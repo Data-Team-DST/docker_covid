@@ -1,9 +1,10 @@
-FROM ghcr.io/mon-org/covid-xray-core:latest
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-COPY requirements/trainer.txt /tmp/requirements-trainer.txt
-RUN pip install -r /tmp/requirements-trainer.txt
+COPY requirements/trainer.txt /tmp/trainer.txt
+RUN pip install -r /tmp/trainer.txt
 
 COPY src/ /workspace/src/
 COPY app/ /workspace/app/

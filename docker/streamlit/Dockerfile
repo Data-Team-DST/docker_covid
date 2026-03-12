@@ -1,12 +1,13 @@
-FROM ghcr.io/mon-org/covid-xray-core:latest
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-COPY requirements/streamlit.txt /tmp/requirements-streamlit.txt
-RUN pip install -r /tmp/requirements-streamlit.txt
+COPY requirements/streamlit.txt /tmp/streamlit.txt
+RUN pip install -r /tmp/streamlit.txt
 
-COPY app/ /workspace/app/
 COPY src/ /workspace/src/
+COPY app/ /workspace/app/
 
 EXPOSE 8501
 

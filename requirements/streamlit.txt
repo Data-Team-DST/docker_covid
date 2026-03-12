@@ -1,2 +1,6 @@
 streamlit
 plotly
+mlflow
+boto3
+pillow
+opencv-python

@@ -1,0 +1,25 @@
+
+Utilisateur
+    │
+    ▼
+Streamlit UI
+    │
+    ├── lit le modèle validé
+    ├── lance une prédiction
+    └── consulte éventuellement MLflow
+
+Trainer (TensorFlow + Keras + DVC + MLflow client)
+    │
+    ├── lit les données depuis /data
+    ├── versionne les données via DVC
+    ├── entraîne InceptionV3 / VGG16 / autres
+    ├── log les runs dans MLflow
+    └── envoie les artefacts dans MinIO
+
+MLflow Server
+    ├── metadata -> PostgreSQL
+    └── artifacts -> MinIO
+
+MinIO
+    ├── bucket mlflow
+    └── bucket dvcstore

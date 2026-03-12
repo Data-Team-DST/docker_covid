@@ -1,2 +1,5 @@
+mlflow
+dvc[s3]
+jupyterlab
 albumentations
-tensorflow
+seaborn
