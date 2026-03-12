@@ -84,7 +84,7 @@ services:
       --server.port=8501
 
 
-  mlflow:build:
+  mlflow:
     build:
       context: .
       dockerfile: docker/mlflow/Dockerfile
