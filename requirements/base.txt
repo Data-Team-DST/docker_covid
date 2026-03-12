@@ -1,0 +1,10 @@
+mlflow
+dvc[s3]
+boto3
+numpy
+pandas
+scikit-learn
+matplotlib
+opencv-python
+pydicom
+pillow

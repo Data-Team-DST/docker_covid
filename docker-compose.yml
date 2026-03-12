@@ -1,0 +1,182 @@
+# =========================================================
+# CONFIGURATION
+# Les valeurs viennent du fichier .env
+# =========================================================
+
+services:
+  # =======================================================
+  # Trainer : entraînement TensorFlow + DVC + MLflow
+  # Service GPU
+  # =======================================================
+  app:
+    build:
+      context: .
+      dockerfile: ${TRAINER_DOCKERFILE}
+    image: ${TRAINER_IMAGE}:${IMAGE_TAG}
+    container_name: ${APP_CONTAINER_NAME}
+    working_dir: ${APP_WORKDIR}
+    tty: true
+    stdin_open: true
+
+    volumes:
+      - ./:${APP_WORKDIR}
+      - ${DATA_DIR}:${APP_WORKDIR}/data
+      - ${MODELS_DIR}:${APP_WORKDIR}/models
+      - ${OUTPUTS_DIR}:${APP_WORKDIR}/outputs
+
+    environment:
+      TZ: ${TZ}
+      PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
+
+      # MLflow
+      MLFLOW_TRACKING_URI: http://${MLFLOW_CONTAINER_NAME}:${MLFLOW_PORT}
+      MLFLOW_S3_ENDPOINT_URL: http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT}
+
+      # MinIO / S3
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+
+    depends_on:
+      - postgres
+      - minio
+      - mlflow
+
+    command: bash -c "python --version && sleep infinity"
+
+    profiles: ["gpu"]
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${GPU_COUNT}
+              capabilities: [gpu]
+
+  # =======================================================
+  # Interface utilisateur Streamlit
+  # =======================================================
+  streamlit:
+    build:
+      context: .
+      dockerfile: ${STREAMLIT_DOCKERFILE}
+    image: ${STREAMLIT_IMAGE}:${IMAGE_TAG}
+    container_name: ${STREAMLIT_CONTAINER_NAME}
+    working_dir: ${APP_WORKDIR}
+
+    volumes:
+      - ./:${APP_WORKDIR}
+      - ${MODELS_DIR}:${APP_WORKDIR}/models
+      - ${OUTPUTS_DIR}:${APP_WORKDIR}/outputs
+
+    environment:
+      TZ: ${TZ}
+      PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
+      MLFLOW_TRACKING_URI: http://${MLFLOW_CONTAINER_NAME}:${MLFLOW_PORT}
+      MLFLOW_S3_ENDPOINT_URL: http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+
+    depends_on:
+      - mlflow
+      - minio
+
+    ports:
+      - "${STREAMLIT_PORT}:8501"
+
+    command: >
+      streamlit run app/streamlit_app.py
+      --server.address=0.0.0.0
+      --server.port=8501
+
+  # =======================================================
+  # Serveur MLflow
+  # =======================================================
+  mlflow:
+    image: ${MLFLOW_IMAGE}
+    container_name: ${MLFLOW_CONTAINER_NAME}
+
+    depends_on:
+      - postgres
+      - minio
+
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      MLFLOW_S3_ENDPOINT_URL: http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT}
+
+    ports:
+      - "${MLFLOW_PORT}:5000"
+
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_CONTAINER_NAME}:5432/${POSTGRES_DB}
+      --artifacts-destination s3://${MLFLOW_BUCKET}
+
+  # =======================================================
+  # Base de données MLflow
+  # =======================================================
+  postgres:
+    image: ${POSTGRES_IMAGE}
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # =======================================================
+  # Stockage objet MinIO
+  # =======================================================
+  minio:
+    image: ${MINIO_IMAGE}
+    container_name: ${MINIO_CONTAINER_NAME}
+    restart: unless-stopped
+
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
+
+    ports:
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
+
+    volumes:
+      - minio_data:/data
+
+  # =======================================================
+  # Initialisation des buckets MinIO
+  # =======================================================
+  minio-init:
+    image: ${MINIO_CLIENT_IMAGE}
+    container_name: ${MINIO_INIT_CONTAINER_NAME}
+
+    depends_on:
+      - minio
+
+    entrypoint: >
+      /bin/sh -c "
+      sleep 8;
+      mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      mc mb -p local/${MLFLOW_BUCKET} || true;
+      mc mb -p local/${DVC_BUCKET} || true;
+      exit 0;
+      "
+
+volumes:
+  postgres_data:
+  minio_data:
