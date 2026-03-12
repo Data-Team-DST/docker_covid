@@ -6,7 +6,7 @@ Streamlit UI
     │
     ├── lit le modèle validé
     ├── lance une prédiction
-    └── consulte éventuellement MLflow
+    └── consulte  MLflow
 
 Trainer (TensorFlow + Keras + DVC + MLflow client)
     │
