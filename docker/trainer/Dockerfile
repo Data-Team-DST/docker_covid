@@ -1,4 +1,4 @@
-ARG BASE_IMAGE
+ARG BASE_IMAGE=ghcr.io/data-team-dst/covid-xray-base:latest
 FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
