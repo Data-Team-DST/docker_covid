@@ -12,9 +12,9 @@ Reference:
 import warnings
 from typing import Callable, List, Optional, Tuple
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
 
 try:
     from lime import lime_image
@@ -23,7 +23,9 @@ try:
     LIME_AVAILABLE = True
 except ImportError:
     LIME_AVAILABLE = False
-    warnings.warn("LIME non installé. Installez avec: pip install lime", ImportWarning)
+    warnings.warn(
+        "LIME non installé. Installez avec: pip install lime", ImportWarning
+    )
 
 
 class LIMEImageExplainer:
@@ -50,7 +52,9 @@ class LIMEImageExplainer:
         batch_size: int = 32,
     ):
         if not LIME_AVAILABLE:
-            raise ImportError("LIME non installé. Installez avec: pip install lime")
+            raise ImportError(
+                "LIME non installé. Installez avec: pip install lime"
+            )
 
         self.predict_fn = predict_fn
         self.segmentation_method = segmentation_method
@@ -60,15 +64,17 @@ class LIMEImageExplainer:
         # Créer l'explainer LIME
         self.explainer = lime_image.LimeImageExplainer()
 
-    def _mark_boundaries_cv2(self, image: np.ndarray, segments: np.ndarray, color=(1, 1, 0)) -> np.ndarray:
+    def _mark_boundaries_cv2(
+        self, image: np.ndarray, segments: np.ndarray, color=(1, 1, 0)
+    ) -> np.ndarray:
         """
         Marque les frontières des segments en utilisant cv2.
-        
+
         Args:
             image: Image originale (H, W, C) ou (H, W)
             segments: Matrice de segments (H, W) avec labels
             color: Couleur des frontières (RGB, valeurs [0, 1])
-        
+
         Returns:
             Image avec frontières marquées
         """
@@ -76,20 +82,24 @@ class LIMEImageExplainer:
         marked = image.copy()
         if marked.max() <= 1.0:
             marked = (marked * 255).astype(np.uint8)
-        
+
         # Convertir en couleur si nécessaire
         if len(marked.shape) == 2:
             marked = cv2.cvtColor(marked, cv2.COLOR_GRAY2RGB)
-        
+
         # Trouver les contours de chaque segment
         segments_uint8 = segments.astype(np.uint8)
         unique_labels = np.unique(segments_uint8)
-        
+
         for label in unique_labels:
             mask = (segments_uint8 == label).astype(np.uint8)
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            cv2.drawContours(marked, contours, -1, tuple(int(c * 255) for c in color), 1)
-        
+            contours, _ = cv2.findContours(
+                mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            cv2.drawContours(
+                marked, contours, -1, tuple(int(c * 255) for c in color), 1
+            )
+
         # Normaliser à [0, 1]
         return marked.astype(np.float32) / 255.0
 
@@ -98,7 +108,11 @@ class LIMEImageExplainer:
         if self.segmentation_method == "quickshift":
             # Utiliser pyrMeanShiftFiltering comme alternative à quickshift
             def quickshift_cv2(x):
-                img = (x * 255).astype(np.uint8) if x.max() <= 1.0 else x.astype(np.uint8)
+                img = (
+                    (x * 255).astype(np.uint8)
+                    if x.max() <= 1.0
+                    else x.astype(np.uint8)
+                )
                 if len(img.shape) == 2:
                     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
                 shifted = cv2.pyrMeanShiftFiltering(img, 21, 51)
@@ -106,26 +120,38 @@ class LIMEImageExplainer:
                 gray = cv2.cvtColor(shifted, cv2.COLOR_BGR2GRAY)
                 _, labels = cv2.connectedComponents(gray)
                 return labels
+
             return quickshift_cv2
         elif self.segmentation_method == "felzenszwalb":
             # Utiliser pyrMeanShiftFiltering comme alternative
             def felzenszwalb_cv2(x):
-                img = (x * 255).astype(np.uint8) if x.max() <= 1.0 else x.astype(np.uint8)
+                img = (
+                    (x * 255).astype(np.uint8)
+                    if x.max() <= 1.0
+                    else x.astype(np.uint8)
+                )
                 if len(img.shape) == 2:
                     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
                 shifted = cv2.pyrMeanShiftFiltering(img, 21, 51)
                 gray = cv2.cvtColor(shifted, cv2.COLOR_BGR2GRAY)
                 _, labels = cv2.connectedComponents(gray)
                 return labels
+
             return felzenszwalb_cv2
         elif self.segmentation_method == "slic":
             # Utiliser SLIC de cv2.ximgproc si disponible
             def slic_cv2(x):
-                img = (x * 255).astype(np.uint8) if x.max() <= 1.0 else x.astype(np.uint8)
+                img = (
+                    (x * 255).astype(np.uint8)
+                    if x.max() <= 1.0
+                    else x.astype(np.uint8)
+                )
                 if len(img.shape) == 2:
                     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
                 try:
-                    slic_obj = cv2.ximgproc.createSuperpixelSLIC(img, region_size=10)
+                    slic_obj = cv2.ximgproc.createSuperpixelSLIC(
+                        img, region_size=10
+                    )
                     slic_obj.iterate(10)
                     return slic_obj.getLabels()
                 except AttributeError:
@@ -134,6 +160,7 @@ class LIMEImageExplainer:
                     gray = cv2.cvtColor(shifted, cv2.COLOR_BGR2GRAY)
                     _, labels = cv2.connectedComponents(gray)
                     return labels
+
             return slic_cv2
         else:
             raise ValueError(f"Méthode inconnue: {self.segmentation_method}")
@@ -223,7 +250,9 @@ class LIMEImageExplainer:
         # Masque des régions importantes
         axes[1].imshow(mask, cmap="Reds", alpha=0.8)
         axes[1].set_title(
-            f"Régions Importantes\n(Top {num_features})", fontsize=12, weight="bold"
+            f"Régions Importantes\n(Top {num_features})",
+            fontsize=12,
+            weight="bold",
         )
         axes[1].axis("off")
 
@@ -287,7 +316,9 @@ class LIMEImageExplainer:
         # Avec frontières
         axes[1].imshow(img_boundry)
         axes[1].set_title(
-            f"LIME - Super-pixels\n(Top {num_features})", fontsize=12, weight="bold"
+            f"LIME - Super-pixels\n(Top {num_features})",
+            fontsize=12,
+            weight="bold",
         )
         axes[1].axis("off")
 
@@ -399,33 +430,70 @@ class LIMEImageExplainer:
         for i, method in enumerate(methods, 1):
             if method == "quickshift":
                 # Utiliser watershed de cv2 comme alternative à quickshift
-                gray = cv2.cvtColor(image if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2GRAY)
-                segments = cv2.watershed(image if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR), 
-                                        cv2.connectedComponents(gray)[1])
+                gray = cv2.cvtColor(
+                    (
+                        image
+                        if len(image.shape) == 3
+                        else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                    ),
+                    cv2.COLOR_BGR2GRAY,
+                )
+                segments = cv2.watershed(
+                    (
+                        image
+                        if len(image.shape) == 3
+                        else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                    ),
+                    cv2.connectedComponents(gray)[1],
+                )
             elif method == "felzenszwalb":
                 # Utiliser pyrMeanShiftFiltering comme alternative
-                segments = cv2.pyrMeanShiftFiltering(image if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR), 
-                                                     21, 51)[..., 0]
+                segments = cv2.pyrMeanShiftFiltering(
+                    (
+                        image
+                        if len(image.shape) == 3
+                        else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                    ),
+                    21,
+                    51,
+                )[..., 0]
             elif method == "slic":
                 # Utiliser SLIC de cv2.ximgproc
                 try:
-                    slic_obj = cv2.ximgproc.createSuperpixelSLIC(image if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR), 
-                                                                  region_size=10)
+                    slic_obj = cv2.ximgproc.createSuperpixelSLIC(
+                        (
+                            image
+                            if len(image.shape) == 3
+                            else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                        ),
+                        region_size=10,
+                    )
                     slic_obj.iterate(10)
                     segments = slic_obj.getLabels()
                 except AttributeError:
                     # Fallback si ximgproc n'est pas disponible
-                    segments = cv2.pyrMeanShiftFiltering(image if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR), 
-                                                         21, 51)[..., 0]
+                    segments = cv2.pyrMeanShiftFiltering(
+                        (
+                            image
+                            if len(image.shape) == 3
+                            else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                        ),
+                        21,
+                        51,
+                    )[..., 0]
 
             img_seg = self._mark_boundaries_cv2(image, segments)
 
             axes[i].imshow(img_seg)
-            axes[i].set_title(f"{method.capitalize()}", fontsize=11, weight="bold")
+            axes[i].set_title(
+                f"{method.capitalize()}", fontsize=11, weight="bold"
+            )
             axes[i].axis("off")
 
         plt.suptitle(
-            "Comparaison des Méthodes de Segmentation", fontsize=13, weight="bold"
+            "Comparaison des Méthodes de Segmentation",
+            fontsize=13,
+            weight="bold",
         )
         plt.tight_layout()
 
@@ -504,7 +572,11 @@ def quick_lime_explanation(
 
     # Visualiser
     fig = explainer.visualize_explanation(
-        image, explanation, label=label_idx, num_features=num_features, figsize=figsize
+        image,
+        explanation,
+        label=label_idx,
+        num_features=num_features,
+        figsize=figsize,
     )
 
     # Ajouter le nom de classe au titre
@@ -513,6 +585,8 @@ def quick_lime_explanation(
         if label_idx < len(class_names)
         else f"Classe {label_idx}"
     )
-    fig.suptitle(f"LIME Explanation - {class_name}", fontsize=13, weight="bold", y=1.02)
+    fig.suptitle(
+        f"LIME Explanation - {class_name}", fontsize=13, weight="bold", y=1.02
+    )
 
     return fig

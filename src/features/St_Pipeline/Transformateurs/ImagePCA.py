@@ -5,14 +5,15 @@ Transformateur pour appliquer une analyse en composantes principales.
 """
 
 from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 
 try:
-    import streamlit as st
-    import plotly.graph_objects as go
     import plotly.express as px
+    import plotly.graph_objects as go
+    import streamlit as st
     HAS_STREAMLIT = True
 except ImportError:
     HAS_STREAMLIT = False

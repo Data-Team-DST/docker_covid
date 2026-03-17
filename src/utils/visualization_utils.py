@@ -61,17 +61,23 @@ def plot_training_curves(
 
         combined_history = {}
         for key in history.history.keys():
-            combined_history[key] = history.history[key] + history_ft.history[key]
+            combined_history[key] = (
+                history.history[key] + history_ft.history[key]
+            )
     else:
         print("\n📊 Mode: Single-phase training")
         combined_history = history.history
         epochs_fe = None
 
     # Get available metrics
-    available_metrics = [k for k in combined_history.keys() if not k.startswith("val_")]
+    available_metrics = [
+        k for k in combined_history.keys() if not k.startswith("val_")
+    ]
 
     # Plot Loss + 3 metrics
-    metrics_to_plot = ["loss"] + [m for m in available_metrics if m != "loss"][:3]
+    metrics_to_plot = ["loss"] + [m for m in available_metrics if m != "loss"][
+        :3
+    ]
 
     _, axes = plt.subplots(1, len(metrics_to_plot), figsize=figsize)
 
@@ -118,7 +124,9 @@ def plot_training_curves(
         ax.set_xlabel("Epoch", fontsize=12)
         ax.set_ylabel(metric.capitalize(), fontsize=12)
         ax.set_title(
-            f"{metric.capitalize()} over Epochs", fontsize=14, fontweight="bold"
+            f"{metric.capitalize()} over Epochs",
+            fontsize=14,
+            fontweight="bold",
         )
         ax.legend(loc="best", fontsize=10)
         ax.grid(True, alpha=0.3)
@@ -231,6 +239,8 @@ def plot_confusion_matrix(
     print("\n   Accuracy per class:")
     for i, class_name in enumerate(class_names):
         class_acc = cm[i, i] / cm[i].sum() if cm[i].sum() > 0 else 0
-        print(f"      {class_name}: {class_acc:.2%} ({cm[i, i]}/{cm[i].sum()})")
+        print(
+            f"      {class_name}: {class_acc:.2%} ({cm[i, i]}/{cm[i].sum()})"
+        )
 
     print("\n✅ Matrice affichée!")

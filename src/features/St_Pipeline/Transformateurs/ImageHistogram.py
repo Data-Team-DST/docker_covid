@@ -5,13 +5,14 @@ Transformateur pour calculer les histogrammes d'intensité des images.
 """
 
 from typing import Any
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 try:
-    import streamlit as st
     import plotly.graph_objects as go
+    import streamlit as st
     from plotly.subplots import make_subplots
     HAS_STREAMLIT = True
 except ImportError:
@@ -162,7 +163,7 @@ class ImageHistogram(BaseTransform):
     def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """Visualise les histogrammes extraits."""
         import matplotlib.pyplot as plt
-        
+
         # Extraire les images originales
         if isinstance(X_before, pd.DataFrame):
             images = [X_before['image_array'].iloc[i] for i in range(min(n_samples, len(X_before)))]

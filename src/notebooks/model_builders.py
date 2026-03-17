@@ -14,20 +14,20 @@ Date: November 2025
 
 import logging
 from pathlib import Path
-from typing import Tuple, List
+from typing import List, Tuple
 
-import tensorflow as tf
 import keras
+import tensorflow as tf
 from keras import layers, models, regularizers
-from keras.optimizers import Adam
-from keras.losses import CategoricalCrossentropy
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.applications import (
     VGG16,
-    ResNet50,
     EfficientNetB0,
     InceptionV3,
+    ResNet50,
 )
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from keras.losses import CategoricalCrossentropy
+from keras.optimizers import Adam
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -70,7 +70,11 @@ def build_custom_cnn(
     # Bloc 1: 32 filtres
     model.add(
         layers.Conv2D(
-            32, (3, 3), activation="relu", padding="same", input_shape=input_shape
+            32,
+            (3, 3),
+            activation="relu",
+            padding="same",
+            input_shape=input_shape,
         )
     )
     model.add(layers.BatchNormalization())
@@ -114,12 +118,16 @@ def build_custom_cnn(
     # Flatten et couches denses
     model.add(layers.Flatten())
     model.add(
-        layers.Dense(512, activation="relu", kernel_regularizer=regularizers.l2(0.001))
+        layers.Dense(
+            512, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
     )
     model.add(layers.BatchNormalization())
     model.add(layers.Dropout(0.5))
     model.add(
-        layers.Dense(256, activation="relu", kernel_regularizer=regularizers.l2(0.001))
+        layers.Dense(
+            256, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
     )
     model.add(layers.BatchNormalization())
     model.add(layers.Dropout(0.5))
@@ -143,17 +151,17 @@ def build_simple_cnn(
 ) -> keras.Model:
     """
     Build a simple CNN architecture with 2 convolutional blocks.
-    
+
     Architecture:
         - 2 convolutional blocks (32→64 filters)
         - 1 dense layer (128 units)
         - Batch normalization and dropout for regularization
-    
+
     Args:
         input_shape: Input image shape (height, width, channels)
         num_classes: Number of output classes
         verbose: Print model information
-    
+
     Returns:
         Keras model
     """
@@ -161,34 +169,46 @@ def build_simple_cnn(
         print("=" * 70)
         print("SIMPLE CNN ARCHITECTURE")
         print("=" * 70)
-    
+
     model = models.Sequential(name="CNN_Simple")
-    
+
     # Block 1: 32 filters
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape))
+    model.add(
+        layers.Conv2D(
+            32,
+            (3, 3),
+            activation="relu",
+            padding="same",
+            input_shape=input_shape,
+        )
+    )
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.25))
-    
+
     # Block 2: 64 filters
-    model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(layers.Conv2D(64, (3, 3), activation="relu", padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.25))
-    
+
     # Dense layers
     model.add(layers.Flatten())
-    model.add(layers.Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+    model.add(
+        layers.Dense(
+            128, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
+    )
     model.add(layers.Dropout(0.3))
-    model.add(layers.Dense(num_classes, activation='softmax'))
-    
+    model.add(layers.Dense(num_classes, activation="softmax"))
+
     if verbose:
         print("\n✅ Modèle créé")
         print(f"   Nom: {model.name}")
         print(f"   Conv blocks: 2 (32→64)")
         print(f"   Dense: 128")
         print(f"   Total params: {model.count_params():,}")
-    
+
     return model
 
 
@@ -199,17 +219,17 @@ def build_medium_cnn(
 ) -> keras.Model:
     """
     Build a medium CNN architecture with 3 convolutional blocks.
-    
+
     Architecture:
         - 3 convolutional blocks (32→64→128 filters)
         - 2 dense layers (256→128 units)
         - Batch normalization and dropout for regularization
-    
+
     Args:
         input_shape: Input image shape (height, width, channels)
         num_classes: Number of output classes
         verbose: Print model information
-    
+
     Returns:
         Keras model
     """
@@ -217,42 +237,58 @@ def build_medium_cnn(
         print("=" * 70)
         print("MEDIUM CNN ARCHITECTURE")
         print("=" * 70)
-    
+
     model = models.Sequential(name="CNN_Medium")
-    
+
     # Block 1: 32 filters
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape))
+    model.add(
+        layers.Conv2D(
+            32,
+            (3, 3),
+            activation="relu",
+            padding="same",
+            input_shape=input_shape,
+        )
+    )
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.25))
-    
+
     # Block 2: 64 filters
-    model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(layers.Conv2D(64, (3, 3), activation="relu", padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.25))
-    
+
     # Block 3: 128 filters
-    model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same'))
+    model.add(layers.Conv2D(128, (3, 3), activation="relu", padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.3))
-    
+
     # Dense layers
     model.add(layers.Flatten())
-    model.add(layers.Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+    model.add(
+        layers.Dense(
+            256, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
+    )
     model.add(layers.Dropout(0.4))
-    model.add(layers.Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+    model.add(
+        layers.Dense(
+            128, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
+    )
     model.add(layers.Dropout(0.4))
-    model.add(layers.Dense(num_classes, activation='softmax'))
-    
+    model.add(layers.Dense(num_classes, activation="softmax"))
+
     if verbose:
         print("\n✅ Modèle créé")
         print(f"   Nom: {model.name}")
         print(f"   Conv blocks: 3 (32→64→128)")
         print(f"   Dense: 256→128")
         print(f"   Total params: {model.count_params():,}")
-    
+
     return model
 
 
@@ -263,17 +299,17 @@ def build_deep_cnn(
 ) -> keras.Model:
     """
     Build a deep CNN architecture with 4 convolutional blocks.
-    
+
     Architecture:
         - 4 convolutional blocks (32→64→128→256 filters)
         - 2 dense layers (512→256 units)
         - Batch normalization and dropout for regularization
-    
+
     Args:
         input_shape: Input image shape (height, width, channels)
         num_classes: Number of output classes
         verbose: Print model information
-    
+
     Returns:
         Keras model
     """
@@ -281,48 +317,64 @@ def build_deep_cnn(
         print("=" * 70)
         print("DEEP CNN ARCHITECTURE")
         print("=" * 70)
-    
+
     model = models.Sequential(name="CNN_Deep")
-    
+
     # Block 1: 32 filters
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape))
+    model.add(
+        layers.Conv2D(
+            32,
+            (3, 3),
+            activation="relu",
+            padding="same",
+            input_shape=input_shape,
+        )
+    )
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.25))
-    
+
     # Block 2: 64 filters
-    model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(layers.Conv2D(64, (3, 3), activation="relu", padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.25))
-    
+
     # Block 3: 128 filters
-    model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same'))
+    model.add(layers.Conv2D(128, (3, 3), activation="relu", padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.3))
-    
+
     # Block 4: 256 filters
-    model.add(layers.Conv2D(256, (3, 3), activation='relu', padding='same'))
+    model.add(layers.Conv2D(256, (3, 3), activation="relu", padding="same"))
     model.add(layers.BatchNormalization())
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Dropout(0.3))
-    
+
     # Dense layers
     model.add(layers.Flatten())
-    model.add(layers.Dense(512, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+    model.add(
+        layers.Dense(
+            512, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
+    )
     model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
+    model.add(
+        layers.Dense(
+            256, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
+    )
     model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(num_classes, activation='softmax'))
-    
+    model.add(layers.Dense(num_classes, activation="softmax"))
+
     if verbose:
         print("\n✅ Modèle créé")
         print(f"   Nom: {model.name}")
         print(f"   Conv blocks: 4 (32→64→128→256)")
         print(f"   Dense: 512→256")
         print(f"   Total params: {model.count_params():,}")
-    
+
     return model
 
 
@@ -409,7 +461,9 @@ def build_transfer_learning_model(
     )
 
     if verbose:
-        trainable_params = sum(tf.size(w).numpy() for w in model.trainable_weights)
+        trainable_params = sum(
+            tf.size(w).numpy() for w in model.trainable_weights
+        )
         total_params = sum(tf.size(w).numpy() for w in model.weights)
 
         print("\n✅ Modèle créé")
@@ -458,8 +512,12 @@ def unfreeze_top_layers(
         layer.trainable = False
 
     if verbose:
-        trainable_count = sum(1 for layer in base_model.layers if layer.trainable)
-        frozen_count = sum(1 for layer in base_model.layers if not layer.trainable)
+        trainable_count = sum(
+            1 for layer in base_model.layers if layer.trainable
+        )
+        frozen_count = sum(
+            1 for layer in base_model.layers if not layer.trainable
+        )
 
         print("\n📊 Base model layers:")
         print(f"   Trainable: {trainable_count}")
@@ -477,7 +535,9 @@ def unfreeze_top_layers(
     )
 
     if verbose:
-        trainable_params = sum(tf.size(w).numpy() for w in model.trainable_weights)
+        trainable_params = sum(
+            tf.size(w).numpy() for w in model.trainable_weights
+        )
         total_params = sum(tf.size(w).numpy() for w in model.weights)
 
         print("\n📊 Paramètres après unfreeze:")
@@ -588,7 +648,9 @@ def create_callbacks(
     if verbose:
         print("\n✅ Callbacks configurés:")
         print(f"   • EarlyStopping (patience={patience_early_stop})")
-        print(f"   • ReduceLROnPlateau (factor=0.5, patience={patience_reduce_lr})")
+        print(
+            f"   • ReduceLROnPlateau (factor=0.5, patience={patience_reduce_lr})"
+        )
         print(f"   • ModelCheckpoint (monitor={monitor})")
 
     return callbacks

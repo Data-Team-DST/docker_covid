@@ -6,12 +6,13 @@ et transformées.
 """
 
 from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 
 try:
-    import streamlit as st
     import plotly.graph_objects as go
+    import streamlit as st
     from plotly.subplots import make_subplots
     HAS_STREAMLIT = True
 except ImportError:

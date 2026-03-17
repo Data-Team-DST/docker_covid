@@ -5,13 +5,14 @@ Transformateur pour convertir des images 2D/3D en vecteurs 1D.
 """
 
 from typing import Any
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 try:
-    import streamlit as st
     import plotly.graph_objects as go
+    import streamlit as st
     HAS_STREAMLIT = True
 except ImportError:
     HAS_STREAMLIT = False

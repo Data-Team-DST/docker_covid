@@ -19,13 +19,13 @@ __license__ = "MIT"
 
 # Main package imports - will be populated after creating modules
 try:
-    from .models import build_baseline_cnn, MaskApplicator
     from .features import load_images_flat, prepare_covid_data
-    from .visualization import visualize_samples, compare_methods
-    
+    from .models import MaskApplicator, build_baseline_cnn
+    from .visualization import compare_methods, visualize_samples
+
     __all__ = [
         "build_baseline_cnn",
-        "MaskApplicator", 
+        "MaskApplicator",
         "load_images_flat",
         "prepare_covid_data",
         "visualize_samples",

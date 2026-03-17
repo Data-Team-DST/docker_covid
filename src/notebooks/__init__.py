@@ -18,44 +18,44 @@ Organized into focused modules:
 
 # Data loading & preprocessing
 from .data_utils import (
-    load_dataset,
-    create_preprocessing_pipeline,
-    prepare_train_val_test_split,
     compute_class_weights,
     create_data_generators,
+    create_preprocessing_pipeline,
     create_transfer_learning_generators,
+    load_dataset,
+    prepare_train_val_test_split,
+)
+
+# Interpretability
+from .interpretability_utils import (
+    get_preprocessing_function,
+    run_gradcam_analysis,
+    select_sample_images,
+    setup_interpretability,
 )
 
 # Model building
 from .model_builders import (
     build_custom_cnn,
-    build_simple_cnn,
-    build_medium_cnn,
     build_deep_cnn,
+    build_medium_cnn,
+    build_simple_cnn,
+    build_transfer_learning_model,
     compile_model,
     create_callbacks,
-    build_transfer_learning_model,
     unfreeze_top_layers,
 )
 
 # Training & evaluation
 from .training_utils import (
-    train_model,
     evaluate_model,
+    train_model,
 )
 
 # Visualization
 from .visualization_utils import (
-    plot_training_curves,
     plot_confusion_matrix,
-)
-
-# Interpretability
-from .interpretability_utils import (
-    setup_interpretability,
-    run_gradcam_analysis,
-    select_sample_images,
-    get_preprocessing_function,
+    plot_training_curves,
 )
 
 __all__ = [

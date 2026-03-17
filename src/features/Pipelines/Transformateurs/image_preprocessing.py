@@ -124,7 +124,7 @@ class ImageResizer(BaseEstimator, TransformerMixin):
 
     def fit(self, *_: Any) -> ImageResizer:
         """No-op fit to keep sklearn API compatible.
-        
+
         Args:
             *_: Arguments ignorés (X, y, etc.). Le *_ capture tous les arguments
                 positionnels mais ne les utilise pas. Convention sklearn : fit(X, y)
@@ -134,13 +134,13 @@ class ImageResizer(BaseEstimator, TransformerMixin):
 
     def _resize_with_aspect_ratio(self, img: Image.Image) -> Image.Image:
         """Resize an image while preserving its aspect ratio.
-        
+
         Stratégie:
         1. Calcule le ratio de redimensionnement (le plus petit des 2 dimensions)
         2. Redimensionne l'image à la nouvelle taille calculée (avec LANCZOS)
         3. Crée une image noire de la taille cible
         4. Colle l'image redimensionnée au centre (padding noir sur les bords)
-        
+
         Exemple: Image 300×400 → 256×256
         - ratio = min(256/300, 256/400) = 0.64
         - new_size = (192, 256)
@@ -155,7 +155,9 @@ class ImageResizer(BaseEstimator, TransformerMixin):
         img_resized = img.resize(new_size, self.resample)
 
         # Création du canvas noir de la taille cible
-        new_img = Image.new(img.mode, self.img_size, color=0) # color=0 pour noir
+        new_img = Image.new(
+            img.mode, self.img_size, color=0
+        )  # color=0 pour noir
         # Calcul de la position de centrage
         paste_x = (self.img_size[0] - new_size[0]) // 2
         paste_y = (self.img_size[1] - new_size[1]) // 2
@@ -198,7 +200,8 @@ class ImageResizer(BaseEstimator, TransformerMixin):
         self.n_images_processed_ = len(resized)
         if self.verbose:
             logger.info(
-                "Resizing completed: %d images processed", self.n_images_processed_
+                "Resizing completed: %d images processed",
+                self.n_images_processed_,
             )
         return np.array(resized)
 
@@ -221,7 +224,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
             feature_range: Range for 'minmax' or 'custom' normalization.
             per_image: Normalize each image individually if True.
             verbose: Whether to log processing information.
-            
+
         Raises:
             ValueError: If method is not one of 'minmax', 'standard', 'custom'.
         """
@@ -231,7 +234,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
             raise ValueError(
                 f"Invalid method '{method}'. Must be one of {valid_methods}."
             )
-        
+
         self.method = method_lower
         self.feature_range = feature_range
         self.per_image = per_image
@@ -243,9 +246,11 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
             "std": None,
         }
 
-    def fit(self, X: list[np.ndarray] | np.ndarray, y: Any = None) -> ImageNormalizer:
+    def fit(
+        self, X: list[np.ndarray] | np.ndarray, y: Any = None
+    ) -> ImageNormalizer:
         """Fit normalizer on data (compute global stats if needed).
-        
+
         Args:
             X: Images sur lesquelles calculer les statistiques globales
             y: Ignored, exists for sklearn compatibility
@@ -263,7 +268,9 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
                 logger.info("Fitted normalizer with method %s", self.method)
         return self
 
-    def transform(self, X: list[np.ndarray] | np.ndarray, y: Any = None) -> np.ndarray:
+    def transform(
+        self, X: list[np.ndarray] | np.ndarray, y: Any = None
+    ) -> np.ndarray:
         """
         Apply normalization to images.
 
@@ -304,13 +311,13 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
         gmin, gmax = self._globals["min"], self._globals["max"]
         if gmin is None or gmax is None:
             raise RuntimeError("Normalizer not fitted for global min/max")
-        
+
         # Protection contre division par zéro
         if gmax == gmin:
             if self.verbose:
                 logger.warning("Min equals max (%.2f). Returning zeros.", gmin)
             return np.zeros_like(arr)
-        
+
         return (arr - gmin) / (gmax - gmin)
 
     def _normalize_standard(self, arr: np.ndarray) -> np.ndarray:
@@ -326,17 +333,21 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
         """Apply custom range normalization."""
         fr_min, fr_max = self.feature_range
         if self.per_image:
-            return np.array([self._custom_image(img, fr_min, fr_max) for img in arr])
+            return np.array(
+                [self._custom_image(img, fr_min, fr_max) for img in arr]
+            )
         gmin, gmax = self._globals["min"], self._globals["max"]
         if gmin is None or gmax is None:
             raise RuntimeError("Normalizer not fitted for global min/max")
-        
+
         # Protection contre division par zéro
         if gmax == gmin:
             if self.verbose:
-                logger.warning("Min equals max (%.2f). Returning feature_range min.", gmin)
+                logger.warning(
+                    "Min equals max (%.2f). Returning feature_range min.", gmin
+                )
             return np.full_like(arr, fr_min)
-        
+
         normalized = (arr - gmin) / (gmax - gmin)
         return normalized * (fr_max - fr_min) + fr_min
 
@@ -344,7 +355,9 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
     def _minmax_image(img: np.ndarray) -> np.ndarray:
         """Normalize single image with min-max."""
         img_min, img_max = img.min(), img.max()
-        return (img - img_min) / (img_max - img_min) if img_max > img_min else img
+        return (
+            (img - img_min) / (img_max - img_min) if img_max > img_min else img
+        )
 
     @staticmethod
     def _standardize_image(img: np.ndarray) -> np.ndarray:
@@ -353,7 +366,9 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
         return (img - img_mean) / img_std if img_std > 0 else img - img_mean
 
     @staticmethod
-    def _custom_image(img: np.ndarray, fr_min: float, fr_max: float) -> np.ndarray:
+    def _custom_image(
+        img: np.ndarray, fr_min: float, fr_max: float
+    ) -> np.ndarray:
         """Normalize single image to a custom range."""
         img_min, img_max = img.min(), img.max()
         if img_max <= img_min:
@@ -375,7 +390,9 @@ class MaskerConfig:
 class ImageMasker(BaseEstimator, TransformerMixin):
     """Apply binary masks to images."""
 
-    def __init__(self, mask_paths: list[str], config: MaskerConfig = MaskerConfig()):
+    def __init__(
+        self, mask_paths: list[str], config: MaskerConfig = MaskerConfig()
+    ):
         """
         Initialize the ImageMasker.
 
@@ -393,7 +410,7 @@ class ImageMasker(BaseEstimator, TransformerMixin):
 
     def fit(self, *_):
         """No-op fit to keep sklearn API compatible.
-        
+
         Args:
             *_: X, y et autres arguments sklearn capturés mais ignorés
         """
@@ -445,7 +462,9 @@ class ImageMasker(BaseEstimator, TransformerMixin):
 
         self.n_images_masked_ = len(masked)
         if self.verbose:
-            logger.info("Masking completed: %d images processed", self.n_images_masked_)
+            logger.info(
+                "Masking completed: %d images processed", self.n_images_masked_
+            )
         return np.array(masked)
 
 
@@ -503,7 +522,9 @@ class ImageFlattener(BaseEstimator, TransformerMixin):
         n_samples = arr.shape[0]
         data_flat = arr.reshape((n_samples, -1), order=self.order)
         if self.verbose:
-            logger.info("Flattening completed: %s -> %s", arr.shape, data_flat.shape)
+            logger.info(
+                "Flattening completed: %s -> %s", arr.shape, data_flat.shape
+            )
         return data_flat
 
     def inverse_transform(self, X: np.ndarray) -> np.ndarray:
@@ -517,7 +538,9 @@ class ImageFlattener(BaseEstimator, TransformerMixin):
             Images reshaped to original dimensions.
         """
         if not self.original_shape_:
-            raise RuntimeError("Transformer must be fitted before inverse_transform")
+            raise RuntimeError(
+                "Transformer must be fitted before inverse_transform"
+            )
         n_samples = X.shape[0]
         target_shape = (n_samples,) + self.original_shape_
         return X.reshape(target_shape, order=self.order)
@@ -565,7 +588,9 @@ class ImageBinarizer(BaseEstimator, TransformerMixin):
         else:
             self.threshold_value_ = float(self.threshold)
         if self.verbose:
-            logger.info("Fitted binarizer with threshold: %.4f", self.threshold_value_)
+            logger.info(
+                "Fitted binarizer with threshold: %.4f", self.threshold_value_
+            )
         return self
 
     def _compute_threshold(self, arr: np.ndarray) -> float:
@@ -634,7 +659,8 @@ class ImageBinarizer(BaseEstimator, TransformerMixin):
         if self.verbose:
             positive_ratio = float((binarized == 1).mean() * 100)
             logger.info(
-                "Binarization completed. Positive pixels: %.1f%%", positive_ratio
+                "Binarization completed. Positive pixels: %.1f%%",
+                positive_ratio,
             )
 
         return binarized

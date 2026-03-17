@@ -13,10 +13,10 @@ Date: November 2025
 import logging
 from typing import List, Optional
 
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import keras
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
 # Configure logger
@@ -206,11 +206,18 @@ def visualize_masked_images(
         # Add label as ylabel
         if labels is not None:
             axes[i, 0].set_ylabel(
-                f"{labels[idx]}", fontsize=11, fontweight="bold", rotation=0, ha="right"
+                f"{labels[idx]}",
+                fontsize=11,
+                fontweight="bold",
+                rotation=0,
+                ha="right",
             )
 
     plt.suptitle(
-        "Comparaison: Original vs Mask vs Masked", fontsize=16, fontweight="bold", y=0.995
+        "Comparaison: Original vs Mask vs Masked",
+        fontsize=16,
+        fontweight="bold",
+        y=0.995,
     )
     plt.tight_layout()
 
@@ -264,7 +271,9 @@ def compare_preprocessing_steps(
 
     print(f"\n📊 Comparaison de {n_samples} images")
     print(f"   Raw range: [{images_raw.min():.1f}, {images_raw.max():.1f}]")
-    print(f"   Preprocessed range: [{images_preprocessed.min():.3f}, {images_preprocessed.max():.3f}]")
+    print(
+        f"   Preprocessed range: [{images_preprocessed.min():.3f}, {images_preprocessed.max():.3f}]"
+    )
 
     for i, idx in enumerate(indices):
         img_raw = images_raw[idx]
@@ -303,10 +312,19 @@ def compare_preprocessing_steps(
         # Add label
         if labels is not None:
             axes[i, 0].set_ylabel(
-                f"{labels[idx]}", fontsize=11, fontweight="bold", rotation=0, ha="right"
+                f"{labels[idx]}",
+                fontsize=11,
+                fontweight="bold",
+                rotation=0,
+                ha="right",
             )
 
-    plt.suptitle("Preprocessing: Avant vs Après", fontsize=16, fontweight="bold", y=0.995)
+    plt.suptitle(
+        "Preprocessing: Avant vs Après",
+        fontsize=16,
+        fontweight="bold",
+        y=0.995,
+    )
     plt.tight_layout()
 
     if save_path:
@@ -315,6 +333,7 @@ def compare_preprocessing_steps(
 
     plt.show()
     print("\n✅ Comparaison affichée!")
+
 
 # =============================================================================
 # TRAINING HISTORY
@@ -350,17 +369,23 @@ def plot_training_curves(
 
         combined_history = {}
         for key in history.history.keys():
-            combined_history[key] = history.history[key] + history_ft.history[key]
+            combined_history[key] = (
+                history.history[key] + history_ft.history[key]
+            )
     else:
         print("\n📊 Mode: Single-phase training")
         combined_history = history.history
         epochs_fe = None
 
     # Get available metrics
-    available_metrics = [k for k in combined_history.keys() if not k.startswith("val_")]
+    available_metrics = [
+        k for k in combined_history.keys() if not k.startswith("val_")
+    ]
 
     # Plot Loss + 3 metrics
-    metrics_to_plot = ["loss"] + [m for m in available_metrics if m != "loss"][:3]
+    metrics_to_plot = ["loss"] + [m for m in available_metrics if m != "loss"][
+        :3
+    ]
 
     _, axes = plt.subplots(1, len(metrics_to_plot), figsize=figsize)
 
@@ -407,7 +432,9 @@ def plot_training_curves(
         ax.set_xlabel("Epoch", fontsize=12)
         ax.set_ylabel(metric.capitalize(), fontsize=12)
         ax.set_title(
-            f"{metric.capitalize()} over Epochs", fontsize=14, fontweight="bold"
+            f"{metric.capitalize()} over Epochs",
+            fontsize=14,
+            fontweight="bold",
         )
         ax.legend(loc="best", fontsize=10)
         ax.grid(True, alpha=0.3)
@@ -520,6 +547,8 @@ def plot_confusion_matrix(
     print("\n   Accuracy per class:")
     for i, class_name in enumerate(class_names):
         class_acc = cm[i, i] / cm[i].sum() if cm[i].sum() > 0 else 0
-        print(f"      {class_name}: {class_acc:.2%} ({cm[i, i]}/{cm[i].sum()})")
+        print(
+            f"      {class_name}: {class_acc:.2%} ({cm[i, i]}/{cm[i].sum()})"
+        )
 
     print("\n✅ Matrice affichée!")

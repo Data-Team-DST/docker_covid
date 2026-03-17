@@ -5,7 +5,8 @@ Supports ResNet50 and other architectures with GPU/CPU adaptivity
 
 import logging
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -15,6 +16,7 @@ try:
     import torch
     import torch.nn as nn
     from torchvision import models, transforms
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -30,7 +32,7 @@ class EmbeddingExtractor:
         device: Optional[str] = None,
         batch_size: int = 32,
         image_size: int = 224,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
     ):
         """
         Initialize embedding extractor
@@ -75,28 +77,29 @@ class EmbeddingExtractor:
         self.model.eval()
 
         # Define transforms
-        self.transform = transforms.Compose([
-            transforms.Resize((image_size, image_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((image_size, image_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        )
 
     def _load_model(self) -> nn.Module:
         """Load and prepare the pre-trained model"""
         self.logger.info(f"Loading {self.model_name} model...")
 
         if self.model_name == "resnet50":
-            model = models.resnet50(weights='IMAGENET1K_V2')
+            model = models.resnet50(weights="IMAGENET1K_V2")
             # Remove the final classification layer
             model = nn.Sequential(*list(model.children())[:-1])
         elif self.model_name == "resnet18":
-            model = models.resnet18(weights='IMAGENET1K_V1')
+            model = models.resnet18(weights="IMAGENET1K_V1")
             model = nn.Sequential(*list(model.children())[:-1])
         elif self.model_name == "efficientnet_b0":
-            model = models.efficientnet_b0(weights='IMAGENET1K_V1')
+            model = models.efficientnet_b0(weights="IMAGENET1K_V1")
             model.classifier = nn.Identity()
         else:
             raise ValueError(f"Unknown model: {self.model_name}")
@@ -108,7 +111,7 @@ class EmbeddingExtractor:
         self,
         image_path: str,
         mask_path: Optional[str] = None,
-        apply_mask: bool = False
+        apply_mask: bool = False,
     ) -> torch.Tensor:
         """
         Preprocess single image for embedding extraction
@@ -121,12 +124,12 @@ class EmbeddingExtractor:
         Returns:
             Preprocessed image tensor
         """
-        img = Image.open(image_path).convert('RGB')
+        img = Image.open(image_path).convert("RGB")
 
         # Apply mask if requested and available
         if apply_mask and mask_path:
             try:
-                mask = Image.open(mask_path).convert('L')
+                mask = Image.open(mask_path).convert("L")
                 mask = mask.resize(img.size)
                 mask_array = np.array(mask)
                 img_array = np.array(img)
@@ -149,7 +152,7 @@ class EmbeddingExtractor:
         self,
         image_df: pd.DataFrame,
         apply_mask: bool = False,
-        checkpoint_interval: int = 500
+        checkpoint_interval: int = 500,
     ) -> Tuple[np.ndarray, List[str]]:
         """
         Extract embeddings from all images in dataframe
@@ -173,20 +176,20 @@ class EmbeddingExtractor:
         with torch.no_grad():
             for i in tqdm(
                 range(0, len(image_df), self.batch_size),
-                desc="Extracting embeddings"
+                desc="Extracting embeddings",
             ):
-                batch_df = image_df.iloc[i:i + self.batch_size]
+                batch_df = image_df.iloc[i : i + self.batch_size]
                 batch_tensors = []
 
                 for _, row in batch_df.iterrows():
                     try:
                         tensor = self.preprocess_image(
-                            row['image_path'],
-                            row.get('mask_path'),
-                            apply_mask=apply_mask
+                            row["image_path"],
+                            row.get("mask_path"),
+                            apply_mask=apply_mask,
                         )
                         batch_tensors.append(tensor)
-                        filenames.append(row['filename'])
+                        filenames.append(row["filename"])
                     except Exception as e:
                         self.logger.error(
                             f"Error processing {row['filename']}: {e}"
@@ -220,7 +223,7 @@ class EmbeddingExtractor:
         embeddings: np.ndarray,
         filenames: List[str],
         output_dir: Path,
-        prefix: str = ""
+        prefix: str = "",
     ):
         """
         Save embeddings and metadata
@@ -239,10 +242,9 @@ class EmbeddingExtractor:
         self.logger.info(f"Saved embeddings to {embeddings_path}")
 
         # Save filenames
-        files_df = pd.DataFrame({
-            'filename': filenames,
-            'embedding_index': range(len(filenames))
-        })
+        files_df = pd.DataFrame(
+            {"filename": filenames, "embedding_index": range(len(filenames))}
+        )
         files_path = output_dir / f"{prefix}embeddings_files.csv"
         files_df.to_csv(files_path, index=False)
         self.logger.info(f"Saved filenames to {files_path}")

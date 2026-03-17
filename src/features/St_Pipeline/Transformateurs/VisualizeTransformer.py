@@ -6,13 +6,14 @@ Transformateur passthrough pour afficher des échantillons d'images.
 
 import os
 from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 try:
-    import streamlit as st
     import plotly.graph_objects as go
+    import streamlit as st
     from plotly.subplots import make_subplots
     HAS_STREAMLIT = True
 except ImportError:

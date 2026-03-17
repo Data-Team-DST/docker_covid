@@ -1,6 +1,9 @@
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+)
 from sklearn.svm import LinearSVC
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
 
 
 def RandomForest():

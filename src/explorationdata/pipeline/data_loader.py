@@ -3,12 +3,13 @@ Data loader for COVID-19 radiography dataset
 Handles loading images, masks, and metadata files
 """
 
-import os
 import logging
+import os
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
-import pandas as pd
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
+import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 
@@ -21,7 +22,7 @@ class DatasetLoader:
         base_path: str,
         metadata_path: str,
         classes: Optional[List[str]] = None,
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
     ):
         """
         Initialize the dataset loader
@@ -41,7 +42,7 @@ class DatasetLoader:
             "COVID",
             "Lung_Opacity",
             "Normal",
-            "Viral Pneumonia"
+            "Viral Pneumonia",
         ]
 
         self.image_data = []
@@ -52,9 +53,7 @@ class DatasetLoader:
         metadata_file = self.metadata_path / f"{class_name}.metadata.xlsx"
 
         if not metadata_file.exists():
-            self.logger.warning(
-                f"Metadata file not found: {metadata_file}"
-            )
+            self.logger.warning(f"Metadata file not found: {metadata_file}")
             return pd.DataFrame()
 
         try:
@@ -65,15 +64,10 @@ class DatasetLoader:
             )
             return df
         except Exception as e:
-            self.logger.error(
-                f"Error loading metadata for {class_name}: {e}"
-            )
+            self.logger.error(f"Error loading metadata for {class_name}: {e}")
             return pd.DataFrame()
 
-    def validate_image(
-        self,
-        image_path: Path
-    ) -> Tuple[bool, Optional[Dict]]:
+    def validate_image(self, image_path: Path) -> Tuple[bool, Optional[Dict]]:
         """
         Validate and get basic stats for an image
 
@@ -97,7 +91,7 @@ class DatasetLoader:
                 "mean": float(np.mean(img_array)),
                 "std": float(np.std(img_array)),
                 "min": float(np.min(img_array)),
-                "max": float(np.max(img_array))
+                "max": float(np.max(img_array)),
             }
             return True, stats
 
@@ -106,9 +100,7 @@ class DatasetLoader:
             return False, None
 
     def load_images_from_class(
-        self,
-        class_name: str,
-        max_images: Optional[int] = None
+        self, class_name: str, max_images: Optional[int] = None
     ) -> List[Dict]:
         """
         Load images from a specific class directory
@@ -125,16 +117,14 @@ class DatasetLoader:
         masks_dir = class_dir / "masks"
 
         if not images_dir.exists():
-            self.logger.error(
-                f"Images directory not found: {images_dir}"
-            )
+            self.logger.error(f"Images directory not found: {images_dir}")
             return []
 
         # Get all image files
         image_files = sorted(
-            list(images_dir.glob("*.png")) +
-            list(images_dir.glob("*.jpg")) +
-            list(images_dir.glob("*.jpeg"))
+            list(images_dir.glob("*.png"))
+            + list(images_dir.glob("*.jpg"))
+            + list(images_dir.glob("*.jpeg"))
         )
 
         if max_images:
@@ -145,10 +135,7 @@ class DatasetLoader:
             f"Loading {len(image_files)} images from {class_name}"
         )
 
-        for img_path in tqdm(
-            image_files,
-            desc=f"Loading {class_name}"
-        ):
+        for img_path in tqdm(image_files, desc=f"Loading {class_name}"):
             # Check for corresponding mask
             mask_path = masks_dir / img_path.name
             has_mask = mask_path.exists()
@@ -157,10 +144,9 @@ class DatasetLoader:
             is_valid, stats = self.validate_image(img_path)
 
             if not is_valid:
-                self.corrupted_images.append({
-                    "path": str(img_path),
-                    "class": class_name
-                })
+                self.corrupted_images.append(
+                    {"path": str(img_path), "class": class_name}
+                )
                 continue
 
             # Build image info
@@ -170,7 +156,7 @@ class DatasetLoader:
                 "image_path": str(img_path),
                 "mask_path": str(mask_path) if has_mask else None,
                 "has_mask": has_mask,
-                **stats
+                **stats,
             }
 
             # If mask exists, get mask stats
@@ -185,16 +171,16 @@ class DatasetLoader:
                     if mask_array.ndim == 3:
                         # Convert RGB mask to grayscale if needed
                         mask_array = mask_array[:, :, 0]
-                    
+
                     # Ensure mask and image have the same spatial dimensions
                     if mask_array.shape[:2] != img_array.shape[:2]:
                         # Resize mask to match image dimensions
                         mask_resized = Image.fromarray(mask_array).resize(
                             (img_array.shape[1], img_array.shape[0]),
-                            Image.NEAREST
+                            Image.NEAREST,
                         )
                         mask_array = np.array(mask_resized)
-                    
+
                     mask_binary = mask_array > 0
                     if mask_binary.any():
                         # Handle both grayscale and RGB images
@@ -204,16 +190,12 @@ class DatasetLoader:
                         else:
                             # For grayscale images
                             masked_pixels = img_array[mask_binary]
-                        
+
                         img_info["mask_area_fraction"] = float(
                             mask_binary.sum() / mask_binary.size
                         )
-                        img_info["masked_mean"] = float(
-                            np.mean(masked_pixels)
-                        )
-                        img_info["masked_std"] = float(
-                            np.std(masked_pixels)
-                        )
+                        img_info["masked_mean"] = float(np.mean(masked_pixels))
+                        img_info["masked_std"] = float(np.std(masked_pixels))
                     else:
                         img_info["mask_area_fraction"] = 0.0
                         img_info["masked_mean"] = None
@@ -232,8 +214,7 @@ class DatasetLoader:
         return class_images
 
     def load_all_images(
-        self,
-        max_images_per_class: Optional[int] = None
+        self, max_images_per_class: Optional[int] = None
     ) -> pd.DataFrame:
         """
         Load all images from all classes
@@ -248,23 +229,20 @@ class DatasetLoader:
 
         for class_name in self.classes:
             class_images = self.load_images_from_class(
-                class_name,
-                max_images_per_class
+                class_name, max_images_per_class
             )
             self.image_data.extend(class_images)
 
         df = pd.DataFrame(self.image_data)
 
-        self.logger.info(
-            f"Loaded {len(df)} images total"
-        )
+        self.logger.info(f"Loaded {len(df)} images total")
         self.logger.info(
             f"Found {len(self.corrupted_images)} corrupted images"
         )
 
         # Print class distribution
         if not df.empty:
-            class_counts = df['class'].value_counts()
+            class_counts = df["class"].value_counts()
             self.logger.info("Class distribution:")
             for cls, count in class_counts.items():
                 self.logger.info(f"  {cls}: {count}")

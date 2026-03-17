@@ -5,13 +5,14 @@ Transformateur pour standardiser les images pixel-wise (mean=0, std=1).
 """
 
 from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 try:
-    import streamlit as st
     import plotly.graph_objects as go
+    import streamlit as st
     from plotly.subplots import make_subplots
     HAS_STREAMLIT = True
 except ImportError:

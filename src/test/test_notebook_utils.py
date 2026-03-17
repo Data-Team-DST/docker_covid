@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from keras.utils import to_categorical
 
 from utils import (
@@ -29,7 +28,6 @@ from utils import (
     train_model,
     unfreeze_top_layers,
 )
-
 
 
 # Fixtures
@@ -180,6 +178,7 @@ def test_evaluate_model(sample_model, sample_data):
 # Test Visualization
 def test_plot_training_curves():
     """Test training curves plotting."""
+
     class DummyHistory:
         def __init__(self):
             self.history = {"loss": [0.5, 0.3], "val_loss": [0.6, 0.4]}

@@ -1,19 +1,25 @@
 import os
-from notebooks.modelebaseline.refactorisation.utils.data_loader import load_dataset
+
 from notebooks.modelebaseline.refactorisation.controllers.trainer import (
+    evaluate_model,
     split_data,
     train_with_grid_search,
-    evaluate_model
 )
 from notebooks.modelebaseline.refactorisation.models.baseline import (
-    RandomForest,
-    LinearSVM,
     AdaBoost,
-    GradientBoosting
+    GradientBoosting,
+    LinearSVM,
+    RandomForest,
 )
-from notebooks.modelebaseline.refactorisation.views.word_generator import generate_word_report
-from notebooks.modelebaseline.refactorisation.utils.load_grid_params import load_grid_params
-
+from notebooks.modelebaseline.refactorisation.utils.data_loader import (
+    load_dataset,
+)
+from notebooks.modelebaseline.refactorisation.utils.load_grid_params import (
+    load_grid_params,
+)
+from notebooks.modelebaseline.refactorisation.views.word_generator import (
+    generate_word_report,
+)
 
 if __name__ == "__main__":
     print("[INFO] Lancement pipeline refactorisé...")
@@ -35,15 +41,16 @@ if __name__ == "__main__":
         model_name = model.__class__.__name__
         param_grid = grid_params.get(model_name, None)
 
-        print(f"\n[INFO] ======= Entraînement du modèle : {model_name} =======")
+        print(
+            f"\n[INFO] ======= Entraînement du modèle : {model_name} ======="
+        )
 
-        trained_model = train_with_grid_search(model, param_grid, X_train, y_train)
+        trained_model = train_with_grid_search(
+            model, param_grid, X_train, y_train
+        )
 
         result = evaluate_model(
-            trained_model,
-            X_test,
-            y_test,
-            model_name=model_name
+            trained_model, X_test, y_test, model_name=model_name
         )
         results.append(result)
 

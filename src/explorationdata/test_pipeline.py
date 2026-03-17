@@ -17,14 +17,15 @@ def test_imports():
 
     try:
         from src.explorationdata.pipeline import (
-            data_loader,
-            embedding_extractor,
-            dimensionality_reducer,
-            clustering_analyzer,
-            visualizer,
             advanced_analysis,
-            pipeline_runner
+            clustering_analyzer,
+            data_loader,
+            dimensionality_reducer,
+            embedding_extractor,
+            pipeline_runner,
+            visualizer,
         )
+
         print("✓ All pipeline modules imported successfully")
         return True
     except Exception as e:
@@ -37,17 +38,22 @@ def test_class_initialization():
     print("\nTesting class initialization...")
 
     try:
+        from src.explorationdata.pipeline.advanced_analysis import (
+            AdvancedAnalyzer,
+        )
+        from src.explorationdata.pipeline.clustering_analyzer import (
+            ClusteringAnalyzer,
+        )
         from src.explorationdata.pipeline.data_loader import DatasetLoader
+        from src.explorationdata.pipeline.dimensionality_reducer import (
+            DimensionalityReducer,
+        )
         from src.explorationdata.pipeline.visualizer import Visualizer
-        from src.explorationdata.pipeline.dimensionality_reducer import DimensionalityReducer
-        from src.explorationdata.pipeline.clustering_analyzer import ClusteringAnalyzer
-        from src.explorationdata.pipeline.advanced_analysis import AdvancedAnalyzer
 
         # These should not fail even with invalid paths
         # They only check initialization
         loader = DatasetLoader(
-            base_path="/fake/path",
-            metadata_path="/fake/metadata"
+            base_path="/fake/path", metadata_path="/fake/metadata"
         )
         print("✓ DatasetLoader initialized")
 
@@ -75,19 +81,19 @@ def test_dependencies():
     print("\nTesting dependencies...")
 
     dependencies = {
-        'numpy': 'numpy',
-        'pandas': 'pandas',
-        'matplotlib': 'matplotlib',
-        'seaborn': 'seaborn',
-        'sklearn': 'scikit-learn',
-        'PIL': 'Pillow',
-        'cv2': 'opencv-python',
+        "numpy": "numpy",
+        "pandas": "pandas",
+        "matplotlib": "matplotlib",
+        "seaborn": "seaborn",
+        "sklearn": "scikit-learn",
+        "PIL": "Pillow",
+        "cv2": "opencv-python",
     }
 
     optional_deps = {
-        'torch': 'torch',
-        'torchvision': 'torchvision',
-        'umap': 'umap-learn',
+        "torch": "torch",
+        "torchvision": "torchvision",
+        "umap": "umap-learn",
     }
 
     all_ok = True
@@ -119,22 +125,26 @@ def test_mock_pipeline():
     try:
         import numpy as np
         import pandas as pd
-        from src.explorationdata.pipeline.dimensionality_reducer import DimensionalityReducer
-        from src.explorationdata.pipeline.clustering_analyzer import ClusteringAnalyzer
+
+        from src.explorationdata.pipeline.clustering_analyzer import (
+            ClusteringAnalyzer,
+        )
+        from src.explorationdata.pipeline.dimensionality_reducer import (
+            DimensionalityReducer,
+        )
 
         # Create mock embeddings
         n_samples = 100
         n_features = 50
         mock_embeddings = np.random.randn(n_samples, n_features)
-        mock_labels = ['class_A'] * 50 + ['class_B'] * 50
+        mock_labels = ["class_A"] * 50 + ["class_B"] * 50
 
         print(f"  Created mock embeddings: {mock_embeddings.shape}")
 
         # Test PCA
         dim_reducer = DimensionalityReducer(random_state=42)
         pca_embeddings, pca_model = dim_reducer.fit_pca(
-            mock_embeddings,
-            n_components=10
+            mock_embeddings, n_components=10
         )
         print(f"  ✓ PCA completed: {pca_embeddings.shape}")
 
@@ -145,9 +155,7 @@ def test_mock_pipeline():
 
         # Test evaluation
         metrics = clustering.evaluate_clustering(
-            mock_labels,
-            kmeans_labels,
-            "KMeans"
+            mock_labels, kmeans_labels, "KMeans"
         )
         print(f"  ✓ Clustering evaluation: ARI={metrics['ari']:.3f}")
 
@@ -156,6 +164,7 @@ def test_mock_pipeline():
     except Exception as e:
         print(f"  ✗ Mock pipeline failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -165,10 +174,10 @@ def test_script_exists():
     print("\nTesting script files...")
 
     scripts = [
-        'src/explorationdata/run_eda_pipeline.py',
-        'src/explorationdata/generate_report.py',
-        'notebooks/Complete_EDA_COVID_Dataset.ipynb',
-        'src/explorationdata/README_EDA_PIPELINE.md'
+        "src/explorationdata/run_eda_pipeline.py",
+        "src/explorationdata/generate_report.py",
+        "notebooks/Complete_EDA_COVID_Dataset.ipynb",
+        "src/explorationdata/README_EDA_PIPELINE.md",
     ]
 
     all_exist = True
@@ -185,9 +194,9 @@ def test_script_exists():
 
 def main():
     """Run all tests"""
-    print("="*60)
+    print("=" * 60)
     print("EDA Pipeline Test Suite")
-    print("="*60)
+    print("=" * 60)
 
     results = []
 
@@ -197,9 +206,9 @@ def main():
     results.append(("Mock Pipeline", test_mock_pipeline()))
     results.append(("Script Files", test_script_exists()))
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Test Summary")
-    print("="*60)
+    print("=" * 60)
 
     all_passed = True
     for test_name, passed in results:
@@ -209,7 +218,7 @@ def main():
         if not passed:
             all_passed = False
 
-    print("="*60)
+    print("=" * 60)
 
     if all_passed:
         print("\n✓ All tests passed!")

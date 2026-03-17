@@ -10,15 +10,14 @@ Author: Data Pipeline Team
 Date: November 2025
 """
 
-from datetime import datetime
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import keras
 import numpy as np
 from sklearn.metrics import classification_report
-
-import keras
 
 # ImageDataGenerator is deprecated in Keras 3, use tf.keras version
 # pylint: disable=import-error,no-name-in-module
@@ -171,10 +170,10 @@ def evaluate_model(
         test_generator.reset()
         y_pred_probs = model.predict(test_generator, verbose=0)
         y_pred = np.argmax(y_pred_probs, axis=1)
-        
+
         # Extract y_true from generator
         # DirectoryIterator has .classes, NumpyArrayIterator doesn't
-        if hasattr(test_generator, 'classes'):
+        if hasattr(test_generator, "classes"):
             y_true = test_generator.classes
         else:
             # For NumpyArrayIterator, extract labels from batches
@@ -208,7 +207,11 @@ def evaluate_model(
         print("\n" + "=" * 70)
         print("CLASSIFICATION REPORT")
         print("=" * 70)
-        print(classification_report(y_true, y_pred, target_names=class_names, digits=4))
+        print(
+            classification_report(
+                y_true, y_pred, target_names=class_names, digits=4
+            )
+        )
 
     # Add predictions to results
     results["y_true"] = y_true
@@ -219,8 +222,6 @@ def evaluate_model(
         print("\n✅ Évaluation terminée!")
 
     return results
-
-
 
 
 # =============================================================================
@@ -281,7 +282,11 @@ def save_run_metadata(
         for key, value in config.items():
             if isinstance(value, Path):
                 config_serializable[key] = str(value)
-            elif isinstance(value, (list, tuple)) and value and isinstance(value[0], Path):
+            elif (
+                isinstance(value, (list, tuple))
+                and value
+                and isinstance(value[0], Path)
+            ):
                 config_serializable[key] = [str(v) for v in value]
             else:
                 config_serializable[key] = value
@@ -294,14 +299,19 @@ def save_run_metadata(
             "final_epoch": len(history.history["loss"]),
             "total_epochs_trained": len(history.history["loss"]),
             "final_metrics": {
-                key: float(values[-1]) for key, values in history.history.items()
+                key: float(values[-1])
+                for key, values in history.history.items()
             },
         }
 
     # Add evaluation metrics
     if metrics:
         metadata["evaluation_metrics"] = {
-            key: float(value) if isinstance(value, (int, float, np.number)) else str(value)
+            key: (
+                float(value)
+                if isinstance(value, (int, float, np.number))
+                else str(value)
+            )
             for key, value in metrics.items()
             if not isinstance(value, np.ndarray)  # Skip arrays
         }

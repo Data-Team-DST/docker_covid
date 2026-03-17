@@ -6,13 +6,14 @@ Transformateur pour appliquer des augmentations aléatoires aux images
 """
 
 from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 try:
-    import streamlit as st
     import plotly.graph_objects as go
+    import streamlit as st
     from plotly.subplots import make_subplots
     HAS_STREAMLIT = True
 except ImportError:
@@ -333,7 +334,7 @@ class ImageAugmenter(BaseTransform):
     def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """Visualise les effets de l'augmentation."""
         import matplotlib.pyplot as plt
-        
+
         # Extraire les images
         if isinstance(X_before, pd.DataFrame):
             images_before = [X_before['image_array'].iloc[i] for i in range(min(n_samples, len(X_before)))]

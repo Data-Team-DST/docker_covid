@@ -4,27 +4,26 @@ Clustering analysis with KMeans and DBSCAN
 
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Tuple
+from typing import Dict, Optional, Tuple
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans, DBSCAN
+import seaborn as sns
+from sklearn.cluster import DBSCAN, KMeans
 from sklearn.metrics import (
     adjusted_rand_score,
     normalized_mutual_info_score,
-    silhouette_score
+    silhouette_score,
 )
 from sklearn.metrics.pairwise import cosine_similarity
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 class ClusteringAnalyzer:
     """Perform clustering analysis on embeddings"""
 
     def __init__(
-        self,
-        random_state: int = 42,
-        logger: Optional[logging.Logger] = None
+        self, random_state: int = 42, logger: Optional[logging.Logger] = None
     ):
         """
         Initialize clustering analyzer
@@ -40,9 +39,7 @@ class ClusteringAnalyzer:
         self.dbscan_model = None
 
     def fit_kmeans(
-        self,
-        embeddings: np.ndarray,
-        n_clusters: int = 4
+        self, embeddings: np.ndarray, n_clusters: int = 4
     ) -> np.ndarray:
         """
         Fit KMeans clustering
@@ -54,14 +51,10 @@ class ClusteringAnalyzer:
         Returns:
             Cluster labels
         """
-        self.logger.info(
-            f"Fitting KMeans with {n_clusters} clusters..."
-        )
+        self.logger.info(f"Fitting KMeans with {n_clusters} clusters...")
 
         self.kmeans_model = KMeans(
-            n_clusters=n_clusters,
-            random_state=self.random_state,
-            n_init=10
+            n_clusters=n_clusters, random_state=self.random_state, n_init=10
         )
 
         labels = self.kmeans_model.fit_predict(embeddings)
@@ -76,10 +69,7 @@ class ClusteringAnalyzer:
         return labels
 
     def fit_dbscan(
-        self,
-        embeddings: np.ndarray,
-        eps: float = 0.5,
-        min_samples: int = 5
+        self, embeddings: np.ndarray, eps: float = 0.5, min_samples: int = 5
     ) -> np.ndarray:
         """
         Fit DBSCAN clustering
@@ -96,11 +86,7 @@ class ClusteringAnalyzer:
             f"Fitting DBSCAN (eps={eps}, min_samples={min_samples})..."
         )
 
-        self.dbscan_model = DBSCAN(
-            eps=eps,
-            min_samples=min_samples,
-            n_jobs=-1
-        )
+        self.dbscan_model = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1)
 
         labels = self.dbscan_model.fit_predict(embeddings)
 
@@ -117,7 +103,7 @@ class ClusteringAnalyzer:
         self,
         true_labels: np.ndarray,
         pred_labels: np.ndarray,
-        method_name: str = "clustering"
+        method_name: str = "clustering",
     ) -> Dict[str, float]:
         """
         Evaluate clustering against ground truth labels
@@ -146,16 +132,10 @@ class ClusteringAnalyzer:
 
         self.logger.info(f"{method_name} - ARI: {ari:.3f}, NMI: {nmi:.3f}")
 
-        return {
-            'method': method_name,
-            'ari': ari,
-            'nmi': nmi
-        }
+        return {"method": method_name, "ari": ari, "nmi": nmi}
 
     def compute_similarity_matrix(
-        self,
-        embeddings: np.ndarray,
-        sample_size: Optional[int] = 1000
+        self, embeddings: np.ndarray, sample_size: Optional[int] = 1000
     ) -> np.ndarray:
         """
         Compute cosine similarity matrix
@@ -173,9 +153,7 @@ class ClusteringAnalyzer:
             )
             rng = np.random.RandomState(self.random_state)
             indices = rng.choice(
-                len(embeddings),
-                size=sample_size,
-                replace=False
+                len(embeddings), size=sample_size, replace=False
             )
             embeddings_sample = embeddings[indices]
         else:
@@ -191,7 +169,7 @@ class ClusteringAnalyzer:
         similarity_matrix: np.ndarray,
         labels: Optional[list] = None,
         output_path: Path = None,
-        figsize: Tuple[int, int] = (10, 8)
+        figsize: Tuple[int, int] = (10, 8),
     ):
         """
         Plot similarity matrix as heatmap
@@ -207,23 +185,25 @@ class ClusteringAnalyzer:
         # If labels provided, sort by label
         if labels is not None:
             sorted_indices = np.argsort(labels)
-            similarity_matrix = similarity_matrix[sorted_indices][:, sorted_indices]
+            similarity_matrix = similarity_matrix[sorted_indices][
+                :, sorted_indices
+            ]
 
         sns.heatmap(
             similarity_matrix,
-            cmap='coolwarm',
+            cmap="coolwarm",
             center=0,
             square=True,
-            cbar_kws={'label': 'Cosine Similarity'},
+            cbar_kws={"label": "Cosine Similarity"},
             xticklabels=False,
-            yticklabels=False
+            yticklabels=False,
         )
 
-        plt.title('Image Similarity Matrix (Cosine)')
+        plt.title("Image Similarity Matrix (Cosine)")
         plt.tight_layout()
 
         if output_path:
-            plt.savefig(output_path, dpi=150, bbox_inches='tight')
+            plt.savefig(output_path, dpi=150, bbox_inches="tight")
             self.logger.info(f"Saved similarity heatmap to {output_path}")
         plt.close()
 
@@ -232,7 +212,7 @@ class ClusteringAnalyzer:
         embeddings: np.ndarray,
         labels: list,
         output_path: Path,
-        sample_per_class: int = 100
+        sample_per_class: int = 100,
     ):
         """
         Plot average inter-class similarity
@@ -256,9 +236,7 @@ class ClusteringAnalyzer:
             label_indices = [i for i, l in enumerate(labels) if l == label]
             if len(label_indices) > sample_per_class:
                 label_indices = rng.choice(
-                    label_indices,
-                    size=sample_per_class,
-                    replace=False
+                    label_indices, size=sample_per_class, replace=False
                 )
             sampled_embeddings.extend([embeddings[i] for i in label_indices])
             sampled_labels.extend([label] * len(label_indices))
@@ -284,17 +262,17 @@ class ClusteringAnalyzer:
         sns.heatmap(
             inter_class_sim,
             annot=True,
-            fmt='.3f',
-            cmap='coolwarm',
+            fmt=".3f",
+            cmap="coolwarm",
             xticklabels=unique_labels,
             yticklabels=unique_labels,
-            cbar_kws={'label': 'Average Cosine Similarity'}
+            cbar_kws={"label": "Average Cosine Similarity"},
         )
-        plt.title('Inter-Class Similarity Matrix')
-        plt.xlabel('Class')
-        plt.ylabel('Class')
+        plt.title("Inter-Class Similarity Matrix")
+        plt.xlabel("Class")
+        plt.ylabel("Class")
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close()
 
         self.logger.info(
@@ -307,7 +285,7 @@ class ClusteringAnalyzer:
         labels: list,
         kmeans_labels: np.ndarray,
         dbscan_labels: np.ndarray,
-        output_path: Path
+        output_path: Path,
     ):
         """
         Save clustering results to CSV
@@ -319,12 +297,14 @@ class ClusteringAnalyzer:
             dbscan_labels: DBSCAN cluster labels
             output_path: Output CSV path
         """
-        df = pd.DataFrame({
-            'filename': filenames,
-            'true_label': labels,
-            'kmeans_cluster': kmeans_labels,
-            'dbscan_cluster': dbscan_labels
-        })
+        df = pd.DataFrame(
+            {
+                "filename": filenames,
+                "true_label": labels,
+                "kmeans_cluster": kmeans_labels,
+                "dbscan_cluster": dbscan_labels,
+            }
+        )
 
         df.to_csv(output_path, index=False)
         self.logger.info(f"Saved cluster results to {output_path}")

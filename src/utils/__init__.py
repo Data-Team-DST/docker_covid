@@ -43,6 +43,9 @@ from .model_builders import (
     unfreeze_top_layers,
 )
 
+# Pipeline execution (Streamlit)
+from .pipeline_executor import StreamlitPipelineExecutor
+
 # Training & evaluation
 from .training_utils import (
     evaluate_model,
@@ -54,9 +57,6 @@ from .visualization_utils import (
     plot_confusion_matrix,
     plot_training_curves,
 )
-
-# Pipeline execution (Streamlit)
-from .pipeline_executor import StreamlitPipelineExecutor
 
 __all__ = [
     # Data

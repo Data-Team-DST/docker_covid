@@ -4,15 +4,17 @@ Advanced analysis: Grad-CAM, PCA reconstructions, and other visualizations
 
 import logging
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from PIL import Image
 
 try:
     import torch
     import torch.nn.functional as F
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -22,9 +24,7 @@ class AdvancedAnalyzer:
     """Perform advanced analysis and visualizations"""
 
     def __init__(
-        self,
-        random_state: int = 42,
-        logger: Optional[logging.Logger] = None
+        self, random_state: int = 42, logger: Optional[logging.Logger] = None
     ):
         """
         Initialize advanced analyzer
@@ -43,7 +43,7 @@ class AdvancedAnalyzer:
         original_images_df: pd.DataFrame,
         output_path: Path,
         n_components_list: List[int] = [5, 10, 20, 50],
-        n_samples: int = 4
+        n_samples: int = 4,
     ):
         """
         Visualize PCA reconstructions with different component counts
@@ -61,16 +61,14 @@ class AdvancedAnalyzer:
         # Sample images
         sampled_df = original_images_df.sample(
             n=min(n_samples, len(original_images_df)),
-            random_state=self.random_state
+            random_state=self.random_state,
         )
 
         n_rows = n_samples
         n_cols = len(n_components_list) + 1  # +1 for original
 
         fig, axes = plt.subplots(
-            n_rows,
-            n_cols,
-            figsize=(n_cols * 2, n_rows * 2)
+            n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2)
         )
 
         if n_rows == 1:
@@ -79,14 +77,14 @@ class AdvancedAnalyzer:
         for i, (idx, row) in enumerate(sampled_df.iterrows()):
             # Original image
             try:
-                img = Image.open(row['image_path']).convert('L')
+                img = Image.open(row["image_path"]).convert("L")
                 img_resized = img.resize((64, 64))
-                axes[i, 0].imshow(img_resized, cmap='gray')
-                axes[i, 0].set_title('Original')
-                axes[i, 0].axis('off')
+                axes[i, 0].imshow(img_resized, cmap="gray")
+                axes[i, 0].set_title("Original")
+                axes[i, 0].axis("off")
 
                 # Get embedding for this image
-                embedding = embeddings[idx:idx+1]
+                embedding = embeddings[idx : idx + 1]
 
                 # Transform to PCA space
                 pca_embedding = pca_model.transform(embedding)
@@ -103,31 +101,32 @@ class AdvancedAnalyzer:
                     # Reshape to image (approximate visualization)
                     # Note: This is just for visualization purposes
                     # The embedding space doesn't directly map to pixel space
-                    recon_vis = reconstructed[0][:64*64].reshape(64, 64)
-                    recon_vis = (recon_vis - recon_vis.min()) / (recon_vis.max() - recon_vis.min() + 1e-8)
+                    recon_vis = reconstructed[0][: 64 * 64].reshape(64, 64)
+                    recon_vis = (recon_vis - recon_vis.min()) / (
+                        recon_vis.max() - recon_vis.min() + 1e-8
+                    )
 
-                    axes[i, j+1].imshow(recon_vis, cmap='gray')
-                    axes[i, j+1].set_title(f'{n_comp} PC')
-                    axes[i, j+1].axis('off')
+                    axes[i, j + 1].imshow(recon_vis, cmap="gray")
+                    axes[i, j + 1].set_title(f"{n_comp} PC")
+                    axes[i, j + 1].axis("off")
 
             except Exception as e:
                 self.logger.warning(f"Error creating reconstruction: {e}")
                 for j in range(n_cols):
-                    axes[i, j].text(0.5, 0.5, 'Error', ha='center', va='center')
-                    axes[i, j].axis('off')
+                    axes[i, j].text(
+                        0.5, 0.5, "Error", ha="center", va="center"
+                    )
+                    axes[i, j].axis("off")
 
-        plt.suptitle('PCA Reconstruction Quality', fontsize=14, y=0.995)
+        plt.suptitle("PCA Reconstruction Quality", fontsize=14, y=0.995)
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close()
 
         self.logger.info(f"Saved PCA reconstructions to {output_path}")
 
     def visualize_pca_loadings(
-        self,
-        pca_model,
-        output_path: Path,
-        n_components: int = 10
+        self, pca_model, output_path: Path, n_components: int = 10
     ):
         """
         Visualize PCA component loadings
@@ -145,7 +144,9 @@ class AdvancedAnalyzer:
         n_cols = 5
         n_rows = (n_components + n_cols - 1) // n_cols
 
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2))
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2)
+        )
         axes = axes.flatten()
 
         for i in range(n_components):
@@ -158,22 +159,24 @@ class AdvancedAnalyzer:
             else:
                 # Take first size*size elements
                 size = int(np.sqrt(len(component)))
-                component_2d = component[:size*size].reshape(size, size)
+                component_2d = component[: size * size].reshape(size, size)
 
             # Normalize
-            component_2d = (component_2d - component_2d.min()) / (component_2d.max() - component_2d.min() + 1e-8)
+            component_2d = (component_2d - component_2d.min()) / (
+                component_2d.max() - component_2d.min() + 1e-8
+            )
 
-            axes[i].imshow(component_2d, cmap='seismic', aspect='auto')
-            axes[i].set_title(f'PC{i+1} ({var_explained[i]:.2%})', fontsize=8)
-            axes[i].axis('off')
+            axes[i].imshow(component_2d, cmap="seismic", aspect="auto")
+            axes[i].set_title(f"PC{i+1} ({var_explained[i]:.2%})", fontsize=8)
+            axes[i].axis("off")
 
         # Hide unused subplots
         for i in range(n_components, len(axes)):
-            axes[i].axis('off')
+            axes[i].axis("off")
 
-        plt.suptitle('PCA Principal Components (Loadings)', fontsize=14)
+        plt.suptitle("PCA Principal Components (Loadings)", fontsize=14)
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close()
 
         self.logger.info(f"Saved PCA loadings to {output_path}")
@@ -184,7 +187,7 @@ class AdvancedAnalyzer:
         cluster_labels: np.ndarray,
         embeddings: np.ndarray,
         output_path: Path,
-        n_per_cluster: int = 5
+        n_per_cluster: int = 5,
     ):
         """
         Show representative images for each cluster
@@ -200,7 +203,7 @@ class AdvancedAnalyzer:
 
         # Add cluster labels to dataframe
         df_clustered = df.copy()
-        df_clustered['cluster'] = cluster_labels
+        df_clustered["cluster"] = cluster_labels
 
         # Get unique clusters (excluding noise if DBSCAN)
         unique_clusters = sorted([c for c in set(cluster_labels) if c != -1])
@@ -213,14 +216,14 @@ class AdvancedAnalyzer:
         fig, axes = plt.subplots(
             n_clusters,
             n_per_cluster,
-            figsize=(n_per_cluster * 2, n_clusters * 2)
+            figsize=(n_per_cluster * 2, n_clusters * 2),
         )
 
         if n_clusters == 1:
             axes = axes.reshape(1, -1)
 
         for i, cluster_id in enumerate(unique_clusters):
-            cluster_df = df_clustered[df_clustered['cluster'] == cluster_id]
+            cluster_df = df_clustered[df_clustered["cluster"] == cluster_id]
             cluster_indices = cluster_df.index.tolist()
 
             if len(cluster_indices) == 0:
@@ -232,8 +235,7 @@ class AdvancedAnalyzer:
 
             # Find closest images to center
             distances = np.linalg.norm(
-                cluster_embeddings - cluster_center,
-                axis=1
+                cluster_embeddings - cluster_center, axis=1
             )
             closest_indices = np.argsort(distances)[:n_per_cluster]
 
@@ -244,25 +246,27 @@ class AdvancedAnalyzer:
                 row = cluster_df.iloc[idx]
 
                 try:
-                    img = Image.open(row['image_path'])
-                    axes[i, j].imshow(img, cmap='gray')
-                    axes[i, j].axis('off')
+                    img = Image.open(row["image_path"])
+                    axes[i, j].imshow(img, cmap="gray")
+                    axes[i, j].axis("off")
 
                     if j == 0:
                         axes[i, j].set_ylabel(
-                            f'Cluster {cluster_id}\n({len(cluster_df)} imgs)',
+                            f"Cluster {cluster_id}\n({len(cluster_df)} imgs)",
                             fontsize=9,
                             rotation=0,
-                            ha='right'
+                            ha="right",
                         )
                 except Exception as e:
                     self.logger.warning(f"Error loading image: {e}")
-                    axes[i, j].text(0.5, 0.5, 'Error', ha='center', va='center')
-                    axes[i, j].axis('off')
+                    axes[i, j].text(
+                        0.5, 0.5, "Error", ha="center", va="center"
+                    )
+                    axes[i, j].axis("off")
 
-        plt.suptitle('Cluster Representatives', fontsize=14, y=0.995)
+        plt.suptitle("Cluster Representatives", fontsize=14, y=0.995)
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close()
 
         self.logger.info(f"Saved cluster representatives to {output_path}")
@@ -273,7 +277,7 @@ class AdvancedAnalyzer:
         metric: str,
         output_path: Path,
         n_samples: int = 10,
-        mode: str = "both"
+        mode: str = "both",
     ):
         """
         Create montage of extreme samples based on a metric
@@ -285,9 +289,7 @@ class AdvancedAnalyzer:
             n_samples: Number of samples to show
             mode: 'high', 'low', or 'both'
         """
-        self.logger.info(
-            f"Creating extreme samples montage for {metric}..."
-        )
+        self.logger.info(f"Creating extreme samples montage for {metric}...")
 
         if metric not in df.columns:
             self.logger.warning(f"Metric {metric} not found in dataframe")
@@ -298,10 +300,9 @@ class AdvancedAnalyzer:
 
         if mode == "both":
             n_each = n_samples // 2
-            sampled = pd.concat([
-                df_sorted.head(n_each),
-                df_sorted.tail(n_samples - n_each)
-            ])
+            sampled = pd.concat(
+                [df_sorted.head(n_each), df_sorted.tail(n_samples - n_each)]
+            )
             title_suffix = "Lowest and Highest"
         elif mode == "low":
             sampled = df_sorted.head(n_samples)
@@ -313,33 +314,31 @@ class AdvancedAnalyzer:
         n_cols = 5
         n_rows = (len(sampled) + n_cols - 1) // n_cols
 
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2))
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2)
+        )
         axes = axes.flatten()
 
         for i, (_, row) in enumerate(sampled.iterrows()):
             try:
-                img = Image.open(row['image_path'])
-                axes[i].imshow(img, cmap='gray')
+                img = Image.open(row["image_path"])
+                axes[i].imshow(img, cmap="gray")
                 axes[i].set_title(
-                    f'{row["class"]}\n{metric}={row[metric]:.1f}',
-                    fontsize=8
+                    f'{row["class"]}\n{metric}={row[metric]:.1f}', fontsize=8
                 )
-                axes[i].axis('off')
+                axes[i].axis("off")
             except Exception as e:
                 self.logger.warning(f"Error loading image: {e}")
-                axes[i].text(0.5, 0.5, 'Error', ha='center', va='center')
-                axes[i].axis('off')
+                axes[i].text(0.5, 0.5, "Error", ha="center", va="center")
+                axes[i].axis("off")
 
         # Hide unused subplots
         for i in range(len(sampled), len(axes)):
-            axes[i].axis('off')
+            axes[i].axis("off")
 
-        plt.suptitle(
-            f'Extreme Samples - {title_suffix} {metric}',
-            fontsize=14
-        )
+        plt.suptitle(f"Extreme Samples - {title_suffix} {metric}", fontsize=14)
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close()
 
         self.logger.info(f"Saved extreme samples montage to {output_path}")

@@ -60,7 +60,9 @@ class GradCAM:
                     if "conv" in sublayer.name.lower():
                         return sublayer.name
 
-        raise ValueError("Aucune couche convolutionnelle trouvée dans le modèle")
+        raise ValueError(
+            "Aucune couche convolutionnelle trouvée dans le modèle"
+        )
 
     def _build_grad_model(self) -> keras.Model:
         """Construit le modèle de gradient."""
@@ -82,7 +84,9 @@ class GradCAM:
                         continue
 
         if conv_layer is None:
-            raise ValueError(f"Couche '{self.layer_name}' non trouvée dans le modèle")
+            raise ValueError(
+                f"Couche '{self.layer_name}' non trouvée dans le modèle"
+            )
 
         # ✅ CORRECTION: Gérer correctement les modèles Sequential
         if isinstance(self.model, keras.Sequential):
@@ -95,7 +99,9 @@ class GradCAM:
                 hasattr(first_layer, "input_shape")
                 and first_layer.input_shape is not None
             ):
-                input_shape = first_layer.input_shape[1:]  # Enlever batch dimension
+                input_shape = first_layer.input_shape[
+                    1:
+                ]  # Enlever batch dimension
             elif hasattr(first_layer, "batch_input_shape"):
                 input_shape = first_layer.batch_input_shape[1:]
             else:
@@ -161,11 +167,15 @@ class GradCAM:
                 model_input = self.model.input
 
             return keras.Model(
-                inputs=model_input, outputs=[conv_layer.output, self.model.output]
+                inputs=model_input,
+                outputs=[conv_layer.output, self.model.output],
             )
 
     def compute_heatmap(
-        self, image: np.ndarray, class_idx: Optional[int] = None, normalize: bool = True
+        self,
+        image: np.ndarray,
+        class_idx: Optional[int] = None,
+        normalize: bool = True,
     ) -> np.ndarray:
         """
         Calcule la heatmap Grad-CAM pour une image.
@@ -268,7 +278,10 @@ class GradCAM:
 
 
 def overlay_heatmap(
-    image: np.ndarray, heatmap: np.ndarray, alpha: float = 0.4, colormap: str = "jet"
+    image: np.ndarray,
+    heatmap: np.ndarray,
+    alpha: float = 0.4,
+    colormap: str = "jet",
 ) -> np.ndarray:
     """
     Superpose la heatmap sur l'image originale.
@@ -284,7 +297,9 @@ def overlay_heatmap(
     """
     # Redimensionner la heatmap à la taille de l'image
     heatmap_resized = (
-        tf.image.resize(heatmap[..., np.newaxis], (image.shape[0], image.shape[1]))
+        tf.image.resize(
+            heatmap[..., np.newaxis], (image.shape[0], image.shape[1])
+        )
         .numpy()
         .squeeze()
     )
@@ -466,7 +481,9 @@ def compare_layers(
     for i, layer_name in enumerate(layer_names):
         gradcam = GradCAM(model, layer_name=layer_name)
         heatmap = gradcam.compute_heatmap(image, class_idx=class_idx)
-        superimposed = overlay_heatmap(image, heatmap, alpha=0.4, colormap=colormap)
+        superimposed = overlay_heatmap(
+            image, heatmap, alpha=0.4, colormap=colormap
+        )
 
         axes[i].imshow(superimposed)
         axes[i].set_title(f"{layer_name}", fontsize=9, weight="bold")
@@ -476,7 +493,9 @@ def compare_layers(
     for i in range(n_layers, len(axes)):
         axes[i].axis("off")
 
-    plt.suptitle("Grad-CAM - Comparaison des Couches", fontsize=13, weight="bold")
+    plt.suptitle(
+        "Grad-CAM - Comparaison des Couches", fontsize=13, weight="bold"
+    )
     plt.tight_layout()
 
     if save_path:

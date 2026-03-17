@@ -5,14 +5,15 @@ Transformateur pour convertir des images couleur en niveaux de gris.
 """
 
 from typing import Any
+
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from PIL import Image
+from tqdm import tqdm
 
 try:
-    import streamlit as st
     import plotly.graph_objects as go
+    import streamlit as st
     from plotly.subplots import make_subplots
     HAS_STREAMLIT = True
 except ImportError:

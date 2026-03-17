@@ -20,7 +20,9 @@ try:
     SHAP_AVAILABLE = True
 except ImportError:
     SHAP_AVAILABLE = False
-    warnings.warn("SHAP non installé. Installez avec: pip install shap", ImportWarning)
+    warnings.warn(
+        "SHAP non installé. Installez avec: pip install shap", ImportWarning
+    )
 
 
 class SHAPExplainer:
@@ -41,9 +43,13 @@ class SHAPExplainer:
         >>> explainer.visualize_image_plot(X_test[0], shap_values[0], class_idx=0)
     """
 
-    def __init__(self, model, background_data: np.ndarray, layer: Optional[int] = None):
+    def __init__(
+        self, model, background_data: np.ndarray, layer: Optional[int] = None
+    ):
         if not SHAP_AVAILABLE:
-            raise ImportError("SHAP non installé. Installez avec: pip install shap")
+            raise ImportError(
+                "SHAP non installé. Installez avec: pip install shap"
+            )
 
         self.model = model
         self.background_data = background_data
@@ -52,7 +58,9 @@ class SHAPExplainer:
         # Créer l'explainer DeepExplainer
         self.explainer = shap.DeepExplainer(model, background_data)
 
-    def explain(self, images: np.ndarray, check_additivity: bool = False) -> np.ndarray:
+    def explain(
+        self, images: np.ndarray, check_additivity: bool = False
+    ) -> np.ndarray:
         """
         Calcule les valeurs SHAP pour un batch d'images.
 
@@ -107,7 +115,9 @@ class SHAPExplainer:
         shap_mean = np.mean(np.abs(shap_values[class_idx]), axis=-1)
 
         im1 = axes[1].imshow(shap_mean, cmap="Reds")
-        axes[1].set_title("SHAP Values\n(Magnitude)", fontsize=11, weight="bold")
+        axes[1].set_title(
+            "SHAP Values\n(Magnitude)", fontsize=11, weight="bold"
+        )
         axes[1].axis("off")
         plt.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
 
@@ -197,7 +207,9 @@ class SHAPExplainer:
         axes[2].set_title("Overlay", fontsize=11, weight="bold")
         axes[2].axis("off")
 
-        plt.suptitle(f"SHAP Heatmap - Classe {class_idx}", fontsize=12, weight="bold")
+        plt.suptitle(
+            f"SHAP Heatmap - Classe {class_idx}", fontsize=12, weight="bold"
+        )
         plt.tight_layout()
 
         if save_path:
@@ -240,7 +252,9 @@ class SHAPExplainer:
 
         # Créer le plot
         fig = plt.figure(figsize=figsize)
-        shap.summary_plot(shap_flat, images_flat, max_display=max_display, show=False)
+        shap.summary_plot(
+            shap_flat, images_flat, max_display=max_display, show=False
+        )
 
         plt.title("SHAP Summary Plot", fontsize=12, weight="bold", pad=20)
         plt.tight_layout()
@@ -309,7 +323,9 @@ class SHAPExplainer:
             Figure matplotlib
         """
         # Aplatir les shap values
-        shap_flat = shap_values[class_idx].reshape(len(shap_values[class_idx]), -1)
+        shap_flat = shap_values[class_idx].reshape(
+            len(shap_values[class_idx]), -1
+        )
 
         # Expected value
         base_value = self.explainer.expected_value[class_idx]
@@ -431,7 +447,9 @@ class SHAPExplainer:
             superimposed = heatmap_colored * 0.4 + img_display * 0.6
 
             axes[i].imshow(superimposed)
-            axes[i].set_title(f"{class_names[class_idx]}", fontsize=10, weight="bold")
+            axes[i].set_title(
+                f"{class_names[class_idx]}", fontsize=10, weight="bold"
+            )
             axes[i].axis("off")
 
         # Masquer les axes vides
@@ -488,7 +506,11 @@ def quick_shap_explanation(
         else f"Classe {class_idx}"
     )
     fig = explainer.visualize_image_plot(
-        image, shap_values[0], class_idx, class_name=class_name, figsize=figsize
+        image,
+        shap_values[0],
+        class_idx,
+        class_name=class_name,
+        figsize=figsize,
     )
 
     return fig

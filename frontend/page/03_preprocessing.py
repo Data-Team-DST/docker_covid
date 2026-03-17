@@ -15,7 +15,6 @@ import streamlit as st
 #   par des descriptions projet réelles.
 
 
-
 def run():
 
     # colored_header(

@@ -20,46 +20,43 @@ def main():
     )
 
     parser.add_argument(
-        '--base-path',
+        "--base-path",
         type=str,
         required=True,
-        help='Path to COVID-19_Radiography_Dataset/COVID-19_Radiography_Dataset'
+        help="Path to COVID-19_Radiography_Dataset/COVID-19_Radiography_Dataset",
     )
 
     parser.add_argument(
-        '--metadata-path',
+        "--metadata-path",
         type=str,
         required=True,
-        help='Path to metadata directory'
+        help="Path to metadata directory",
     )
 
     parser.add_argument(
-        '--output-dir',
+        "--output-dir",
         type=str,
-        default='outputs',
-        help='Output directory for results'
+        default="outputs",
+        help="Output directory for results",
     )
 
     parser.add_argument(
-        '--seed',
-        type=int,
-        default=42,
-        help='Random seed for reproducibility'
+        "--seed", type=int, default=42, help="Random seed for reproducibility"
     )
 
     parser.add_argument(
-        '--device',
+        "--device",
         type=str,
         default=None,
-        choices=['cuda', 'cpu', None],
-        help='Device to use for deep learning (auto-detect if not specified)'
+        choices=["cuda", "cpu", None],
+        help="Device to use for deep learning (auto-detect if not specified)",
     )
 
     parser.add_argument(
-        '--max-images-per-class',
+        "--max-images-per-class",
         type=int,
         default=None,
-        help='Maximum number of images per class (None = all)'
+        help="Maximum number of images per class (None = all)",
     )
 
     args = parser.parse_args()
@@ -84,23 +81,23 @@ def main():
         output_dir=args.output_dir,
         seed=args.seed,
         device=args.device,
-        max_images_per_class=args.max_images_per_class
+        max_images_per_class=args.max_images_per_class,
     )
 
     print("Running full pipeline...")
     success = pipeline.run_full_pipeline()
 
     if success:
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Pipeline completed successfully!")
         print(f"Results saved to: {pipeline.output_dir}")
-        print("="*60)
+        print("=" * 60)
         sys.exit(0)
     else:
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Pipeline failed. Check logs for details.")
         print(f"Partial results may be in: {pipeline.output_dir}")
-        print("="*60)
+        print("=" * 60)
         sys.exit(1)
 
 

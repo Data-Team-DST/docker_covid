@@ -5,16 +5,17 @@ Contient ImagePathLoader et TupleToDataFrame pour charger et convertir
 les chemins d'images et leurs métadonnées.
 """
 
-import os
 import glob
+import os
 from typing import Any, Optional, Tuple
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 try:
-    import streamlit as st
     import plotly.express as px
+    import streamlit as st
     HAS_STREAMLIT = True
 except ImportError:
     HAS_STREAMLIT = False

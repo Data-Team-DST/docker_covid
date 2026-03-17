@@ -70,7 +70,11 @@ def build_custom_cnn(
     # Bloc 1: 32 filtres
     model.add(
         layers.Conv2D(
-            32, (3, 3), activation="relu", padding="same", input_shape=input_shape
+            32,
+            (3, 3),
+            activation="relu",
+            padding="same",
+            input_shape=input_shape,
         )
     )
     model.add(layers.BatchNormalization())
@@ -114,12 +118,16 @@ def build_custom_cnn(
     # Flatten et couches denses
     model.add(layers.Flatten())
     model.add(
-        layers.Dense(512, activation="relu", kernel_regularizer=regularizers.l2(0.001))
+        layers.Dense(
+            512, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
     )
     model.add(layers.BatchNormalization())
     model.add(layers.Dropout(0.5))
     model.add(
-        layers.Dense(256, activation="relu", kernel_regularizer=regularizers.l2(0.001))
+        layers.Dense(
+            256, activation="relu", kernel_regularizer=regularizers.l2(0.001)
+        )
     )
     model.add(layers.BatchNormalization())
     model.add(layers.Dropout(0.5))
@@ -219,7 +227,9 @@ def build_transfer_learning_model(
     )
 
     if verbose:
-        trainable_params = sum(tf.size(w).numpy() for w in model.trainable_weights)
+        trainable_params = sum(
+            tf.size(w).numpy() for w in model.trainable_weights
+        )
         total_params = sum(tf.size(w).numpy() for w in model.weights)
 
         print("\n✅ Modèle créé")
@@ -268,8 +278,12 @@ def unfreeze_top_layers(
         layer.trainable = False
 
     if verbose:
-        trainable_count = sum(1 for layer in base_model.layers if layer.trainable)
-        frozen_count = sum(1 for layer in base_model.layers if not layer.trainable)
+        trainable_count = sum(
+            1 for layer in base_model.layers if layer.trainable
+        )
+        frozen_count = sum(
+            1 for layer in base_model.layers if not layer.trainable
+        )
 
         print("\n📊 Base model layers:")
         print(f"   Trainable: {trainable_count}")
@@ -287,7 +301,9 @@ def unfreeze_top_layers(
     )
 
     if verbose:
-        trainable_params = sum(tf.size(w).numpy() for w in model.trainable_weights)
+        trainable_params = sum(
+            tf.size(w).numpy() for w in model.trainable_weights
+        )
         total_params = sum(tf.size(w).numpy() for w in model.weights)
 
         print("\n📊 Paramètres après unfreeze:")
@@ -398,7 +414,9 @@ def create_callbacks(
     if verbose:
         print("\n✅ Callbacks configurés:")
         print(f"   • EarlyStopping (patience={patience_early_stop})")
-        print(f"   • ReduceLROnPlateau (factor=0.5, patience={patience_reduce_lr})")
+        print(
+            f"   • ReduceLROnPlateau (factor=0.5, patience={patience_reduce_lr})"
+        )
         print(f"   • ModelCheckpoint (monitor={monitor})")
 
     return callbacks
