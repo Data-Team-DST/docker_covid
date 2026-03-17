@@ -1,4 +1,5 @@
 """Chargement du modèle Keras — singleton thread-safe"""
+
 import logging
 from pathlib import Path
 
@@ -16,18 +17,24 @@ class ModelLoader:
 
     def load(self, model_path: str = None):
         from app.config import settings
+
         path = Path(model_path or settings.model_path)
 
         if not path.exists():
             logger.warning(f"Fichier modèle introuvable : {path}")
-            logger.warning("→ Mets ton fichier .keras dans data/models/ et redémarre")
+            logger.warning(
+                "→ Mets ton fichier .keras dans data/models/ et redémarre"
+            )
             return
 
         try:
             import tensorflow as tf
+
             self._model = tf.keras.models.load_model(str(path))
             self.is_loaded = True
-            logger.info(f"Modèle chargé : {path} ({path.stat().st_size / 1e6:.1f} Mo)")
+            logger.info(
+                f"Modèle chargé : {path} ({path.stat().st_size / 1e6:.1f} Mo)"
+            )
         except Exception as e:
             logger.error(f"Échec chargement modèle : {e}")
 

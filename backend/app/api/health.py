@@ -1,9 +1,8 @@
 """Endpoint /health — DS_COVID Backend"""
 
-from fastapi import APIRouter
-
 from app.config import settings
 from app.models.loader import model_loader
+from fastapi import APIRouter
 
 router = APIRouter()
 
