@@ -43,10 +43,10 @@ coverage.xml
 _zip_extracted/
 *.zip
 
-# Dossiers générés localement
-models/
-outputs/
-tmp/
+# Dossiers générés localement (racine uniquement)
+/models/
+/outputs/
+/tmp/
 
 # Claude Code (mémoire IA locale)
 .claude/
