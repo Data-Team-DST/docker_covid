@@ -1,1 +1,56 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+backend/.venv/
+*.egg-info/
+
+# Logs locaux
+tmp/logs/
+tmp/quality/
+*.pid
+
+# Env
 .env
+
+# Data & modèles (versionnés via DVC en Phase 2)
+data/raw/
+data/processed/
+data/models/*.keras
+data/models/*.h5
+data/models/*.pkl
+
+# DVC
+.dvc/cache/
+.dvc/tmp/
+.dvc/config.local
+
+# Notebooks
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Zip temporaires
+_zip_extracted/
+*.zip
+
+# Dossiers générés localement (racine uniquement)
+/models/
+/outputs/
+/tmp/
+
+# Claude Code (mémoire IA locale)
+.claude/
+
+# Fichiers de travail locaux
+plan_de_base.txt
+*.docx

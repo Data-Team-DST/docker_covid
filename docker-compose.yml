@@ -1,5 +1,29 @@
 services:
 
+  # ── Phase 1 : API d'inférence ────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: ds_covid_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data:ro          # données + modèle en read-only
+      - ./backend/app:/app/app       # hot-reload en dev
+    env_file:
+      - .env
+    environment:
+      - API_ENV=development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Phase 2+ : stack MLOps complète ─────────────────────────────────────
   trainer:
     build:
       context: .
@@ -71,15 +95,18 @@ services:
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
 
+      BACKEND_URL: http://ds_covid_backend:8000
+
     depends_on:
       - mlflow
       - minio
+      - backend
 
     ports:
       - "${STREAMLIT_PORT}:8501"
 
     command: >
-      streamlit run app/streamlit_app.py
+      streamlit run frontend/streamlit_app.py
       --server.address=0.0.0.0
       --server.port=8501
 
@@ -88,7 +115,6 @@ services:
     build:
       context: .
       dockerfile: docker/mlflow/Dockerfile
-    image: ${MLFLOW_IMAGE}
     container_name: ${MLFLOW_CONTAINER_NAME}
 
     depends_on:

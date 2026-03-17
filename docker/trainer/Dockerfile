@@ -10,4 +10,3 @@ RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install -r /tmp/trainer.txt
 
 COPY src/ /workspace/src/
-COPY app/ /workspace/app/
