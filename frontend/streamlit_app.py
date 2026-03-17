@@ -1,7 +1,8 @@
 # streamlit_app.py — version UX/visuelle ultime, stable et immersive
-import streamlit as st
 import importlib.util
 from pathlib import Path
+
+import streamlit as st
 
 # --- Page config (doit être le PREMIER appel Streamlit, avant tout import de pages) ---
 st.set_page_config(page_title="Projet DS COVID", layout="wide", page_icon="🧪")
@@ -42,7 +43,8 @@ if _import_errors:
     st.stop()
 
 # --- CSS sombre + UX/transitions ---
-st.markdown("""
+st.markdown(
+    """
 <style>
 html, body, [class*="css"] {
     font-family: "Roboto", "Montserrat", sans-serif;
@@ -122,7 +124,9 @@ html, body, [class*="css"] {
     100%{transform: scale(1.2);}
 }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # --- Navigation onglets ---
 _nav_labels = [
@@ -139,7 +143,9 @@ _nav_labels = [
 _badges_emojis = ["🔹", "🟢", "🔴", "🟡", "🟣", "🟠", "🔵", "⚡", "⭐", "🔬"]
 
 # Onglets avec badges emoji (sécurisé)
-_nav_labels_with_badges = [f"{label} {_badges_emojis[i]}" for i, label in enumerate(_nav_labels)]
+_nav_labels_with_badges = [
+    f"{label} {_badges_emojis[i]}" for i, label in enumerate(_nav_labels)
+]
 
 # Création onglets
 tabs = st.tabs(_nav_labels_with_badges)
@@ -163,7 +169,7 @@ for idx, tab in enumerate(tabs):
         gradient = _gradients[idx % len(_gradients)]  # sécurité si mismatch
         st.markdown(
             f"<div class='hero-header' style='background:{gradient}'>{_nav_labels[idx]}</div>",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
         # Exécution du module
@@ -171,11 +177,11 @@ for idx, tab in enumerate(tabs):
             mod.run()
             st.markdown(
                 f"<div style='font-size:11px;color:#98a1b3;margin-top:6px;'>Page chargée : `{fname}` — run() OK.</div>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
         except Exception as e:
             st.error(f"Erreur `run()` dans `{fname}` : {e}")
             st.markdown(
                 "<div style='font-size:12px;color:#d88;'>Vérifiez la fonction run() dans le module.</div>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )

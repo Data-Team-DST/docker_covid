@@ -1,4 +1,5 @@
 """Point d'entrée FastAPI — DS_COVID ML Backend"""
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,12 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
 from app.api.predict import router as predict_router
-from app.models.loader import model_loader
 from app.config import settings
+from app.models.loader import model_loader
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
 

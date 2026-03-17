@@ -1,7 +1,11 @@
 # 03_preprocessing.py
 
+import os
+
+# Imports système
+from pathlib import Path
+
 import streamlit as st
-from streamlit_extras.colored_header import colored_header
 
 # Structure comments:
 # - Expose only run().
@@ -10,11 +14,6 @@ from streamlit_extras.colored_header import colored_header
 # - Tous les blocs sont des placeholders à remplacer
 #   par des descriptions projet réelles.
 
-# Imports système
-import subprocess
-import os
-import sys
-from pathlib import Path
 
 
 def run():
@@ -35,26 +34,12 @@ def run():
     # Ajouter /page/images/ au chemin global
     chemin_global = os.path.join(chemin_global, "page", "images/")
 
-    p4 = rf"{chemin_global}distri_desquilibre.PNG"
-    image_4 = Path(p4).relative_to(Path.cwd())
-
     p5 = rf"{chemin_global}config_dataset.PNG"
-    image_5 = Path(p5).relative_to(Path.cwd())
-
     p6 = rf"{chemin_global}config_wsl.PNG"
-    image_6 = Path(p6).relative_to(Path.cwd())
-
     p7 = rf"{chemin_global}strategie_reequilibrage.PNG"
-    image_7 = Path(p7).relative_to(Path.cwd())
-
     p8 = rf"{chemin_global}split_stratifie.PNG"
-    image_8 = Path(p8).relative_to(Path.cwd())
-
     p9 = rf"{chemin_global}config_data_augmentation.PNG"
-    image_9 = Path(p9).relative_to(Path.cwd())
-
     p10 = rf"{chemin_global}visu_augmentation.PNG"
-    image_10 = Path(p10).relative_to(Path.cwd())
 
     Config_container = st.container(border=True)
     with Config_container:
@@ -135,7 +120,9 @@ def run():
             with sub_col_2:
                 st.image(str(p2), caption="Après application du masque")
 
-            st.info("Quoi ? Application d’un masque pour isoler la région d’intérêt.")
+            st.info(
+                "Quoi ? Application d’un masque pour isoler la région d’intérêt."
+            )
             st.info(
                 "Pourquoi ? Réduire le bruit et améliorer la qualité des données "
                 "en se concentrant sur les zones pertinentes."

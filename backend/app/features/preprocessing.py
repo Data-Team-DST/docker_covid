@@ -1,4 +1,5 @@
 """Preprocessing des images — identique à ce qui a été utilisé à l'entraînement"""
+
 import io
 import logging
 
@@ -8,7 +9,9 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 
-def preprocess_image(image_bytes: bytes, img_size: tuple[int, int] = (224, 224)) -> np.ndarray:
+def preprocess_image(
+    image_bytes: bytes, img_size: tuple[int, int] = (224, 224)
+) -> np.ndarray:
     """
     Prépare une image brute pour l'inférence.
     Pipeline : bytes → PIL → resize → RGB → normalize [0,1] → batch dim

@@ -1,13 +1,14 @@
 """Endpoint /predict — DS_COVID Backend"""
+
 import logging
 import time
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from app.models.loader import model_loader
-from app.features.preprocessing import preprocess_image
-from app.schemas.response import PredictionResponse
 from app.config import settings
+from app.features.preprocessing import preprocess_image
+from app.models.loader import model_loader
+from app.schemas.response import PredictionResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -24,11 +25,13 @@ async def predict(file: UploadFile = File(...)):
     if not model_loader.is_loaded:
         raise HTTPException(
             status_code=503,
-            detail="Modèle non disponible — vérifier que data/models/ contient le fichier .keras"
+            detail="Modèle non disponible — vérifier que data/models/ contient le fichier .keras",
         )
 
     if file.content_type not in ("image/jpeg", "image/png"):
-        raise HTTPException(status_code=400, detail="Format accepté : JPEG ou PNG uniquement")
+        raise HTTPException(
+            status_code=400, detail="Format accepté : JPEG ou PNG uniquement"
+        )
 
     try:
         t0 = time.time()
@@ -41,9 +44,14 @@ async def predict(file: UploadFile = File(...)):
         predicted_class = settings.class_names[predicted_idx]
         confidence = float(predictions[predicted_idx])
 
-        scores = {cls: float(predictions[i]) for i, cls in enumerate(settings.class_names)}
+        scores = {
+            cls: float(predictions[i])
+            for i, cls in enumerate(settings.class_names)
+        }
 
-        logger.info(f"Prédiction : {predicted_class} ({confidence:.1%}) | {latency_ms}ms")
+        logger.info(
+            f"Prédiction : {predicted_class} ({confidence:.1%}) | {latency_ms}ms"
+        )
 
         return PredictionResponse(
             predicted_class=predicted_class,
@@ -54,4 +62,6 @@ async def predict(file: UploadFile = File(...)):
 
     except Exception as e:
         logger.error(f"Erreur prédiction : {e}")
-        raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur interne : {str(e)}"
+        ) from e

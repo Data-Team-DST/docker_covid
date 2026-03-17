@@ -2,11 +2,12 @@
 
 import streamlit as st
 
+
 def run():
 
-    
     try:
-        from streamlit_extras.colored_header import colored_header  
+        from streamlit_extras.colored_header import colored_header
+
         # Header
         colored_header(
             label="Conclusion critique et perspectives",
@@ -14,11 +15,11 @@ def run():
                 "Synthèse finale : enseignements, limites méthodologiques, perspectives réalistes "
                 "et avertissements éthiques."
             ),
-            color_name="blue-70"
+            color_name="blue-70",
         )
     except Exception as e:
         st.error(f"Erreur dans colored_header: {e}")
-    
+
     st.divider()
 
     # 1. Positionnement
@@ -73,7 +74,9 @@ def run():
         "| Sensibilité acquisition | Tests robustes, contrôle des préprocesseurs |\n"
         "| Usage clinique | Ne pas utiliser comme outil de diagnostic définitif|"
     )
-    st.warning("→ Ce projet n’est **pas destiné à un usage clinique** en l'état (disclaimer éthique).")
+    st.warning(
+        "→ Ce projet n’est **pas destiné à un usage clinique** en l'état (disclaimer éthique)."
+    )
     st.divider()
 
     # 6. Perspectives et axes d’amélioration
@@ -83,10 +86,8 @@ def run():
         "- Moyen terme : embeddings profonds hors ligne, analyses de similarité, versionnage des données\n"
         "- Long terme : validation multi-sources, explicabilité, pipeline MLOps\n"
         "- Futur : intégration de métadonnées cliniques et explorations autres modèles"
-        
     )
     st.divider()
-
 
 
 if __name__ == "__main__":

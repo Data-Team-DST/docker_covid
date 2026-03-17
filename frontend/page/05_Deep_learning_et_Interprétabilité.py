@@ -3,11 +3,11 @@
 # - Palette: navy/dark background, high-contrast highlights; sans-serif font.
 # - File status: deep-dive template for best model — interpretability, error analysis, subgroup performance.
 
+import os
+from pathlib import Path
+
 import streamlit as st
 from streamlit_extras.colored_header import colored_header
-from pathlib import Path
-import os
-
 
 
 def run():
@@ -15,7 +15,7 @@ def run():
     colored_header(
         label="Deep learning et interprétabilité",
         description="",
-        color_name="blue-70"
+        color_name="blue-70",
     )
     st.divider()
 
@@ -26,13 +26,17 @@ def run():
 
     chemin_absolu = rf"{chemin_global}/Inceptionv3.png"
     image_path = Path(chemin_absolu).relative_to(Path.cwd())
-    st.image(str(image_path), caption="Schéma explicatif", use_container_width=True)
+    st.image(
+        str(image_path), caption="Schéma explicatif", use_container_width=True
+    )
 
     st.markdown("**Courbes de loss et d’accuracy**")
 
     chemin_absolu = rf"{chemin_global}/courbe loss.png"
     image_path = Path(chemin_absolu).relative_to(Path.cwd())
-    st.image(str(image_path), caption="Courbes de loss et d’accuracy", width=500)
+    st.image(
+        str(image_path), caption="Courbes de loss et d’accuracy", width=500
+    )
 
     st.markdown("**Matrice de confusion**")
 
@@ -67,7 +71,7 @@ def run():
     st.image(
         str(image_path_3),
         caption="Résultats obtenus avec la méthode LIME",
-        use_container_width=True
+        use_container_width=True,
     )
 
     chemin_absolu_4 = rf"{chemin_global}/lime2.png"
@@ -75,7 +79,7 @@ def run():
     st.image(
         str(image_path_4),
         caption="Résultats obtenus avec la méthode LIME",
-        use_container_width=True
+        use_container_width=True,
     )
 
 

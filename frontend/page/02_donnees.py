@@ -1,17 +1,16 @@
 # 02_donnees.py — version améliorée : UI harmonisée, preview, ZIP, robuste
 
-from pathlib import Path
-from typing import Optional, List, Dict
-import streamlit as st
-from streamlit_extras.colored_header import colored_header
-from PIL import Image
-import numpy as np
-import pandas as pd
 import random
-import plotly.express as px
+from pathlib import Path
 
 # KaggleHub pour datasets publics
 import kagglehub
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+from PIL import Image
+from streamlit_extras.colored_header import colored_header
 
 # ---------------- CONFIG ----------------
 DATASET_DIR = Path("dataset")
@@ -50,16 +49,17 @@ _CSS = """
 </style>
 """
 
+
 def _render_section(title: str, body: str):
     st.markdown(
         f"<div class='section-card'><div class='label'>{title}</div><div>{body}</div></div>",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
 
 # ---------------- Helpers ----------------
 @st.cache_resource
-def get_kaggle_dataset_path(dataset_slug: str) -> Optional[Path]:
+def get_kaggle_dataset_path(dataset_slug: str) -> Path | None:
     if kagglehub is None:
         return None
     try:
@@ -87,6 +87,7 @@ def looks_like_images(p: Path) -> bool:
 # UTILITAIRES - CHARGEMENT DATASET
 # ============================================================================
 
+
 def _is_image_file(p: Path) -> bool:
     """Vérifie si un fichier est une image."""
     return p.is_file() and p.suffix.lower() in IMG_EXTS
@@ -96,7 +97,8 @@ def _is_image_file(p: Path) -> bool:
 # UTILITAIRES - MÉTRIQUES ET ÉCHANTILLONNAGE
 # ============================================================================
 
-def compute_image_metrics(img: Image.Image) -> Dict:
+
+def compute_image_metrics(img: Image.Image) -> dict:
     """Calcule la luminosité, le contraste et l'entropie."""
     arr = np.array(img.convert("RGB"), dtype=np.float32)
     r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
@@ -117,7 +119,7 @@ def compute_image_metrics(img: Image.Image) -> Dict:
     }
 
 
-def mask_coverage(mask_path: Path) -> Optional[float]:
+def mask_coverage(mask_path: Path) -> float | None:
     """Retourne le pourcentage de pixels masqués (0–100)."""
     if not mask_path.exists():
         return None
@@ -131,7 +133,7 @@ def mask_coverage(mask_path: Path) -> Optional[float]:
         return None
 
 
-def sample_images_from_class(root: Path, cls: str, n: int) -> List[Path]:
+def sample_images_from_class(root: Path, cls: str, n: int) -> list[Path]:
     """Récupère n images aléatoires depuis root/<cls>/images/."""
     images_dir = root / cls / "images"
     if not images_dir.exists():
@@ -144,9 +146,7 @@ def sample_images_from_class(root: Path, cls: str, n: int) -> List[Path]:
 
 
 def overlay_mask_on_image(
-    img_path: Path,
-    mask_path: Path,
-    alpha: float = 0.4
+    img_path: Path, mask_path: Path, alpha: float = 0.4
 ) -> Image.Image:
     """Superpose un masque rouge sur une image."""
     img = Image.open(img_path).convert("RGBA")
@@ -166,12 +166,11 @@ def overlay_mask_on_image(
 # SCAN COMPLET DU DATASET
 # ============================================================================
 
+
 @st.cache_data(show_spinner=False)
 def run_full_dataset_scan(
-    root: Path,
-    classes: List[str],
-    include_masks: bool = True
-) -> Dict:
+    root: Path, classes: list[str], include_masks: bool = True
+) -> dict:
     """Scanne tout le dataset et retourne les métriques agrégées."""
     results = {"per_image": [], "by_class": {}}
 
@@ -223,10 +222,12 @@ def run_full_dataset_scan(
             except Exception:
                 continue
 
-    for cls, info in results["by_class"].items():
+    for _cls, info in results["by_class"].items():
         ms = info["metrics"]
         if ms:
-            info["avg_lum"] = float(np.mean([m["luminosity_mean"] for m in ms]))
+            info["avg_lum"] = float(
+                np.mean([m["luminosity_mean"] for m in ms])
+            )
             info["avg_std"] = float(np.mean([m["contrast_std"] for m in ms]))
             info["avg_entropy"] = float(np.mean([m["entropy"] for m in ms]))
         else:
@@ -240,6 +241,7 @@ def run_full_dataset_scan(
 # ============================================================================
 # VISUALISATIONS
 # ============================================================================
+
 
 def plot_luminosity_distributions(df_metrics: pd.DataFrame):
     """Affiche les distributions de luminosité et de contraste par classe."""
@@ -256,7 +258,6 @@ def plot_luminosity_distributions(df_metrics: pd.DataFrame):
     )
     st.plotly_chart(fig_lum, width="stretch")
 
-
     fig_std = px.violin(
         df_metrics,
         x="class",
@@ -270,7 +271,7 @@ def plot_luminosity_distributions(df_metrics: pd.DataFrame):
     st.plotly_chart(fig_std, width="stretch")
 
 
-def plot_mask_coverage(by_class: Dict, classes: List[str]):
+def plot_mask_coverage(by_class: dict, classes: list[str]):
     """Affiche la distribution de la couverture des masques."""
 
     long_data = []
@@ -295,7 +296,7 @@ def plot_mask_coverage(by_class: Dict, classes: List[str]):
     st.plotly_chart(fig, width="stretch")
 
 
-def show_mask_overlays(per_image: List[Dict], max_examples: int = 3):
+def show_mask_overlays(per_image: list[dict], max_examples: int = 3):
     """Affiche des exemples de masques superposés."""
     st.markdown("### Exemples de masques superposés")
 
@@ -330,18 +331,18 @@ def show_mask_overlays(per_image: List[Dict], max_examples: int = 3):
 def run():
     st.markdown(_CSS, unsafe_allow_html=True)
 
-
     try:
-        colored_header(label="Présentation des données", description= "",color_name="blue-70")
+        colored_header(
+            label="Présentation des données",
+            description="",
+            color_name="blue-70",
+        )
     except Exception:
-        st.markdown(f"### Présentation des données")
+        st.markdown("### Présentation des données")
 
     st.divider()
 
-    _render_section(
-        "Inventaire et volumétrie",
-        f"Dataset : {KAGGLE_SLUG}"
-    )
+    _render_section("Inventaire et volumétrie", f"Dataset : {KAGGLE_SLUG}")
 
     table_md = "| Classe | Images | Masques |\n|---:|---:|---:|\n"
     for k, v in DEFAULT_CLASS_COUNTS.items():
@@ -362,12 +363,14 @@ def run():
         "<li>Masques : binaires, alignés avec les images</li>"
         "<li>Variabilité : anatomie, angles, contrastes et artefacts</li>"
         "</ul>"
-        "<p>Ces caractéristiques influencent les étapes de prétraitement et de modélisation.</p>"
+        "<p>Ces caractéristiques influencent les étapes de prétraitement et de modélisation.</p>",
     )
 
     st.markdown("## Import et aperçu rapide (Kaggle)")
     if kagglehub is None:
-        st.warning("KaggleHub non disponible — téléchargement automatique impossible.")
+        st.warning(
+            "KaggleHub non disponible — téléchargement automatique impossible."
+        )
         return
 
     try:
@@ -382,7 +385,9 @@ def run():
 
     st.write(f"Racine détectée : `{dataset_root}`")
 
-    classes = sorted([p.name for p in dataset_root.iterdir() if looks_like_images(p)])
+    classes = sorted(
+        [p.name for p in dataset_root.iterdir() if looks_like_images(p)]
+    )
     if not classes:
         st.error("Aucune classe détectée.")
         return
@@ -394,13 +399,13 @@ def run():
     colored_header(
         "Analyse et visualisations du dataset",
         "Exploration visuelle et métriques des images radiographiques",
-        color_name="violet-70"
+        color_name="violet-70",
     )
 
     colored_header(
         "Échantillonnage rapide",
         "Visualisation d’un petit échantillon d’images",
-        color_name="violet-70"
+        color_name="violet-70",
     )
 
     col1, col2, col3 = st.columns([3, 1, 1])
@@ -413,7 +418,10 @@ def run():
             st.session_state.pop("viz_sample", None)
 
     sample_key = f"{choice}__{n}"
-    if "viz_sample" not in st.session_state or st.session_state["viz_sample"].get("key") != sample_key:
+    if (
+        "viz_sample" not in st.session_state
+        or st.session_state["viz_sample"].get("key") != sample_key
+    ):
         imgs = sample_images_from_class(dataset_root, choice, n)
         st.session_state["viz_sample"] = {
             "key": sample_key,
@@ -454,7 +462,9 @@ def run():
         col_a.metric("Luminosité", f"{metrics['luminosity_mean']:.1f}")
         col_b.metric("Contraste", f"{metrics['contrast_std']:.1f}")
         col_c.metric("Entropie", f"{metrics['entropy']:.2f}")
-        col_d.metric("Couverture masque", f"{mask_cov:.1f}%" if mask_cov else "N/A")
+        col_d.metric(
+            "Couverture masque", f"{mask_cov:.1f}%" if mask_cov else "N/A"
+        )
 
     except Exception as e:
         st.error(f"Erreur : {e}")
@@ -464,7 +474,7 @@ def run():
     colored_header(
         "Analyse complète du dataset",
         "Scan et visualisations sur l’ensemble des données",
-        color_name="violet-70"
+        color_name="violet-70",
     )
 
     if st.button("Lancer le scan complet", type="primary"):
@@ -472,7 +482,9 @@ def run():
 
     if "last_scan" not in st.session_state:
         with st.spinner("Scan en cours, veuillez patienter..."):
-            scan_data = run_full_dataset_scan(dataset_root, classes, include_masks=True)
+            scan_data = run_full_dataset_scan(
+                dataset_root, classes, include_masks=True
+            )
             st.session_state["last_scan"] = scan_data
     else:
         scan_data = st.session_state["last_scan"]
@@ -486,12 +498,14 @@ def run():
     rows = []
     for entry in scan_data["per_image"]:
         m = entry["metrics"]
-        rows.append({
-            "class": entry["class"],
-            "lum": m["luminosity_mean"],
-            "std": m["contrast_std"],
-            "entropy": m["entropy"],
-        })
+        rows.append(
+            {
+                "class": entry["class"],
+                "lum": m["luminosity_mean"],
+                "std": m["contrast_std"],
+                "entropy": m["entropy"],
+            }
+        )
 
     df_metrics = pd.DataFrame(rows)
 
@@ -502,19 +516,24 @@ def run():
     colored_header(
         "Galerie d’outliers radiographiques",
         "Exemples d’artefacts observés dans les radiographies thoraciques",
-        color_name="violet-70"
+        color_name="violet-70",
     )
 
     anomalies_dir = Path(__file__).parent / "images" / "anomalies_cxr"
     if anomalies_dir.exists():
-        anomaly_images = sorted([
-            f for f in anomalies_dir.iterdir()
-            if f.is_file() and f.suffix.lower() == ".png"
-        ])
+        anomaly_images = sorted(
+            [
+                f
+                for f in anomalies_dir.iterdir()
+                if f.is_file() and f.suffix.lower() == ".png"
+            ]
+        )
         if anomaly_images:
             names = [img.name for img in anomaly_images]
             selected = st.selectbox("Choisir une anomalie :", options=names)
-            img = Image.open(anomaly_images[names.index(selected)]).convert("RGB")
+            img = Image.open(anomaly_images[names.index(selected)]).convert(
+                "RGB"
+            )
             st.image(img, caption=selected)
         else:
             st.info("Le dossier anomalies_cxr est vide.")

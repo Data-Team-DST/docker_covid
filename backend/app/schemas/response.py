@@ -1,4 +1,5 @@
 """Schémas Pydantic — Réponses API"""
+
 from pydantic import BaseModel, Field
 
 
@@ -8,16 +9,18 @@ class PredictionResponse(BaseModel):
     scores: dict[str, float]
     latency_ms: float
 
-    model_config = {"json_schema_extra": {
-        "example": {
-            "predicted_class": "COVID",
-            "confidence": 0.92,
-            "scores": {
-                "COVID": 0.92,
-                "Lung_Opacity": 0.04,
-                "Normal": 0.03,
-                "Viral_Pneumonia": 0.01,
-            },
-            "latency_ms": 245.3,
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "predicted_class": "COVID",
+                "confidence": 0.92,
+                "scores": {
+                    "COVID": 0.92,
+                    "Lung_Opacity": 0.04,
+                    "Normal": 0.03,
+                    "Viral_Pneumonia": 0.01,
+                },
+                "latency_ms": 245.3,
+            }
         }
-    }}
+    }

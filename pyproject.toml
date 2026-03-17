@@ -46,6 +46,14 @@ ignore = [
     "C901",  # too complex
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# Pages Streamlit : trailing whitespace dans CSS strings, loop vars de déstructuration
+"frontend/page/*.py" = ["W291", "W293", "B007"]
+"frontend/streamlit_app.py" = ["W291", "W293"]
+# Notebooks et code ML exploratoire — pas soumis au lint CI
+"src/**" = ["ALL"]
+"src/notebooks/**" = ["ALL"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

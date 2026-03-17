@@ -4,11 +4,12 @@
 # - File status: modelling lab template — compare models, visualise diagnostics,
 #   test on radiographic images.
 
-import streamlit as st
-from streamlit_extras.colored_header import colored_header
-from PIL import Image
-from pathlib import Path
 import os
+from pathlib import Path
+
+import streamlit as st
+from PIL import Image
+from streamlit_extras.colored_header import colored_header
 
 # Optional: placeholder for torch/keras if models are deep learning
 # import torch
@@ -25,7 +26,7 @@ def run():
     # Header / hero
     colored_header(
         label="Modèles de machine learning et optimisation",
-        color_name="blue-70"
+        color_name="blue-70",
     )
     st.divider()
 
@@ -64,7 +65,9 @@ def run():
         # Introduction
         intro_cont = st.container(border=True)
         with intro_cont:
-            st.subheader("Les modèles de machine learning testés dans notre projet")
+            st.subheader(
+                "Les modèles de machine learning testés dans notre projet"
+            )
             st.info("Support Vector Machine (SVM)")
             st.info("k-Nearest Neighbors (k-NN)")
             st.info("Random Forest")
@@ -84,7 +87,9 @@ def run():
                 "(axes colonnes) et les classes réelles (axes lignes)."
             )
 
-        select_matrix_col1, select_matrix_col2 = st.columns([0.5, 0.5], gap="small")
+        select_matrix_col1, select_matrix_col2 = st.columns(
+            [0.5, 0.5], gap="small"
+        )
 
         with select_matrix_col1:
             cont_image_display = st.container(border=True)
@@ -116,9 +121,7 @@ def run():
             cont_options = st.container()
             with cont_options:
                 show_filenames1 = st.checkbox(
-                    "Afficher les noms de fichiers",
-                    value=True,
-                    key="NAMES1"
+                    "Afficher les noms de fichiers", value=True, key="NAMES1"
                 )
 
         with cont_buttons:
@@ -127,9 +130,8 @@ def run():
                 for model_name in MODELS:
                     model_path = MATRICES_FOLDER / model_name
                     if model_path.exists():
-                        img_files = (
-                            sorted(model_path.glob("*.png"))
-                            + sorted(model_path.glob("*.jpg"))
+                        img_files = sorted(model_path.glob("*.png")) + sorted(
+                            model_path.glob("*.jpg")
                         )
                         if img_files:
                             sample_map[model_name] = [
@@ -143,12 +145,12 @@ def run():
 
         sample_map = st.session_state.get("sample_map_1", {})
         if not sample_map:
-            st.info("Cliquez sur le bouton pour afficher les matrices de confusion.")
+            st.info(
+                "Cliquez sur le bouton pour afficher les matrices de confusion."
+            )
         else:
             targets = (
-                list(sample_map.keys())
-                if choice1 == "all"
-                else [choice1]
+                list(sample_map.keys()) if choice1 == "all" else [choice1]
             )
 
             for model_name, entries in sample_map.items():
@@ -206,7 +208,9 @@ def run():
             hyp_cont1 = st.container(border=True)
             with hyp_cont1:
                 st.subheader("Hyperparamètres testés")
-                st.info("SVM : C (régularisation), nombre maximal d’itérations")
+                st.info(
+                    "SVM : C (régularisation), nombre maximal d’itérations"
+                )
                 st.info(
                     "Random Forest : nombre d’arbres, profondeur maximale, etc."
                 )
@@ -225,7 +229,7 @@ def run():
                 st.image(
                     str(image_path),
                     caption="Hyperparamètres",
-                    use_container_width=True
+                    use_container_width=True,
                 )
 
     st.divider()
@@ -240,14 +244,10 @@ def run():
         GS_col1, GS_col2 = st.columns([2, 1], gap="small")
 
         with GS_col1:
-            cont_image_display_GS = st.container(
-                border=True
-            )
+            cont_image_display_GS = st.container(border=True)
 
         with GS_col2:
-            cont_select_GS = st.container(
-                border=True
-            )
+            cont_select_GS = st.container(border=True)
 
         # Sélection des matrices Grid Search
         with cont_select_GS:
@@ -256,9 +256,7 @@ def run():
             )
             n_images2 = 2
             show_filenames2 = st.checkbox(
-                "Afficher les noms de fichiers",
-                value=True,
-                key="NAMES2"
+                "Afficher les noms de fichiers", value=True, key="NAMES2"
             )
 
             if st.button("Matrices de confusion (Grid Search)", key="LOAD2"):
@@ -266,13 +264,11 @@ def run():
                 for model_name in MODELS:
                     model_path = MATRICES_FOLDER / model_name
                     if model_path.exists():
-                        img_files = (
-                            list(model_path.glob("*.png"))
-                            + list(model_path.glob("*.jpg"))
+                        img_files = list(model_path.glob("*.png")) + list(
+                            model_path.glob("*.jpg")
                         )
                         sample_map[model_name] = [
-                            {"image": str(f)}
-                            for f in img_files[:n_images2]
+                            {"image": str(f)} for f in img_files[:n_images2]
                         ]
                 st.session_state["sample_map"] = sample_map
 
@@ -287,18 +283,14 @@ def run():
                 )
             else:
                 targets = (
-                    list(sample_map.keys())
-                    if choice2 == "all"
-                    else [choice2]
+                    list(sample_map.keys()) if choice2 == "all" else [choice2]
                 )
 
                 for model_name, entries in sample_map.items():
                     if model_name not in targets:
                         continue
 
-                    st.markdown(
-                        f"### {model_name} — {len(entries)} matrices"
-                    )
+                    st.markdown(f"### {model_name} — {len(entries)} matrices")
                     cols = st.columns(2)
 
                     for idx, entry in enumerate(entries):
@@ -316,7 +308,7 @@ def run():
                                     im,
                                     caption=caption,
                                     output_format="PNG",
-                                    use_container_width=True
+                                    use_container_width=True,
                                 )
 
         st.success(

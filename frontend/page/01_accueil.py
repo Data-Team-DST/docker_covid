@@ -1,9 +1,9 @@
 # 01_accueil.py — Accueil détaillé mais oral-friendly
 
-import streamlit as st
-from streamlit_extras.colored_header import colored_header
 from pathlib import Path
 
+import streamlit as st
+from streamlit_extras.colored_header import colored_header
 
 _CSS = """
 <style>
@@ -20,6 +20,7 @@ abbr { text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.12); 
 </style>
 """
 
+
 def run():
     st.markdown(_CSS, unsafe_allow_html=True)
 
@@ -28,11 +29,17 @@ def run():
         colored_header(
             label="Analyse de radiographies pulmonaires — Classification COVID-19 et aide au diagnostic",
             description="Projet réalisé par Cirine B., Lena B., Steven M., Rafael C., encadré par Nicolas M.",
-            color_name="blue-70"
+            color_name="blue-70",
         )
     except Exception:
-        st.markdown("<h2>Analyse de radiographies pulmonaires — Classification COVID-19</h2>", unsafe_allow_html=True)
-        st.markdown("<div class='small-note'>Prototype d'assistance diagnostique visuelle — rapide, interprétable et prêt pour la démonstration.</div>", unsafe_allow_html=True)
+        st.markdown(
+            "<h2>Analyse de radiographies pulmonaires — Classification COVID-19</h2>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<div class='small-note'>Prototype d'assistance diagnostique visuelle — rapide, interprétable et prêt pour la démonstration.</div>",
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
@@ -46,7 +53,7 @@ def run():
         "• Plus de <strong>7 millions</strong> de décès<br>"
         "• Pneumonie virale spécifique (<em>viral pneumonia</em>) due au <strong>SARS-CoV-2</strong>"
         "</div>",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     # Problème 1 + Solution 1
@@ -56,23 +63,38 @@ def run():
         "• Tests lents, sensibilité variable, dépendance aux laboratoires<br>"
         "<strong>Solution :</strong> imagerie médicale (CXR/CT) pour un triage rapide et accessible."
         "</div>",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     # Images et diagnostic visuel
     img_col, text_col = st.columns([1, 2])
     with img_col:
         images_data = {
-            "Fig1": ("Fig1.jpg", "Opacités en verre dépoli périphériques bilatérales."),
-            "Fig2": ("Fig2.jpg", "Consolidation pulmonaire sévère bilatérale."),
+            "Fig1": (
+                "Fig1.jpg",
+                "Opacités en verre dépoli périphériques bilatérales.",
+            ),
+            "Fig2": (
+                "Fig2.jpg",
+                "Consolidation pulmonaire sévère bilatérale.",
+            ),
             "Fig3": ("Fig3.jpg", "Progression radiologique COVID-19."),
-            "Fig4": ("Fig4.jpg", "Évolution temporelle des atteintes pulmonaires."),
+            "Fig4": (
+                "Fig4.jpg",
+                "Évolution temporelle des atteintes pulmonaires.",
+            ),
         }
-        selected_fig = st.selectbox("Sélectionner une image :", list(images_data.keys()))
+        selected_fig = st.selectbox(
+            "Sélectionner une image :", list(images_data.keys())
+        )
         img_name, caption = images_data[selected_fig]
-        img_path = Path(__file__).parent / "images" / "covid_cxr_symptoms" / img_name
-        if img_path.exists(): st.image(str(img_path), caption=caption)
-        else: st.info("Image non disponible.")
+        img_path = (
+            Path(__file__).parent / "images" / "covid_cxr_symptoms" / img_name
+        )
+        if img_path.exists():
+            st.image(str(img_path), caption=caption)
+        else:
+            st.info("Image non disponible.")
 
     with text_col:
         st.markdown(
@@ -84,7 +106,7 @@ def run():
             "<strong>Solution : intelligence artificielle</strong><br>"
             "Machine learning et deep learning accélèrent la détection, tout en proposant une solution interprétable et reproductible."
             "</div>",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
     st.divider()
@@ -98,12 +120,12 @@ def run():
     # with col1:
     st.subheader("Objectif 1 — Performance")
     st.markdown(
-            "- **S** : classification COVID vs non-COVID\n"
-            "- **M** : F1 ≥ 0,80 sur validation indépendante\n"
-            "- **A** : fine-tuning InceptionV3\n"
-            "- **R** : réduire faux négatifs\n"
-            "- **T** : 12/01/2024 démonstration"
-        )
+        "- **S** : classification COVID vs non-COVID\n"
+        "- **M** : F1 ≥ 0,80 sur validation indépendante\n"
+        "- **A** : fine-tuning InceptionV3\n"
+        "- **R** : réduire faux négatifs\n"
+        "- **T** : 12/01/2024 démonstration"
+    )
     # with col2:
     #     st.subheader("Objectif 2 — Sensibilité / Spécificité ")
     #     st.markdown(
@@ -113,6 +135,7 @@ def run():
     #         "- **R** : réduire faux négatifs\n"
     #         "- **T** : démontré sur validation"
     #     )
+
 
 if __name__ == "__main__":
     run()

@@ -1,6 +1,7 @@
 """Configuration centralisée — DS_COVID Backend"""
+
+
 from pydantic_settings import BaseSettings
-from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -15,7 +16,12 @@ class Settings(BaseSettings):
     model_version: str = "1.0.0"
 
     # Classes (ordre doit correspondre à l'entraînement)
-    class_names: list[str] = ["COVID", "Lung_Opacity", "Normal", "Viral_Pneumonia"]
+    class_names: list[str] = [
+        "COVID",
+        "Lung_Opacity",
+        "Normal",
+        "Viral_Pneumonia",
+    ]
 
     # Image preprocessing
     img_size: tuple[int, int] = (224, 224)
