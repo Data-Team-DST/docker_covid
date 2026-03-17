@@ -69,9 +69,6 @@ line_length = 88
 testpaths = ["backend/tests"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = [
-    "--cov=backend/app",
-    "--cov-report=term-missing",
-    "--cov-report=xml:backend/coverage.xml",
     "--strict-markers",
 ]
 markers = [

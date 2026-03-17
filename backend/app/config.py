@@ -1,6 +1,5 @@
 """Configuration centralisée — DS_COVID Backend"""
 
-
 from pydantic_settings import BaseSettings
 
 
@@ -29,6 +28,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 # Instance globale — importée partout
