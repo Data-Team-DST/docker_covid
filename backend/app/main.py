@@ -3,12 +3,13 @@
 import logging
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.health import router as health_router
 from app.api.predict import router as predict_router
 from app.config import settings
 from app.models.loader import model_loader
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(
     level=logging.INFO,

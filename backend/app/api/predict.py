@@ -3,11 +3,12 @@
 import logging
 import time
 
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
 from app.config import settings
 from app.features.preprocessing import preprocess_image
 from app.models.loader import model_loader
 from app.schemas.response import PredictionResponse
-from fastapi import APIRouter, File, HTTPException, UploadFile
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
