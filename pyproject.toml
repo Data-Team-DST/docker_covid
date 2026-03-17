@@ -68,6 +68,7 @@ line_length = 88
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 python_files = ["test_*.py", "*_test.py"]
+pythonpath = ["backend"]
 addopts = [
     "--strict-markers",
 ]
