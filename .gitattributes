@@ -1,0 +1,15 @@
+# Force LF line endings for shell scripts and config files
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.toml  text eol=lf
+*.cfg   text eol=lf
+*.txt   text eol=lf
+*.py    text eol=lf
+*.md    text eol=lf
+*.env*  text eol=lf
+Makefile text eol=lf
+
+# Windows-specific files keep CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
