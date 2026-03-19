@@ -79,9 +79,7 @@ def test_prepare_train_val_test_split(sample_data):
 def test_compute_class_weights(sample_data):
     """Test class weights computation."""
     _, y = sample_data
-    weights = compute_class_weights(
-        y, categories=["class0", "class1"], verbose=False
-    )
+    weights = compute_class_weights(y, categories=["class0", "class1"], verbose=False)
     assert isinstance(weights, dict)
 
 
@@ -191,9 +189,7 @@ def test_plot_confusion_matrix():
     """Test confusion matrix plotting."""
     y_true = np.array([0, 1, 0, 1])
     y_pred = np.array([0, 1, 1, 1])
-    res = plot_confusion_matrix(
-        y_true, y_pred, class_names=["class0", "class1"]
-    )
+    res = plot_confusion_matrix(y_true, y_pred, class_names=["class0", "class1"])
     assert res is None
 
 
@@ -229,9 +225,7 @@ def test_select_sample_images(sample_data):
     """Test sample image selection."""
     X, y = sample_data
     # Use identical predictions to get correctly classified samples
-    indices, _ = select_sample_images(
-        X, y, y, ["class0", "class1"], n_samples=2
-    )
+    indices, _ = select_sample_images(X, y, y, ["class0", "class1"], n_samples=2)
     assert isinstance(indices, (list, np.ndarray))
 
 

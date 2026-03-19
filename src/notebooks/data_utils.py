@@ -18,12 +18,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import keras
 import numpy as np
-from keras.applications.efficientnet import (
-    preprocess_input as effnet_preprocess,
-)
-from keras.applications.inception_v3 import (
-    preprocess_input as inception_preprocess,
-)
+from keras.applications.efficientnet import preprocess_input as effnet_preprocess
+from keras.applications.inception_v3 import preprocess_input as inception_preprocess
 from keras.applications.resnet50 import preprocess_input as resnet_preprocess
 from keras.applications.vgg16 import preprocess_input as vgg16_preprocess
 from sklearn.model_selection import train_test_split
@@ -150,9 +146,7 @@ def create_preprocessing_pipeline(
 
     # Add masker if mask paths provided
     if mask_paths is not None and len(mask_paths) > 0:
-        steps.append(
-            ("mask", ImageMasker(mask_paths=mask_paths, verbose=verbose))
-        )
+        steps.append(("mask", ImageMasker(mask_paths=mask_paths, verbose=verbose)))
 
     pipeline = Pipeline(steps)
 
@@ -171,9 +165,7 @@ def prepare_train_val_test_split(
     val_size: float = 0.15,
     random_seed: int = 42,
     verbose: bool = True,
-) -> Tuple[
-    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
-]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Split data into train/validation/test sets with one-hot encoding.
 
@@ -429,9 +421,7 @@ def create_transfer_learning_generators(
             print("  • Zoom: ±5%")
             print("  • Horizontal flip: NON (images médicales)")
     else:
-        train_datagen = ImageDataGenerator(
-            preprocessing_function=preprocess_func
-        )
+        train_datagen = ImageDataGenerator(preprocessing_function=preprocess_func)
         if verbose:
             print("\n⚠️ Pas d'augmentation sur le training set")
 

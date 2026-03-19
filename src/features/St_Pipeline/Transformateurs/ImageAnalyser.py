@@ -88,9 +88,7 @@ class ImageAnalyser(BaseTransform):
 
         # Statistiques de base
         self.stats_["total_images"] = len(X)
-        self.stats_["labels_distribution"] = (
-            X["label"].value_counts().to_dict()
-        )
+        self.stats_["labels_distribution"] = X["label"].value_counts().to_dict()
 
         # Analyse des dimensions et tailles
         image_dims = []
@@ -119,9 +117,7 @@ class ImageAnalyser(BaseTransform):
 
                 if idx % 100 == 0 or idx == total - 1:
                     progress = (idx + 1) / total
-                    self._update_progress(
-                        progress, f"Analysé {idx + 1}/{total}"
-                    )
+                    self._update_progress(progress, f"Analysé {idx + 1}/{total}")
             self._clear_progress()
         else:
             # Mode console avec tqdm
@@ -146,9 +142,7 @@ class ImageAnalyser(BaseTransform):
                         with Image.open(row["mask_path"]) as mask:
                             mask_dims.append(mask.size)
                 except Exception as e:
-                    self._log(
-                        f"Erreur: {row['image_path']}: {e}", level="warning"
-                    )
+                    self._log(f"Erreur: {row['image_path']}: {e}", level="warning")
 
         # Statistiques des dimensions
         self.stats_["image_dimensions"] = Counter(image_dims)
@@ -162,15 +156,9 @@ class ImageAnalyser(BaseTransform):
 
         # Statistiques des tailles de fichiers
         if file_sizes:
-            self.stats_["avg_file_size_mb"] = np.mean(file_sizes) / (
-                1024 * 1024
-            )
-            self.stats_["min_file_size_mb"] = np.min(file_sizes) / (
-                1024 * 1024
-            )
-            self.stats_["max_file_size_mb"] = np.max(file_sizes) / (
-                1024 * 1024
-            )
+            self.stats_["avg_file_size_mb"] = np.mean(file_sizes) / (1024 * 1024)
+            self.stats_["min_file_size_mb"] = np.min(file_sizes) / (1024 * 1024)
+            self.stats_["max_file_size_mb"] = np.max(file_sizes) / (1024 * 1024)
 
         self._log(
             f"Analyse terminée: {self.stats_['unique_dimensions']} dimensions uniques"
@@ -245,9 +233,7 @@ class ImageAnalyser(BaseTransform):
 
                 if idx % 50 == 0 or idx == total - 1:
                     progress = (idx + 1) / total
-                    self._update_progress(
-                        progress, f"Chargé {idx + 1}/{total}"
-                    )
+                    self._update_progress(progress, f"Chargé {idx + 1}/{total}")
             self._clear_progress()
         else:
             # Mode console avec tqdm
@@ -281,9 +267,7 @@ class ImageAnalyser(BaseTransform):
                     else:
                         masks_array.append(None)
                 except Exception as e:
-                    self._log(
-                        f"Erreur: {row['image_path']}: {e}", level="warning"
-                    )
+                    self._log(f"Erreur: {row['image_path']}: {e}", level="warning")
                     images_array.append(None)
                     masks_array.append(None)
                     mean_intensities.append(np.nan)
@@ -332,9 +316,7 @@ class ImageAnalyser(BaseTransform):
             )
         with col4:
             size = self.stats_.get("most_common_size")
-            st.metric(
-                "Taille Commune", f"{size[0]}x{size[1]}" if size else "N/A"
-            )
+            st.metric("Taille Commune", f"{size[0]}x{size[1]}" if size else "N/A")
 
     def _analyze_by_label(self, X_transformed: pd.DataFrame) -> None:
         """Analyse et affiche les statistiques par label (Streamlit)."""

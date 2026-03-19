@@ -22,7 +22,11 @@ kagglehub
 numpy==2.0.2
 pillow==11.0.0
 scikit-learn==1.5.2
+scikit-image
 pandas
+
+# ── DVC (versioning données + remote MinIO/S3) ────────────────────────────
+dvc[s3]
 
 # ── Dev & qualite ─────────────────────────────────────────────────────────────
 pytest==8.3.4

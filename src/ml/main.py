@@ -41,17 +41,11 @@ if __name__ == "__main__":
         model_name = model.__class__.__name__
         param_grid = grid_params.get(model_name, None)
 
-        print(
-            f"\n[INFO] ======= Entraînement du modèle : {model_name} ======="
-        )
+        print(f"\n[INFO] ======= Entraînement du modèle : {model_name} =======")
 
-        trained_model = train_with_grid_search(
-            model, param_grid, X_train, y_train
-        )
+        trained_model = train_with_grid_search(model, param_grid, X_train, y_train)
 
-        result = evaluate_model(
-            trained_model, X_test, y_test, model_name=model_name
-        )
+        result = evaluate_model(trained_model, X_test, y_test, model_name=model_name)
         results.append(result)
 
     # Générer le rapport Word

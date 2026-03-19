@@ -15,7 +15,8 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 
 .PHONY: all setup setup-check start start-local start-docker start-all \
-        stop restart logs test lint fix clean build shell help
+        stop restart logs test lint fix clean build shell help \
+        dvc-setup dvc-push dvc-pull
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 GREEN  := \033[0;32m
@@ -48,6 +49,7 @@ start-docker: ## Lance le backend via Docker (zero Python requis)
 
 start: ## Lance le backend FastAPI (Phase 1) via Docker
 	@echo "$(YELLOW)Démarrage backend DS_COVID...$(NC)"
+	docker compose down 2>/dev/null || true
 	docker compose up -d --build backend
 	@echo "$(GREEN)✅ Backend disponible :$(NC)"
 	@echo "   API    : $(BACKEND_URL)"
@@ -56,6 +58,7 @@ start: ## Lance le backend FastAPI (Phase 1) via Docker
 
 start-all: ## Lance la stack complète : backend + frontend + mlflow + minio + postgres
 	@echo "$(YELLOW)Démarrage stack complète DS_COVID (Phase 2)...$(NC)"
+	docker compose down 2>/dev/null || true
 	docker compose up -d --build
 	@echo "$(GREEN)✅ Services disponibles :$(NC)"
 	@echo "   Backend  : $(BACKEND_URL)"
@@ -84,6 +87,24 @@ shell: ## Ouvre un shell dans le container backend
 
 status: ## Status des containers
 	docker compose ps
+
+# ── DVC ───────────────────────────────────────────────────────────────────────
+dvc-setup: ## Configure DVC remote MinIO (credentials locaux, gitignorés)
+	@echo "$(YELLOW)Configuration DVC remote MinIO...$(NC)"
+	@echo "[remote \"minio\"]" > .dvc/config.local
+	@echo "    access_key_id = minioadmin" >> .dvc/config.local
+	@echo "    secret_access_key = minioadmin" >> .dvc/config.local
+	@echo "$(GREEN)✅ .dvc/config.local créé$(NC)"
+
+dvc-push: ## Pousse les données vers MinIO (make start-all requis)
+	@echo "$(YELLOW)Push DVC → MinIO...$(NC)"
+	@.venv/bin/dvc push || dvc push
+	@echo "$(GREEN)✅ Données pushées$(NC)"
+
+dvc-pull: ## Récupère les données depuis MinIO
+	@echo "$(YELLOW)Pull DVC ← MinIO...$(NC)"
+	@.venv/bin/dvc pull || dvc pull
+	@echo "$(GREEN)✅ Données récupérées$(NC)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test: ## Lance les tests unitaires (local, sans Docker)

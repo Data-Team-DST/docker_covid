@@ -25,7 +25,10 @@ async def predict(file: UploadFile = File(...)):
     if not model_loader.is_loaded:
         raise HTTPException(
             status_code=503,
-            detail="Modèle non disponible — vérifier que data/models/ contient le fichier .keras",
+            detail=(
+                "Modèle non disponible — vérifier que"
+                " data/models/ contient le .keras"
+            ),
         )
 
     if file.content_type not in ("image/jpeg", "image/png"):
@@ -45,12 +48,14 @@ async def predict(file: UploadFile = File(...)):
         confidence = float(predictions[predicted_idx])
 
         scores = {
-            cls: float(predictions[i])
-            for i, cls in enumerate(settings.class_names)
+            cls: float(predictions[i]) for i, cls in enumerate(settings.class_names)
         }
 
         logger.info(
-            f"Prédiction : {predicted_class} ({confidence:.1%}) | {latency_ms}ms"
+            "Prédiction : %s (%.1f%%) | %sms",
+            predicted_class,
+            confidence * 100,
+            latency_ms,
         )
 
         return PredictionResponse(
@@ -61,7 +66,5 @@ async def predict(file: UploadFile = File(...)):
         )
 
     except Exception as e:
-        logger.error(f"Erreur prédiction : {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Erreur interne : {str(e)}"
-        ) from e
+        logger.error("Erreur prédiction : %s", e)
+        raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}") from e

@@ -213,9 +213,5 @@ class ImageRandomCropper(BaseTransform):
                 height=500
             )
             
-<<<<<<< HEAD
             st.plotly_chart(fig, use_container_width=True)
-=======
-            st.plotly_chart(fig, width="stretch")
->>>>>>> origin/Dev
             st.info(f"Analyse de {len(positions)} crops")

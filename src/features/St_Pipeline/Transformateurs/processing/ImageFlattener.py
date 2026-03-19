@@ -134,8 +134,4 @@ class ImageFlattener(BaseTransform):
             fig = go.Figure()
             fig.add_trace(go.Scatter(y=sample_features, mode='lines', name='Features'))
             fig.update_layout(xaxis_title="Index", yaxis_title="Valeur", height=300)
-<<<<<<< HEAD
             st.plotly_chart(fig, use_container_width=True)
-=======
-            st.plotly_chart(fig, width="stretch")
->>>>>>> origin/Dev

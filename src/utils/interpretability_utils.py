@@ -18,28 +18,16 @@ from typing import List, Optional, Tuple
 import keras
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.applications.efficientnet import (
-    preprocess_input as efficientnet_preprocess,
-)
+from keras.applications.efficientnet import preprocess_input as efficientnet_preprocess
 
 # Import preprocessing functions
-from keras.applications.inception_v3 import (
-    preprocess_input as inception_preprocess,
-)
+from keras.applications.inception_v3 import preprocess_input as inception_preprocess
 from keras.applications.resnet50 import preprocess_input as resnet_preprocess
 from keras.applications.vgg16 import preprocess_input as vgg16_preprocess
 
 # Import from interpretability module
-<<<<<<< HEAD
 from src.interpretability.gradcam import GradCAM, visualize_gradcam
 
-=======
-from DS_COVID.src.interpretability.Experimental.gradcam import (
-    GradCAM,
-    visualize_gradcam,
-)
-
->>>>>>> origin/Dev
 
 # Configure logger
 logger = logging.getLogger(__name__)

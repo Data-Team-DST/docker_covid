@@ -147,11 +147,7 @@ def deep_merge(base: dict, override: dict) -> dict:
     result = base.copy()
 
     for key, value in override.items():
-        if (
-            key in result
-            and isinstance(result[key], dict)
-            and isinstance(value, dict)
-        ):
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = deep_merge(result[key], value)
         else:
             result[key] = value
@@ -226,9 +222,7 @@ def build_config(project_root: Path, environment: str) -> Config:
     )
 
     models_dir = project_root / flat_config.get("paths_models_dir", "models")
-    results_dir = project_root / flat_config.get(
-        "paths_results_dir", "results"
-    )
+    results_dir = project_root / flat_config.get("paths_results_dir", "results")
 
     # Mapping des champs JSON vers Config
     config_kwargs = {
@@ -246,16 +240,10 @@ def build_config(project_root: Path, environment: str) -> Config:
         "test_split": flat_config.get("training_test_split", 0.2),
         "random_seed": flat_config.get("training_random_seed", 42),
         "classes": flat_config.get("dataset_classes", []),
-        "rf_n_estimators": flat_config.get(
-            "models_random_forest_n_estimators", 200
-        ),
+        "rf_n_estimators": flat_config.get("models_random_forest_n_estimators", 200),
         "rf_max_depth": flat_config.get("models_random_forest_max_depth", 15),
-        "xgb_n_estimators": flat_config.get(
-            "models_xgboost_n_estimators", 100
-        ),
-        "xgb_learning_rate": flat_config.get(
-            "models_xgboost_learning_rate", 0.1
-        ),
+        "xgb_n_estimators": flat_config.get("models_xgboost_n_estimators", 100),
+        "xgb_learning_rate": flat_config.get("models_xgboost_learning_rate", 0.1),
         "pretrained_weights": flat_config.get(
             "models_transfer_learning_pretrained_weights", "imagenet"
         ),
@@ -268,29 +256,17 @@ def build_config(project_root: Path, environment: str) -> Config:
         "early_stopping_patience": flat_config.get(
             "callbacks_early_stopping_patience", 10
         ),
-        "reduce_lr_patience": flat_config.get(
-            "callbacks_reduce_lr_patience", 5
-        ),
+        "reduce_lr_patience": flat_config.get("callbacks_reduce_lr_patience", 5),
         "reduce_lr_factor": flat_config.get("callbacks_reduce_lr_factor", 0.5),
         "min_lr": flat_config.get("callbacks_min_lr", 1e-7),
-        "plot_style": flat_config.get(
-            "visualization_plot_style", "seaborn-v0_8"
-        ),
-        "color_palette": flat_config.get(
-            "visualization_color_palette", "husl"
-        ),
+        "plot_style": flat_config.get("visualization_plot_style", "seaborn-v0_8"),
+        "color_palette": flat_config.get("visualization_color_palette", "husl"),
         "figure_width": flat_config.get("visualization_figure_width", 12),
         "figure_height": flat_config.get("visualization_figure_height", 8),
         "dpi": flat_config.get("visualization_dpi", 100),
-        "gradcam_alpha": flat_config.get(
-            "interpretability_gradcam_alpha", 0.4
-        ),
-        "gradcam_colormap": flat_config.get(
-            "interpretability_gradcam_colormap", "jet"
-        ),
-        "shap_max_evals": flat_config.get(
-            "interpretability_shap_max_evals", 100
-        ),
+        "gradcam_alpha": flat_config.get("interpretability_gradcam_alpha", 0.4),
+        "gradcam_colormap": flat_config.get("interpretability_gradcam_colormap", "jet"),
+        "shap_max_evals": flat_config.get("interpretability_shap_max_evals", 100),
         "shap_background_size": flat_config.get(
             "interpretability_shap_background_size", 50
         ),

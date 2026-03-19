@@ -6,4 +6,5 @@ plotly
 mlflow
 boto3
 pillow==11.0.0
+scikit-image
 opencv-python

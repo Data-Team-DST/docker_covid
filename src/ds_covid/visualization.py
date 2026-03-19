@@ -49,13 +49,11 @@ def visualize_samples(
                 if mask_path.exists():
                     try:
                         # Apply masks
-                        overlay_result, original, mask = (
-                            mask_applicator.apply_mask(
-                                img_path,
-                                mask_path,
-                                method="overlay",
-                                alpha=0.5,
-                            )
+                        overlay_result, original, mask = mask_applicator.apply_mask(
+                            img_path,
+                            mask_path,
+                            method="overlay",
+                            alpha=0.5,
                         )
                         extract_result, _, _ = mask_applicator.apply_mask(
                             img_path, mask_path, method="extract"

@@ -232,11 +232,7 @@ class ImageMasker(BaseTransform):
             fig.update_xaxes(showticklabels=False)
             fig.update_yaxes(showticklabels=False)
             fig.update_layout(height=800, showlegend=False)
-<<<<<<< HEAD
             st.plotly_chart(fig, use_container_width=True)
-=======
-            st.plotly_chart(fig, width="stretch")
->>>>>>> origin/Dev
     
     def _prepare_for_display(self, img):
         """Prépare image pour affichage."""

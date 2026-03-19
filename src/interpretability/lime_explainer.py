@@ -23,9 +23,7 @@ try:
     LIME_AVAILABLE = True
 except ImportError:
     LIME_AVAILABLE = False
-    warnings.warn(
-        "LIME non installé. Installez avec: pip install lime", ImportWarning
-    )
+    warnings.warn("LIME non installé. Installez avec: pip install lime", ImportWarning)
 
 
 class LIMEImageExplainer:
@@ -52,9 +50,7 @@ class LIMEImageExplainer:
         batch_size: int = 32,
     ):
         if not LIME_AVAILABLE:
-            raise ImportError(
-                "LIME non installé. Installez avec: pip install lime"
-            )
+            raise ImportError("LIME non installé. Installez avec: pip install lime")
 
         self.predict_fn = predict_fn
         self.segmentation_method = segmentation_method
@@ -109,9 +105,7 @@ class LIMEImageExplainer:
             # Utiliser pyrMeanShiftFiltering comme alternative à quickshift
             def quickshift_cv2(x):
                 img = (
-                    (x * 255).astype(np.uint8)
-                    if x.max() <= 1.0
-                    else x.astype(np.uint8)
+                    (x * 255).astype(np.uint8) if x.max() <= 1.0 else x.astype(np.uint8)
                 )
                 if len(img.shape) == 2:
                     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
@@ -126,9 +120,7 @@ class LIMEImageExplainer:
             # Utiliser pyrMeanShiftFiltering comme alternative
             def felzenszwalb_cv2(x):
                 img = (
-                    (x * 255).astype(np.uint8)
-                    if x.max() <= 1.0
-                    else x.astype(np.uint8)
+                    (x * 255).astype(np.uint8) if x.max() <= 1.0 else x.astype(np.uint8)
                 )
                 if len(img.shape) == 2:
                     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
@@ -142,16 +134,12 @@ class LIMEImageExplainer:
             # Utiliser SLIC de cv2.ximgproc si disponible
             def slic_cv2(x):
                 img = (
-                    (x * 255).astype(np.uint8)
-                    if x.max() <= 1.0
-                    else x.astype(np.uint8)
+                    (x * 255).astype(np.uint8) if x.max() <= 1.0 else x.astype(np.uint8)
                 )
                 if len(img.shape) == 2:
                     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
                 try:
-                    slic_obj = cv2.ximgproc.createSuperpixelSLIC(
-                        img, region_size=10
-                    )
+                    slic_obj = cv2.ximgproc.createSuperpixelSLIC(img, region_size=10)
                     slic_obj.iterate(10)
                     return slic_obj.getLabels()
                 except AttributeError:
@@ -485,9 +473,7 @@ class LIMEImageExplainer:
             img_seg = self._mark_boundaries_cv2(image, segments)
 
             axes[i].imshow(img_seg)
-            axes[i].set_title(
-                f"{method.capitalize()}", fontsize=11, weight="bold"
-            )
+            axes[i].set_title(f"{method.capitalize()}", fontsize=11, weight="bold")
             axes[i].axis("off")
 
         plt.suptitle(
@@ -585,8 +571,6 @@ def quick_lime_explanation(
         if label_idx < len(class_names)
         else f"Classe {label_idx}"
     )
-    fig.suptitle(
-        f"LIME Explanation - {class_name}", fontsize=13, weight="bold", y=1.02
-    )
+    fig.suptitle(f"LIME Explanation - {class_name}", fontsize=13, weight="bold", y=1.02)
 
     return fig

@@ -155,9 +155,7 @@ class ImageResizer(BaseEstimator, TransformerMixin):
         img_resized = img.resize(new_size, self.resample)
 
         # Création du canvas noir de la taille cible
-        new_img = Image.new(
-            img.mode, self.img_size, color=0
-        )  # color=0 pour noir
+        new_img = Image.new(img.mode, self.img_size, color=0)  # color=0 pour noir
         # Calcul de la position de centrage
         paste_x = (self.img_size[0] - new_size[0]) // 2
         paste_y = (self.img_size[1] - new_size[1]) // 2
@@ -246,9 +244,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
             "std": None,
         }
 
-    def fit(
-        self, X: list[np.ndarray] | np.ndarray, y: Any = None
-    ) -> ImageNormalizer:
+    def fit(self, X: list[np.ndarray] | np.ndarray, y: Any = None) -> ImageNormalizer:
         """Fit normalizer on data (compute global stats if needed).
 
         Args:
@@ -268,9 +264,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
                 logger.info("Fitted normalizer with method %s", self.method)
         return self
 
-    def transform(
-        self, X: list[np.ndarray] | np.ndarray, y: Any = None
-    ) -> np.ndarray:
+    def transform(self, X: list[np.ndarray] | np.ndarray, y: Any = None) -> np.ndarray:
         """
         Apply normalization to images.
 
@@ -282,9 +276,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
             Normalized images as NumPy array.
         """
         if self.verbose:
-            logger.info(
-                "Normalizing %d images using '%s' method", len(X), self.method
-            )
+            logger.info("Normalizing %d images using '%s' method", len(X), self.method)
         arr = np.array(X, dtype=np.float32)
 
         if self.method == "minmax":
@@ -333,9 +325,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
         """Apply custom range normalization."""
         fr_min, fr_max = self.feature_range
         if self.per_image:
-            return np.array(
-                [self._custom_image(img, fr_min, fr_max) for img in arr]
-            )
+            return np.array([self._custom_image(img, fr_min, fr_max) for img in arr])
         gmin, gmax = self._globals["min"], self._globals["max"]
         if gmin is None or gmax is None:
             raise RuntimeError("Normalizer not fitted for global min/max")
@@ -355,9 +345,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
     def _minmax_image(img: np.ndarray) -> np.ndarray:
         """Normalize single image with min-max."""
         img_min, img_max = img.min(), img.max()
-        return (
-            (img - img_min) / (img_max - img_min) if img_max > img_min else img
-        )
+        return (img - img_min) / (img_max - img_min) if img_max > img_min else img
 
     @staticmethod
     def _standardize_image(img: np.ndarray) -> np.ndarray:
@@ -366,9 +354,7 @@ class ImageNormalizer(BaseEstimator, TransformerMixin):
         return (img - img_mean) / img_std if img_std > 0 else img - img_mean
 
     @staticmethod
-    def _custom_image(
-        img: np.ndarray, fr_min: float, fr_max: float
-    ) -> np.ndarray:
+    def _custom_image(img: np.ndarray, fr_min: float, fr_max: float) -> np.ndarray:
         """Normalize single image to a custom range."""
         img_min, img_max = img.min(), img.max()
         if img_max <= img_min:
@@ -390,9 +376,7 @@ class MaskerConfig:
 class ImageMasker(BaseEstimator, TransformerMixin):
     """Apply binary masks to images."""
 
-    def __init__(
-        self, mask_paths: list[str], config: MaskerConfig = MaskerConfig()
-    ):
+    def __init__(self, mask_paths: list[str], config: MaskerConfig = MaskerConfig()):
         """
         Initialize the ImageMasker.
 
@@ -462,9 +446,7 @@ class ImageMasker(BaseEstimator, TransformerMixin):
 
         self.n_images_masked_ = len(masked)
         if self.verbose:
-            logger.info(
-                "Masking completed: %d images processed", self.n_images_masked_
-            )
+            logger.info("Masking completed: %d images processed", self.n_images_masked_)
         return np.array(masked)
 
 
@@ -522,9 +504,7 @@ class ImageFlattener(BaseEstimator, TransformerMixin):
         n_samples = arr.shape[0]
         data_flat = arr.reshape((n_samples, -1), order=self.order)
         if self.verbose:
-            logger.info(
-                "Flattening completed: %s -> %s", arr.shape, data_flat.shape
-            )
+            logger.info("Flattening completed: %s -> %s", arr.shape, data_flat.shape)
         return data_flat
 
     def inverse_transform(self, X: np.ndarray) -> np.ndarray:
@@ -538,9 +518,7 @@ class ImageFlattener(BaseEstimator, TransformerMixin):
             Images reshaped to original dimensions.
         """
         if not self.original_shape_:
-            raise RuntimeError(
-                "Transformer must be fitted before inverse_transform"
-            )
+            raise RuntimeError("Transformer must be fitted before inverse_transform")
         n_samples = X.shape[0]
         target_shape = (n_samples,) + self.original_shape_
         return X.reshape(target_shape, order=self.order)
@@ -588,9 +566,7 @@ class ImageBinarizer(BaseEstimator, TransformerMixin):
         else:
             self.threshold_value_ = float(self.threshold)
         if self.verbose:
-            logger.info(
-                "Fitted binarizer with threshold: %.4f", self.threshold_value_
-            )
+            logger.info("Fitted binarizer with threshold: %.4f", self.threshold_value_)
         return self
 
     def _compute_threshold(self, arr: np.ndarray) -> float:

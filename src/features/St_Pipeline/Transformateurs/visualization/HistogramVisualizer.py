@@ -48,9 +48,7 @@ class HistogramVisualizer(BaseTransform):
         X_hist = viz.transform(X_hist)  # Génère visualisation
     """
 
-    def __init__(
-        self, n_bins=32, plot_mode="all", n_samples_display=50, **kwargs
-    ):
+    def __init__(self, n_bins=32, plot_mode="all", n_samples_display=50, **kwargs):
         """
         Initialise le visualisateur d'histogrammes.
 
@@ -75,9 +73,7 @@ class HistogramVisualizer(BaseTransform):
             y: Labels (optionnel)
         """
         if y is None:
-            self._log(
-                "Aucun label fourni, visualisation limitée", level="warning"
-            )
+            self._log("Aucun label fourni, visualisation limitée", level="warning")
             return
 
         # Extraire histogrammes
@@ -230,9 +226,7 @@ class HistogramVisualizer(BaseTransform):
 
         else:
             # Matplotlib
-            fig, axes = plt.subplots(
-                1, len(classes), figsize=(5 * len(classes), 5)
-            )
+            fig, axes = plt.subplots(1, len(classes), figsize=(5 * len(classes), 5))
 
             if len(classes) == 1:
                 axes = [axes]

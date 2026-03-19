@@ -200,19 +200,11 @@ class ImagePathLoader(BaseTransform):
             
             with col1:
                 st.write("**Comptage:**")
-<<<<<<< HEAD
                 st.dataframe(label_counts, use_container_width=True)
             with col2:
                 st.plotly_chart(bar_fig, use_container_width=True)
             with col3:
                 st.plotly_chart(pie_fig, use_container_width=True)
-=======
-                st.dataframe(label_counts, width="stretch")
-            with col2:
-                st.plotly_chart(bar_fig, width="stretch")
-            with col3:
-                st.plotly_chart(pie_fig, width="stretch")
->>>>>>> origin/Dev
         except Exception as e:
             self._log(f"Erreur lors de l'affichage Streamlit: {e}", level="warning")
 

@@ -153,11 +153,7 @@ class ImageHistogram(BaseTransform):
             fig.update_yaxes(showticklabels=False, row=1)
             fig.update_layout(height=500, title_text=f"Features Histogrammes ({self.bins} bins)")
             
-<<<<<<< HEAD
             st.plotly_chart(fig, use_container_width=True)
-=======
-            st.plotly_chart(fig, width="stretch")
->>>>>>> origin/Dev
             st.info(f"📦 Compression: {imgs[0].size} pixels → {self.bins} features par image")
     
     def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:

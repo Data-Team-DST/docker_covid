@@ -75,6 +75,27 @@ find_python() {
     return 1
 }
 
+# -- Verification / installation python3-venv (Ubuntu/WSL) --------------------
+ensure_venv_module() {
+    # Teste si le module venv est disponible
+    if "${PYTHON_BIN}" -m venv --help &>/dev/null 2>&1; then
+        return 0
+    fi
+    # Sur Ubuntu/WSL : python3-venv est un package apt séparé
+    if [ "$OS" = "wsl" ] || [ "$OS" = "linux" ]; then
+        local minor
+        minor="$("${PYTHON_BIN}" -c 'import sys; print(sys.version_info[1])' 2>/dev/null)"
+        local pkg="python3.${minor}-venv"
+        warn "Module venv absent -- installation de ${pkg}..."
+        if sudo apt-get install -y "${pkg}" &>/dev/null; then
+            log "${pkg} installe"
+        else
+            # Fallback générique
+            sudo apt-get install -y python3-venv &>/dev/null && log "python3-venv installe"
+        fi
+    fi
+}
+
 # -- Installation Python (WSL/Linux seulement) --------------------------------
 install_python() {
     if [ "$OS" = "wsl" ] || [ "$OS" = "linux" ]; then
@@ -354,6 +375,7 @@ setup_dev() {
     read -r answer
     if [[ "$answer" =~ ^[oOyY]$ ]]; then
         if find_python; then
+            ensure_venv_module
             if [ ! -d "${VENV_DIR}" ]; then
                 "${PYTHON_BIN}" -m venv "${VENV_DIR}"
             fi
@@ -483,6 +505,7 @@ case "$MODE" in
     --ci)
         # Mode CI : comme --dev mais sans prompts interactifs
         find_python || err "Python >= 3.10 requis en CI"
+        ensure_venv_module
         if [ ! -d "${VENV_DIR}" ]; then
             "${PYTHON_BIN}" -m venv "${VENV_DIR}"
         fi

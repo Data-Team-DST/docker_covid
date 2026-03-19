@@ -8,9 +8,7 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 
 
 def split_data(X, y, test_size=0.2, seed=42):
-    return train_test_split(
-        X, y, test_size=test_size, stratify=y, random_state=seed
-    )
+    return train_test_split(X, y, test_size=test_size, stratify=y, random_state=seed)
 
 
 def train_model(model, X_train, y_train):
@@ -40,9 +38,7 @@ def train_with_grid_search(
         return model
 
 
-def evaluate_model(
-    model, X_test, y_test, model_name, output_folder="rapports"
-):
+def evaluate_model(model, X_test, y_test, model_name, output_folder="rapports"):
     """Évalue le modèle et génère la matrice de confusion."""
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)

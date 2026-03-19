@@ -95,9 +95,7 @@ class ImageHistogram(BaseEstimator, TransformerMixin):
         result = np.array(histograms)
 
         if self.verbose:
-            logger.info(
-                "Histogram extraction completed. Shape: %s", result.shape
-            )
+            logger.info("Histogram extraction completed. Shape: %s", result.shape)
 
         return result
 
@@ -116,13 +114,9 @@ class ImagePCA(BaseEstimator, TransformerMixin):
         random_state: Optional[int] = None,
         verbose: bool = True,
     ):
-        self._init_params(
-            n_components, whiten, svd_solver, random_state, verbose
-        )
+        self._init_params(n_components, whiten, svd_solver, random_state, verbose)
 
-    def _init_params(
-        self, n_components, whiten, svd_solver, random_state, verbose
-    ):
+    def _init_params(self, n_components, whiten, svd_solver, random_state, verbose):
         self.n_components = n_components
         self.whiten = whiten
         self.svd_solver = svd_solver
@@ -182,9 +176,7 @@ class ImagePCA(BaseEstimator, TransformerMixin):
         data_pca = self.pca_.transform(data_flat)
 
         if self.verbose:
-            logger.info(
-                "PCA transformation completed. Shape: %s", data_pca.shape
-            )
+            logger.info("PCA transformation completed. Shape: %s", data_pca.shape)
 
         return data_pca
 
@@ -229,13 +221,9 @@ class ImageStandardScaler(BaseEstimator, TransformerMixin):
         data_flat = data_array.reshape(n_samples, -1)
 
         if self.verbose:
-            logger.info(
-                "Fitting StandardScaler on %d flattened images...", n_samples
-            )
+            logger.info("Fitting StandardScaler on %d flattened images...", n_samples)
 
-        self.scaler_ = StandardScaler(
-            with_mean=self.with_mean, with_std=self.with_std
-        )
+        self.scaler_ = StandardScaler(with_mean=self.with_mean, with_std=self.with_std)
         self.scaler_.fit(data_flat)
 
         if self.verbose:
@@ -250,9 +238,7 @@ class ImageStandardScaler(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         """Transform images using fitted StandardScaler."""
         if self.scaler_ is None:
-            raise RuntimeError(
-                "StandardScaler must be fitted before transform"
-            )
+            raise RuntimeError("StandardScaler must be fitted before transform")
 
         data_array = np.array(X)
         n_samples = data_array.shape[0]
@@ -280,9 +266,7 @@ class ImageStandardScaler(BaseEstimator, TransformerMixin):
     def inverse_transform(self, X: np.ndarray) -> np.ndarray:
         """Reverse standardization."""
         if self.scaler_ is None:
-            raise RuntimeError(
-                "StandardScaler must be fitted before inverse_transform"
-            )
+            raise RuntimeError("StandardScaler must be fitted before inverse_transform")
 
         original_shape = X.shape
         n_samples = original_shape[0] if len(original_shape) > 2 else None

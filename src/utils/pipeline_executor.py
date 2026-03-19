@@ -130,9 +130,7 @@ class StreamlitPipelineExecutor:
                             Xt = sub_result
 
                         except Exception as e:
-                            st.error(
-                                f"❌ Erreur dans le pipeline imbriqué: {e}"
-                            )
+                            st.error(f"❌ Erreur dans le pipeline imbriqué: {e}")
                             raise
 
                     else:
@@ -150,9 +148,7 @@ class StreamlitPipelineExecutor:
 
                         # Injecter le container dans le transformateur s'il supporte cette fonctionnalité
                         if hasattr(transformer, "set_progress_container"):
-                            transformer.set_progress_container(
-                                progress_container
-                            )
+                            transformer.set_progress_container(progress_container)
 
                         # Indicateur de progression
                         step_status = st.empty()
@@ -203,13 +199,9 @@ class StreamlitPipelineExecutor:
                 )
 
         elif isinstance(data, np.ndarray):
-            info_text.append(
-                f"📊 Array: shape={data.shape}, dtype={data.dtype}"
-            )
+            info_text.append(f"📊 Array: shape={data.shape}, dtype={data.dtype}")
             if data.size > 0:
-                info_text.append(
-                    f"📈 Range: [{data.min():.2f}, {data.max():.2f}]"
-                )
+                info_text.append(f"📈 Range: [{data.min():.2f}, {data.max():.2f}]")
 
         elif isinstance(data, dict):
             info_text.append(f"📦 Dictionnaire: {len(data)} clés")

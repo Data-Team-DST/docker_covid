@@ -23,9 +23,7 @@ except ImportError:
 class AdvancedAnalyzer:
     """Perform advanced analysis and visualizations"""
 
-    def __init__(
-        self, random_state: int = 42, logger: Optional[logging.Logger] = None
-    ):
+    def __init__(self, random_state: int = 42, logger: Optional[logging.Logger] = None):
         """
         Initialize advanced analyzer
 
@@ -67,9 +65,7 @@ class AdvancedAnalyzer:
         n_rows = n_samples
         n_cols = len(n_components_list) + 1  # +1 for original
 
-        fig, axes = plt.subplots(
-            n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2)
-        )
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2))
 
         if n_rows == 1:
             axes = axes.reshape(1, -1)
@@ -113,9 +109,7 @@ class AdvancedAnalyzer:
             except Exception as e:
                 self.logger.warning(f"Error creating reconstruction: {e}")
                 for j in range(n_cols):
-                    axes[i, j].text(
-                        0.5, 0.5, "Error", ha="center", va="center"
-                    )
+                    axes[i, j].text(0.5, 0.5, "Error", ha="center", va="center")
                     axes[i, j].axis("off")
 
         plt.suptitle("PCA Reconstruction Quality", fontsize=14, y=0.995)
@@ -144,9 +138,7 @@ class AdvancedAnalyzer:
         n_cols = 5
         n_rows = (n_components + n_cols - 1) // n_cols
 
-        fig, axes = plt.subplots(
-            n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2)
-        )
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2))
         axes = axes.flatten()
 
         for i in range(n_components):
@@ -234,9 +226,7 @@ class AdvancedAnalyzer:
             cluster_center = np.mean(cluster_embeddings, axis=0)
 
             # Find closest images to center
-            distances = np.linalg.norm(
-                cluster_embeddings - cluster_center, axis=1
-            )
+            distances = np.linalg.norm(cluster_embeddings - cluster_center, axis=1)
             closest_indices = np.argsort(distances)[:n_per_cluster]
 
             for j, idx in enumerate(closest_indices):
@@ -259,9 +249,7 @@ class AdvancedAnalyzer:
                         )
                 except Exception as e:
                     self.logger.warning(f"Error loading image: {e}")
-                    axes[i, j].text(
-                        0.5, 0.5, "Error", ha="center", va="center"
-                    )
+                    axes[i, j].text(0.5, 0.5, "Error", ha="center", va="center")
                     axes[i, j].axis("off")
 
         plt.suptitle("Cluster Representatives", fontsize=14, y=0.995)
@@ -314,9 +302,7 @@ class AdvancedAnalyzer:
         n_cols = 5
         n_rows = (len(sampled) + n_cols - 1) // n_cols
 
-        fig, axes = plt.subplots(
-            n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2)
-        )
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols * 2, n_rows * 2))
         axes = axes.flatten()
 
         for i, (_, row) in enumerate(sampled.iterrows()):

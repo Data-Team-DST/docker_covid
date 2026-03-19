@@ -84,9 +84,7 @@ class TransformLogger:
     Utilise UIHandler pour l'affichage des messages.
     """
 
-    def __init__(
-        self, name: str, verbose: bool = True, use_streamlit: bool = False
-    ):
+    def __init__(self, name: str, verbose: bool = True, use_streamlit: bool = False):
         """
         Initialise le logger.
 
@@ -267,9 +265,7 @@ class BaseTransform(ABC):
                 # On va alterner entre progress bar et texte dans le même container
                 # Pour l'instant, initialiser avec une progress bar
                 self._progress_bar = container
-                self._status_text = (
-                    None  # On utilisera le même container pour le texte
-                )
+                self._status_text = None  # On utilisera le même container pour le texte
                 self._last_text = ""
             except Exception as e:
                 # En cas d'erreur (ex: pas dans contexte Streamlit), ignorer
@@ -325,9 +321,7 @@ class BaseTransform(ABC):
             except Exception:
                 pass
 
-    def visualize(
-        self, X_before: Any, X_after: Any, n_samples: int = 3
-    ) -> None:
+    def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """
         Visualise les données avant/après transformation.
 

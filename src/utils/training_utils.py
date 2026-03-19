@@ -205,11 +205,7 @@ def evaluate_model(
         print("\n" + "=" * 70)
         print("CLASSIFICATION REPORT")
         print("=" * 70)
-        print(
-            classification_report(
-                y_true, y_pred, target_names=class_names, digits=4
-            )
-        )
+        print(classification_report(y_true, y_pred, target_names=class_names, digits=4))
 
     # Add predictions to results
     results["y_true"] = y_true

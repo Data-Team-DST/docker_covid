@@ -39,9 +39,7 @@ def load_images_flat(
         return data, labels
 
     files = [
-        f
-        for f in os.listdir(folder_path)
-        if f.endswith((".png", ".jpg", ".jpeg"))
+        f for f in os.listdir(folder_path) if f.endswith((".png", ".jpg", ".jpeg"))
     ]
     random.seed(seed)
     random.shuffle(files)
@@ -122,9 +120,7 @@ def prepare_covid_data(
     return np.array(X), np.array(y)
 
 
-def get_image_mask_pairs(
-    dataset_path: str, category: str
-) -> List[Tuple[Path, Path]]:
+def get_image_mask_pairs(dataset_path: str, category: str) -> List[Tuple[Path, Path]]:
     """
     Get image/mask pairs for a category
 

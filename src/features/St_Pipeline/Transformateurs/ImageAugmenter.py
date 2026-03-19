@@ -310,11 +310,7 @@ class ImageAugmenter(BaseTransform):
             fig.update_xaxes(showticklabels=False)
             fig.update_yaxes(showticklabels=False)
             fig.update_layout(height=400, showlegend=False, title_text="Avant (haut) vs Après (bas)")
-<<<<<<< HEAD
             st.plotly_chart(fig, use_container_width=True)
-=======
-            st.plotly_chart(fig, width="stretch")
->>>>>>> origin/Dev
             
             st.info(f"Augmenté: {self.n_images_augmented_}/{len(X_before)} images (p={self.probability})")
     

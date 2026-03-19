@@ -47,9 +47,7 @@ def generate_report(output_dir: Path, output_file: Path):
     report = []
     report.append("# Comprehensive EDA Report - COVID-19 Radiography Dataset")
     report.append("")
-    report.append(
-        f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    )
+    report.append(f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     report.append(f"**Output Directory**: `{output_dir}`")
     report.append("")
     report.append("---")
@@ -69,15 +67,9 @@ def generate_report(output_dir: Path, output_file: Path):
     report.append("")
 
     if summary:
-        report.append(
-            f"- **Total Images**: {summary.get('total_images', 'N/A')}"
-        )
-        report.append(
-            f"- **Corrupted Images**: {summary.get('corrupted_images', 0)}"
-        )
-        report.append(
-            f"- **Classes**: {', '.join(summary.get('classes', []))}"
-        )
+        report.append(f"- **Total Images**: {summary.get('total_images', 'N/A')}")
+        report.append(f"- **Corrupted Images**: {summary.get('corrupted_images', 0)}")
+        report.append(f"- **Classes**: {', '.join(summary.get('classes', []))}")
         report.append(f"- **Random Seed**: {summary.get('seed', 'N/A')}")
         report.append(f"- **Device Used**: {summary.get('device', 'N/A')}")
         report.append("")
@@ -149,9 +141,7 @@ def generate_report(output_dir: Path, output_file: Path):
     if summary and "embedding_shape" in summary:
         shape = summary["embedding_shape"]
         report.append(f"- **Model**: ResNet50 (pre-trained on ImageNet)")
-        report.append(
-            f"- **Embedding Shape**: {shape[0]} images × {shape[1]} features"
-        )
+        report.append(f"- **Embedding Shape**: {shape[0]} images × {shape[1]} features")
         report.append(f"- **Device**: {summary.get('device', 'N/A')}")
         report.append("")
 
@@ -179,9 +169,7 @@ def generate_report(output_dir: Path, output_file: Path):
     report.append("### t-SNE")
     report.append("")
     report.append("- **Parameters**: perplexity=30")
-    report.append(
-        "- **Sample Size**: max 5000 images (for computational efficiency)"
-    )
+    report.append("- **Sample Size**: max 5000 images (for computational efficiency)")
     report.append("")
 
     # Clustering
@@ -195,9 +183,7 @@ def generate_report(output_dir: Path, output_file: Path):
         report.append(
             f"- **Number of Clusters**: {len(df_stats['class'].unique()) if not df_stats.empty else 'N/A'}"
         )
-        report.append(
-            f"- **Adjusted Rand Index (ARI)**: {km.get('ari', 0):.3f}"
-        )
+        report.append(f"- **Adjusted Rand Index (ARI)**: {km.get('ari', 0):.3f}")
         report.append(
             f"- **Normalized Mutual Information (NMI)**: {km.get('nmi', 0):.3f}"
         )
@@ -208,9 +194,7 @@ def generate_report(output_dir: Path, output_file: Path):
         report.append("### DBSCAN Clustering")
         report.append("")
         report.append(f"- **Parameters**: eps=0.5, min_samples=5")
-        report.append(
-            f"- **Adjusted Rand Index (ARI)**: {db.get('ari', 0):.3f}"
-        )
+        report.append(f"- **Adjusted Rand Index (ARI)**: {db.get('ari', 0):.3f}")
         report.append(
             f"- **Normalized Mutual Information (NMI)**: {db.get('nmi', 0):.3f}"
         )

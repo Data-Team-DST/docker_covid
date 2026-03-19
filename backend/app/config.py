@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """Paramètres de configuration chargés depuis les variables d'environnement."""
+
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000
@@ -26,6 +28,8 @@ class Settings(BaseSettings):
     img_size: tuple[int, int] = (224, 224)
 
     class Config:
+        """Configuration Pydantic : source du fichier .env."""
+
         env_file = ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"

@@ -1,3 +1,5 @@
+name: docker_covid
+
 services:
 
   # ── Phase 1 : API d'inférence ────────────────────────────────────────────

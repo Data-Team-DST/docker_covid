@@ -54,6 +54,9 @@ ignore = [
 "src/**" = ["ALL"]
 "src/notebooks/**" = ["ALL"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
@@ -63,6 +66,7 @@ line-ending = "auto"
 [tool.isort]
 profile = "black"
 line_length = 88
+known_first_party = ["app"]
 
 # ── pytest ────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
@@ -76,6 +80,22 @@ markers = [
     "slow: tests lents (désélectionner avec '-m not slow')",
     "integration: tests d'intégration",
 ]
+
+# ── pylint ────────────────────────────────────────────────────────────────────
+[tool.pylint.main]
+ignored-modules = ["tensorflow", "tensorflow.keras", "tensorflow.keras.models"]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114",  # missing-module-docstring (docstring fichier déjà présent)
+    "R0903",  # too-few-public-methods (Pydantic models / dataclasses)
+    "C0415",  # import-outside-toplevel (lazy import tensorflow intentionnel)
+    "W0718",  # broad-exception-caught (résilience chargement modèle)
+    "E1101",  # no-member (PIL.LANCZOS et tf.keras : faux positifs)
+]
+
+[tool.pylint.format]
+max-line-length = 88
 
 # ── mypy ──────────────────────────────────────────────────────────────────────
 [tool.mypy]

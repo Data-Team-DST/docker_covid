@@ -52,9 +52,7 @@ def test_class_initialization():
 
         # These should not fail even with invalid paths
         # They only check initialization
-        loader = DatasetLoader(
-            base_path="/fake/path", metadata_path="/fake/metadata"
-        )
+        loader = DatasetLoader(base_path="/fake/path", metadata_path="/fake/metadata")
         print("✓ DatasetLoader initialized")
 
         visualizer = Visualizer(random_state=42)
@@ -154,9 +152,7 @@ def test_mock_pipeline():
         print(f"  ✓ KMeans completed: {len(kmeans_labels)} labels")
 
         # Test evaluation
-        metrics = clustering.evaluate_clustering(
-            mock_labels, kmeans_labels, "KMeans"
-        )
+        metrics = clustering.evaluate_clustering(mock_labels, kmeans_labels, "KMeans")
         print(f"  ✓ Clustering evaluation: ARI={metrics['ari']:.3f}")
 
         return True

@@ -73,9 +73,7 @@ class ImageResizer(BaseTransform):
         # Cas 1: DataFrame avec colonne 'image_array'
         if isinstance(X, pd.DataFrame):
             if "image_array" not in X.columns:
-                raise ValueError(
-                    "DataFrame doit contenir une colonne 'image_array'"
-                )
+                raise ValueError("DataFrame doit contenir une colonne 'image_array'")
 
             self._log(
                 f"Redimensionnement de {len(X)} images en {self.img_size} (DataFrame)"
@@ -216,9 +214,7 @@ class ImageResizer(BaseTransform):
 
         return np.array(img_resized)
 
-    def visualize(
-        self, X_before: Any, X_after: Any, n_samples: int = 3
-    ) -> None:
+    def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """Visualise le redimensionnement avant/après."""
         import matplotlib.pyplot as plt
 

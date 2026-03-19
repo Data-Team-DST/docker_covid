@@ -51,9 +51,7 @@ class DatasetStatistics(BaseTransform):
         print(stats.stats_)
     """
 
-    def __init__(
-        self, compute_pixel_stats=False, n_samples_per_class=200, **kwargs
-    ):
+    def __init__(self, compute_pixel_stats=False, n_samples_per_class=200, **kwargs):
         """
         Initialise le calculateur de statistiques.
 
@@ -76,9 +74,7 @@ class DatasetStatistics(BaseTransform):
             y: Labels (optionnel si déjà dans X)
         """
         if not isinstance(X, pd.DataFrame):
-            raise ValueError(
-                "DatasetStatistics requiert un DataFrame en entrée"
-            )
+            raise ValueError("DatasetStatistics requiert un DataFrame en entrée")
 
         if "label" not in X.columns:
             raise ValueError("DataFrame doit contenir une colonne 'label'")
@@ -153,9 +149,7 @@ class DatasetStatistics(BaseTransform):
             X inchangé (pass-through)
         """
         if not self.stats_:
-            self._log(
-                "Aucune statistique calculée. fit() requis.", level="warning"
-            )
+            self._log("Aucune statistique calculée. fit() requis.", level="warning")
             return X
 
         # Générer visualisations
@@ -175,9 +169,7 @@ class DatasetStatistics(BaseTransform):
             # Préparer données
             classes = list(self.stats_["class_distribution"].keys())
             counts = list(self.stats_["class_distribution"].values())
-            percentages = [
-                self.stats_["class_percentages"][c] for c in classes
-            ]
+            percentages = [self.stats_["class_percentages"][c] for c in classes]
 
             # Plotly bar chart
             col1, col2 = st.columns(2)
@@ -191,9 +183,7 @@ class DatasetStatistics(BaseTransform):
                     color=classes,
                     text=counts,
                 )
-                fig.update_traces(
-                    texttemplate="%{text}", textposition="outside"
-                )
+                fig.update_traces(texttemplate="%{text}", textposition="outside")
                 fig.update_layout(showlegend=False, height=400)
                 st.plotly_chart(fig, width="stretch")
 
@@ -205,9 +195,7 @@ class DatasetStatistics(BaseTransform):
                     title="Proportion des Classes (%)",
                     hole=0.3,
                 )
-                fig_pie.update_traces(
-                    textposition="inside", textinfo="percent+label"
-                )
+                fig_pie.update_traces(textposition="inside", textinfo="percent+label")
                 st.plotly_chart(fig_pie, width="stretch")
 
             # Tableau des stats
@@ -248,9 +236,7 @@ class DatasetStatistics(BaseTransform):
                 counts,
                 color=["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A"],
             )
-            ax1.set_title(
-                "Distribution des Classes", fontsize=14, fontweight="bold"
-            )
+            ax1.set_title("Distribution des Classes", fontsize=14, fontweight="bold")
             ax1.set_xlabel("Classe")
             ax1.set_ylabel("Nombre d'images")
             ax1.tick_params(axis="x", rotation=45)
@@ -274,9 +260,7 @@ class DatasetStatistics(BaseTransform):
                 startangle=90,
                 colors=["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A"],
             )
-            ax2.set_title(
-                "Proportion des Classes", fontsize=14, fontweight="bold"
-            )
+            ax2.set_title("Proportion des Classes", fontsize=14, fontweight="bold")
 
             plt.tight_layout()
             plt.show()

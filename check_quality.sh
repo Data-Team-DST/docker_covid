@@ -4,6 +4,21 @@
 
 set -e
 
+# Détection Python (WSL/Linux/Git Bash/Windows)
+if command -v python3 &>/dev/null && python3 -c "import sys; sys.exit(0)" 2>/dev/null; then
+    PYTHON3=python3
+elif command -v python &>/dev/null && python -c "import sys; sys.exit(0)" 2>/dev/null; then
+    PYTHON3=python
+else
+    # Fallback Windows Python
+    for _py in \
+        "/c/Users/steve/AppData/Local/Programs/Python/Python312/python.exe" \
+        "/c/Users/steve/AppData/Local/Programs/Python/Python311/python.exe" \
+        "/usr/bin/python3" "/usr/local/bin/python3"; do
+        if [ -x "$_py" ]; then PYTHON3="$_py"; break; fi
+    done
+fi
+
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
@@ -204,12 +219,13 @@ check_code_smell() {
     echo "========================================" >> "$CODE_SMELL_REPORT"
     echo "" >> "$CODE_SMELL_REPORT"
 
-    python3 - <<PYEOF >> "$CODE_SMELL_REPORT"
-import sys
+    PYTHONIOENCODING=utf-8 $PYTHON3 - <<PYEOF >> "$CODE_SMELL_REPORT"
+import sys, io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, ".")
 from pathlib import Path
 
-exec(open("check_code_smell_parser.py").read())
+exec(open("check_code_smell_parser.py", encoding="utf-8").read())
 
 MAX_LINES = $MAX_LINES_PER_FILE
 root_dirs = ["backend/app", "frontend", "tmp"]
@@ -288,14 +304,16 @@ print("  ❌ = action requise")
 print("========================================")
 
 # ✅ Écriture du score en float
-with open("/tmp/code_smell_score.txt", "w") as f:
+import os
+_score_file = os.path.join("$ARTIFACT_DIR", "code_smell_score.txt")
+with open(_score_file, "w", encoding="utf-8") as f:
     f.write(f"{score:.2f}\n{total_issues}")
 PYEOF
 
-    if [ -f "/tmp/code_smell_score.txt" ]; then
-        SMELL_SCORE=$(sed -n '1p' /tmp/code_smell_score.txt)
-        SMELL_ISSUES=$(sed -n '2p' /tmp/code_smell_score.txt)
-        rm -f /tmp/code_smell_score.txt
+    if [ -f "$ARTIFACT_DIR/code_smell_score.txt" ]; then
+        SMELL_SCORE=$(sed -n '1p' "$ARTIFACT_DIR/code_smell_score.txt")
+        SMELL_ISSUES=$(sed -n '2p' "$ARTIFACT_DIR/code_smell_score.txt")
+        rm -f "$ARTIFACT_DIR/code_smell_score.txt"
     else
         SMELL_SCORE=0.00
         SMELL_ISSUES=99
@@ -305,7 +323,7 @@ PYEOF
     if [ "$SMELL_ISSUES" -eq 0 ]; then
         echo -e "${GREEN}✅ Code Smell OK (score: $SMELL_SCORE/10)${NC}"
         echo "Code Smell: OK ($SMELL_SCORE/10)" >> "$SUMMARY"
-    elif python3 -c "exit(0 if float('$SMELL_SCORE') >= 8.0 else 1)"; then
+    elif $PYTHON3 -c "exit(0 if float('$SMELL_SCORE') >= 8.0 else 1)"; then
         echo -e "${YELLOW}⚠️  Code Smell : $SMELL_ISSUES problème(s) (score: $SMELL_SCORE/10)${NC}"
         echo "   → Bon score mais problèmes à corriger"
         echo "   → Détails : $CODE_SMELL_REPORT"
@@ -344,19 +362,19 @@ check_code_smell
 # 5. Ruff
 # =========================
 if command -v ruff &> /dev/null; then
-    echo -e "${YELLOW}[Ruff]${NC} Analyse (backend + frontend + tmp)..."
-    ruff check . --output-format=full > "$RUFF_REPORT" || true
+    echo -e "${YELLOW}[Ruff]${NC} Analyse (backend/app + frontend)..."
+    ruff check backend/app/ frontend/ --output-format=full > "$RUFF_REPORT" || true
 
-    if [ -s "$RUFF_REPORT" ]; then
+    RUFF_ERRORS=$(grep -E "^(backend/app|frontend)" "$RUFF_REPORT" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$RUFF_ERRORS" -gt 0 ]; then
         echo -e "${YELLOW}📄 Ruff – problèmes restants (extrait) :${NC}"
         head -50 "$RUFF_REPORT"
         echo ""
         echo -e "${YELLOW}📊 Décompte des erreurs par zone :${NC}"
         echo "  • Backend  : $(grep '^backend/app' "$RUFF_REPORT" | wc -l) erreurs"
         echo "  • Frontend : $(grep '^frontend' "$RUFF_REPORT" | wc -l) erreurs"
-        echo "  • Tmp      : $(grep '^tmp/' "$RUFF_REPORT" | wc -l) erreurs"
         echo "→ Rapport complet : $RUFF_REPORT"
-        echo "Ruff: WARNINGS" >> "$SUMMARY"
+        echo "Ruff: WARNINGS ($RUFF_ERRORS erreurs)" >> "$SUMMARY"
     else
         echo -e "${GREEN}✅ Ruff clean${NC}"
         echo "Ruff: OK" >> "$SUMMARY"
@@ -369,12 +387,18 @@ fi
 # 6. Pylint
 # =========================
 if [ "$SKIP_PYLINT" = false ]; then
-    if command -v pylint &> /dev/null; then
+    # Utiliser le pylint du venv pour voir les packages installés (fastapi, pydantic...)
+    PYLINT_BIN=".venv/bin/pylint"
+    if [ ! -f "$PYLINT_BIN" ]; then
+        PYLINT_BIN="pylint"
+    fi
+
+    if command -v "$PYLINT_BIN" &> /dev/null || [ -f "$PYLINT_BIN" ]; then
 
         echo -e "${YELLOW}[Pylint FE]${NC} Vérification frontend..."
-        pylint frontend/ --ignore=page > "$PYLINT_FE_LOG" 2>&1 || true
+        $PYLINT_BIN frontend/ --rcfile=pyproject.toml > "$PYLINT_FE_LOG" 2>&1 || true
 
-        FE_SCORE=$(python3 - <<EOF
+        FE_SCORE=$($PYTHON3 - <<EOF
 import re
 log=open("$PYLINT_FE_LOG").read()
 m=re.search(r"rated at ([0-9.]+)/10", log)
@@ -384,7 +408,7 @@ EOF
         echo -e "${YELLOW}📊 Score Pylint FE : ${FE_SCORE}/10${NC}"
         echo "Pylint FE: ${FE_SCORE}/10" >> "$SUMMARY"
 
-        python3 - <<EOF
+        $PYTHON3 - <<EOF
 if float("$FE_SCORE") < 7:
     exit(1)
 EOF
@@ -394,9 +418,9 @@ EOF
         fi
 
         echo -e "${YELLOW}[Pylint BE]${NC} Vérification backend..."
-        pylint backend/app > "$PYLINT_BE_LOG" 2>&1 || true
+        $PYLINT_BIN backend/app --rcfile=pyproject.toml > "$PYLINT_BE_LOG" 2>&1 || true
 
-        BE_SCORE=$(python3 - <<EOF
+        BE_SCORE=$($PYTHON3 - <<EOF
 import re
 log=open("$PYLINT_BE_LOG").read()
 m=re.search(r"rated at ([0-9.]+)/10", log)
@@ -406,7 +430,7 @@ EOF
         echo -e "${YELLOW}📊 Score Pylint BE : ${BE_SCORE}/10${NC}"
         echo "Pylint BE: ${BE_SCORE}/10" >> "$SUMMARY"
 
-        python3 - <<EOF
+        $PYTHON3 - <<EOF
 if float("$BE_SCORE") < 7:
     exit(1)
 EOF
@@ -416,7 +440,7 @@ EOF
         fi
 
     else
-        echo -e "${RED}❌ Pylint non installé${NC}"
+        echo -e "${RED}❌ Pylint non installé (ni dans .venv ni dans PATH)${NC}"
         exit 1
     fi
 else
@@ -427,9 +451,14 @@ fi
 # =========================
 # 7. Tests + couverture
 # =========================
-if command -v pytest &> /dev/null; then
+PYTEST_BIN=".venv/bin/pytest"
+if [ ! -f "$PYTEST_BIN" ]; then
+    PYTEST_BIN="pytest"
+fi
+
+if command -v "$PYTEST_BIN" &> /dev/null || [ -f "$PYTEST_BIN" ]; then
     echo -e "${YELLOW}[Tests]${NC} Exécution pytest..."
-    if pytest backend/tests \
+    if $PYTEST_BIN backend/tests \
         --cov=backend/app \
         --cov-report=xml:backend/coverage.xml \
         --cov-fail-under=$COVERAGE_THRESHOLD -q > "$PYTEST_LOG" 2>&1; then
@@ -446,7 +475,7 @@ if command -v pytest &> /dev/null; then
         exit 1
     fi
 else
-    echo -e "${RED}❌ Pytest non installé${NC}"
+    echo -e "${RED}❌ Pytest non installé (ni dans .venv ni dans PATH)${NC}"
     exit 1
 fi
 

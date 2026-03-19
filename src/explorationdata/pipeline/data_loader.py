@@ -59,9 +59,7 @@ class DatasetLoader:
         try:
             df = pd.read_excel(metadata_file)
             df.columns = df.columns.str.strip()
-            self.logger.info(
-                f"Loaded metadata for {class_name}: {len(df)} entries"
-            )
+            self.logger.info(f"Loaded metadata for {class_name}: {len(df)} entries")
             return df
         except Exception as e:
             self.logger.error(f"Error loading metadata for {class_name}: {e}")
@@ -131,9 +129,7 @@ class DatasetLoader:
             image_files = image_files[:max_images]
 
         class_images = []
-        self.logger.info(
-            f"Loading {len(image_files)} images from {class_name}"
-        )
+        self.logger.info(f"Loading {len(image_files)} images from {class_name}")
 
         for img_path in tqdm(image_files, desc=f"Loading {class_name}"):
             # Check for corresponding mask
@@ -228,17 +224,13 @@ class DatasetLoader:
         self.logger.info("Starting to load dataset...")
 
         for class_name in self.classes:
-            class_images = self.load_images_from_class(
-                class_name, max_images_per_class
-            )
+            class_images = self.load_images_from_class(class_name, max_images_per_class)
             self.image_data.extend(class_images)
 
         df = pd.DataFrame(self.image_data)
 
         self.logger.info(f"Loaded {len(df)} images total")
-        self.logger.info(
-            f"Found {len(self.corrupted_images)} corrupted images"
-        )
+        self.logger.info(f"Found {len(self.corrupted_images)} corrupted images")
 
         # Print class distribution
         if not df.empty:

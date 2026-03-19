@@ -20,7 +20,7 @@ fi
 
 # 1. Black : formatage principal
 echo -e "${YELLOW}➡️  Black : formatage code...${NC}"
-black $TARGETS --line-length 79 --target-version py312 2>&1 \
+black $TARGETS --line-length 88 --target-version py311 2>&1 \
     | grep -E "(reformatted|unchanged|error)" || true
 echo -e "${GREEN}✅ Black terminé${NC}"
 
@@ -28,7 +28,7 @@ echo -e "${GREEN}✅ Black terminé${NC}"
 echo -e "${YELLOW}➡️  Isort : tri des imports...${NC}"
 isort $TARGETS \
     --settings-path pyproject.toml \
-    --line-length 79 2>&1 \
+    --line-length 88 2>&1 \
     | grep -E "(Fixing|Skipped|error)" || true
 echo -e "${GREEN}✅ Isort terminé${NC}"
 
@@ -36,7 +36,7 @@ echo -e "${GREEN}✅ Isort terminé${NC}"
 # ⚠️ On exclut explicitement F4xx (imports) et I (isort)
 echo -e "${YELLOW}➡️  Ruff : correction erreurs (SANS imports)...${NC}"
 ruff check $TARGETS --fix \
-    --select E,W,B,C4,UP \
+    --select E,W,B,C4,UP,I \
     --ignore F401,F403,F405 2>&1 \
     | grep -E "(fixed|unchanged|error|Found)" || true
 echo -e "${GREEN}✅ Ruff terminé${NC}"

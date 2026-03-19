@@ -108,10 +108,7 @@ class MaskApplicator:
             raise ValueError("Could not load image or mask")
 
         # Resize if necessary
-        if (
-            image.shape[0] > self.max_size[0]
-            or image.shape[1] > self.max_size[1]
-        ):
+        if image.shape[0] > self.max_size[0] or image.shape[1] > self.max_size[1]:
             image = cv2.resize(image, self.max_size)
             mask = cv2.resize(mask, self.max_size)
         elif image.shape != mask.shape:
@@ -128,8 +125,6 @@ class MaskApplicator:
             mask_norm = mask.astype(np.float32) / 255.0
             result = np.where(mask_norm > 0.5, image, 0).astype(np.uint8)
         else:
-            raise ValueError(
-                f"Method '{method}' not supported. Use: {self.methods}"
-            )
+            raise ValueError(f"Method '{method}' not supported. Use: {self.methods}")
 
         return result, image, mask
