@@ -194,6 +194,7 @@ services:
     image: ${MINIO_CLIENT_IMAGE}
     container_name: dvc-sync-down
     restart: unless-stopped
+    entrypoint: ["/bin/sh"]
 
     depends_on:
       - minio
@@ -212,28 +213,35 @@ services:
 
       AWS_DEFAULT_REGION: ${REMOTE_S3_REGION:-us-east-1}
 
-    command: >
-      /bin/sh -c "
-      set -eu;
-      if [ -z \"$$REMOTE_S3_ENDPOINT\" ] || [ -z \"$$REMOTE_S3_ACCESS_KEY\" ] || [ -z \"$$REMOTE_S3_SECRET_KEY\" ] || [ -z \"$$REMOTE_DVC_BUCKET\" ]; then
-        echo '[dvc-sync-down] Remote S3 env vars missing. Service is idle.';
-        sleep infinity;
-      fi;
-      mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
-      mc alias set remote \"$$REMOTE_S3_ENDPOINT\" \"$$REMOTE_S3_ACCESS_KEY\" \"$$REMOTE_S3_SECRET_KEY\";
-      while true; do
-        echo '[dvc-sync-down] Sync remote datasets -> local cache';
-        mc mirror --overwrite \
-          remote/$$REMOTE_DVC_BUCKET/$$REMOTE_DATASETS_PREFIX \
-          local/$$LOCAL_DVC_BUCKET/$$LOCAL_DATASETS_PREFIX || true;
-        sleep $$SYNC_INTERVAL_SECONDS;
-      done;
-      "
+    command:
+      - -ec
+      - |
+        set -eu
+        if [ -z "$$REMOTE_S3_ENDPOINT" ] || [ -z "$$REMOTE_S3_ACCESS_KEY" ] || [ -z "$$REMOTE_S3_SECRET_KEY" ] || [ -z "$$REMOTE_DVC_BUCKET" ]; then
+          echo '[dvc-sync-down] Remote S3 env vars missing. Service is idle.'
+          while true; do sleep 3600; done
+        fi
+        if ! mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; then
+          echo '[dvc-sync-down] Cannot reach local MinIO. Service is idle.'
+          while true; do sleep 3600; done
+        fi
+        if ! mc alias set remote "$$REMOTE_S3_ENDPOINT" "$$REMOTE_S3_ACCESS_KEY" "$$REMOTE_S3_SECRET_KEY"; then
+          echo '[dvc-sync-down] Remote endpoint is invalid for mc alias. Service is idle.'
+          while true; do sleep 3600; done
+        fi
+        while true; do
+          echo '[dvc-sync-down] Sync remote datasets -> local cache'
+          mc mirror --overwrite \
+            remote/$$REMOTE_DVC_BUCKET/$$REMOTE_DATASETS_PREFIX \
+            local/$$LOCAL_DVC_BUCKET/$$LOCAL_DATASETS_PREFIX || true
+          sleep $$SYNC_INTERVAL_SECONDS
+        done
 
   dvc-sync-up:
     image: ${MINIO_CLIENT_IMAGE}
     container_name: dvc-sync-up
     restart: unless-stopped
+    entrypoint: ["/bin/sh"]
 
     depends_on:
       - minio
@@ -254,27 +262,33 @@ services:
 
       AWS_DEFAULT_REGION: ${REMOTE_S3_REGION:-us-east-1}
 
-    command: >
-      /bin/sh -c "
-      set -eu;
-      if [ -z \"$$REMOTE_S3_ENDPOINT\" ] || [ -z \"$$REMOTE_S3_ACCESS_KEY\" ] || [ -z \"$$REMOTE_S3_SECRET_KEY\" ] || [ -z \"$$REMOTE_DVC_BUCKET\" ]; then
-        echo '[dvc-sync-up] Remote S3 env vars missing. Service is idle.';
-        sleep infinity;
-      fi;
-      mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
-      mc alias set remote \"$$REMOTE_S3_ENDPOINT\" \"$$REMOTE_S3_ACCESS_KEY\" \"$$REMOTE_S3_SECRET_KEY\";
-      while true; do
-        echo '[dvc-sync-up] Sync local models -> remote';
-        mc mirror --overwrite \
-          local/$$LOCAL_DVC_BUCKET/$$LOCAL_MODELS_PREFIX \
-          remote/$$REMOTE_DVC_BUCKET/$$REMOTE_MODELS_PREFIX || true;
-        echo '[dvc-sync-up] Sync local outputs -> remote';
-        mc mirror --overwrite \
-          local/$$LOCAL_DVC_BUCKET/$$LOCAL_OUTPUTS_PREFIX \
-          remote/$$REMOTE_DVC_BUCKET/$$REMOTE_OUTPUTS_PREFIX || true;
-        sleep $$SYNC_INTERVAL_SECONDS;
-      done;
-      "
+    command:
+      - -ec
+      - |
+        set -eu
+        if [ -z "$$REMOTE_S3_ENDPOINT" ] || [ -z "$$REMOTE_S3_ACCESS_KEY" ] || [ -z "$$REMOTE_S3_SECRET_KEY" ] || [ -z "$$REMOTE_DVC_BUCKET" ]; then
+          echo '[dvc-sync-up] Remote S3 env vars missing. Service is idle.'
+          while true; do sleep 3600; done
+        fi
+        if ! mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; then
+          echo '[dvc-sync-up] Cannot reach local MinIO. Service is idle.'
+          while true; do sleep 3600; done
+        fi
+        if ! mc alias set remote "$$REMOTE_S3_ENDPOINT" "$$REMOTE_S3_ACCESS_KEY" "$$REMOTE_S3_SECRET_KEY"; then
+          echo '[dvc-sync-up] Remote endpoint is invalid for mc alias. Service is idle.'
+          while true; do sleep 3600; done
+        fi
+        while true; do
+          echo '[dvc-sync-up] Sync local models -> remote'
+          mc mirror --overwrite \
+            local/$$LOCAL_DVC_BUCKET/$$LOCAL_MODELS_PREFIX \
+            remote/$$REMOTE_DVC_BUCKET/$$REMOTE_MODELS_PREFIX || true
+          echo '[dvc-sync-up] Sync local outputs -> remote'
+          mc mirror --overwrite \
+            local/$$LOCAL_DVC_BUCKET/$$LOCAL_OUTPUTS_PREFIX \
+            remote/$$REMOTE_DVC_BUCKET/$$REMOTE_OUTPUTS_PREFIX || true
+          sleep $$SYNC_INTERVAL_SECONDS
+        done
 
 volumes:
   postgres_data:
