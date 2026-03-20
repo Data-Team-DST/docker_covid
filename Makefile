@@ -15,7 +15,8 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 
 .PHONY: all setup setup-check start start-local start-docker start-all \
-        stop restart logs test lint fix clean build shell help
+        stop restart logs test lint fix clean build shell help \
+        dvc-setup dvc-push dvc-pull
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 GREEN  := \033[0;32m
@@ -27,28 +28,31 @@ NC     := \033[0m
 BACKEND_URL  := http://localhost:8000
 FRONTEND_URL := http://localhost:8501
 PYTHON       := python3
+COMPOSE      := docker compose -f infrastructure/docker-compose.yml --project-directory .
+SCRIPTS      := infrastructure/scripts
 
 # ── Défaut ────────────────────────────────────────────────────────────────────
 all: help
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 setup: ## Setup complet : venv, deps, .env, dossiers (run once apres git clone)
-	@bash setup.sh
+	@bash $(SCRIPTS)/setup.sh
 
 setup-check: ## Verifie l etat de l environnement local
-	@bash setup.sh --check
+	@bash $(SCRIPTS)/setup.sh --check
 
 # ── Local (sans Docker) ──────────────────────────────────────────────────────
 start-local: ## Lance backend + frontend en local (necessite setup)
-	@bash start_local.sh
+	@bash $(SCRIPTS)/start_local.sh
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 start-docker: ## Lance le backend via Docker (zero Python requis)
-	@bash start_services.sh phase1
+	@bash $(SCRIPTS)/start_services.sh phase1
 
 start: ## Lance le backend FastAPI (Phase 1) via Docker
 	@echo "$(YELLOW)Démarrage backend DS_COVID...$(NC)"
-	docker compose up -d --build backend
+	$(COMPOSE) down 2>/dev/null || true
+	$(COMPOSE) up -d --build backend
 	@echo "$(GREEN)✅ Backend disponible :$(NC)"
 	@echo "   API    : $(BACKEND_URL)"
 	@echo "   Swagger: $(BACKEND_URL)/docs"
@@ -56,7 +60,8 @@ start: ## Lance le backend FastAPI (Phase 1) via Docker
 
 start-all: ## Lance la stack complète : backend + frontend + mlflow + minio + postgres
 	@echo "$(YELLOW)Démarrage stack complète DS_COVID (Phase 2)...$(NC)"
-	docker compose up -d --build
+	$(COMPOSE) down 2>/dev/null || true
+	$(COMPOSE) up -d --build
 	@echo "$(GREEN)✅ Services disponibles :$(NC)"
 	@echo "   Backend  : $(BACKEND_URL)"
 	@echo "   Frontend : $(FRONTEND_URL)"
@@ -65,25 +70,43 @@ start-all: ## Lance la stack complète : backend + frontend + mlflow + minio + p
 
 stop: ## Arrête tous les containers
 	@echo "$(YELLOW)Arrêt des services...$(NC)"
-	docker compose down
+	$(COMPOSE) down
 	@echo "$(GREEN)✅ Services arrêtés$(NC)"
 
 restart: stop start ## Redémarre le backend
 
 build: ## Build les images sans lancer
-	docker compose build backend
+	$(COMPOSE) build backend
 
 logs: ## Affiche les logs en direct
-	docker compose logs -f backend
+	$(COMPOSE) logs -f backend
 
 logs-all: ## Affiche les logs de tous les services
-	docker compose logs -f
+	$(COMPOSE) logs -f
 
 shell: ## Ouvre un shell dans le container backend
-	docker compose exec backend bash
+	$(COMPOSE) exec backend bash
 
 status: ## Status des containers
-	docker compose ps
+	$(COMPOSE) ps
+
+# ── DVC ───────────────────────────────────────────────────────────────────────
+dvc-setup: ## Configure DVC remote MinIO (credentials locaux, gitignorés)
+	@echo "$(YELLOW)Configuration DVC remote MinIO...$(NC)"
+	@echo "[remote \"minio\"]" > .dvc/config.local
+	@echo "    access_key_id = minioadmin" >> .dvc/config.local
+	@echo "    secret_access_key = minioadmin" >> .dvc/config.local
+	@echo "$(GREEN)✅ .dvc/config.local créé$(NC)"
+
+dvc-push: ## Pousse les données vers MinIO (make start-all requis)
+	@echo "$(YELLOW)Push DVC → MinIO...$(NC)"
+	@.venv/bin/dvc push || dvc push
+	@echo "$(GREEN)✅ Données pushées$(NC)"
+
+dvc-pull: ## Récupère les données depuis MinIO
+	@echo "$(YELLOW)Pull DVC ← MinIO...$(NC)"
+	@.venv/bin/dvc pull || dvc pull
+	@echo "$(GREEN)✅ Données récupérées$(NC)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test: ## Lance les tests unitaires (local, sans Docker)
@@ -101,18 +124,18 @@ test-docker: ## Lance les tests dans le container Docker
 # ── Qualité ───────────────────────────────────────────────────────────────────
 lint: ## Vérifie la qualité du code (ruff + pylint + structure)
 	@echo "$(YELLOW)Vérification qualité...$(NC)"
-	@./check_quality.sh --skip-pylint
+	@bash $(SCRIPTS)/check_quality.sh --skip-pylint
 
 lint-full: ## Vérification qualité complète (avec pylint)
-	@./check_quality.sh
+	@bash $(SCRIPTS)/check_quality.sh
 
 fix: ## Auto-corrige le style (black + isort + ruff)
-	@./fix_style.sh
+	@bash $(SCRIPTS)/fix_style.sh
 
 smell: ## Analyse code smell uniquement
 	@$(PYTHON) -c "\
 import sys; sys.path.insert(0, '.'); \
-exec(open('check_code_smell_parser.py').read()); \
+exec(open('$(SCRIPTS)/check_code_smell_parser.py').read()); \
 from pathlib import Path; \
 [print(evaluate_file(f, sum(1 for _ in open(f)), 100)['message'], f) \
  for f in sorted(Path('backend/app').rglob('*.py')) \
@@ -130,7 +153,7 @@ clean: ## Nettoie __pycache__, .coverage, tmp/quality
 	@echo "$(GREEN)✅ Nettoyage terminé$(NC)"
 
 clean-docker: ## Supprime les images et volumes Docker du projet
-	docker compose down -v --rmi local 2>/dev/null || true
+	$(COMPOSE) down -v --rmi local 2>/dev/null || true
 
 # ── Help ──────────────────────────────────────────────────────────────────────
 help: ## Affiche cette aide

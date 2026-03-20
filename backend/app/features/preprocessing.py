@@ -1,4 +1,7 @@
-"""Preprocessing des images — identique à ce qui a été utilisé à l'entraînement"""
+"""Preprocessing des images.
+
+Identique à ce qui a été utilisé à l'entraînement.
+"""
 
 import io
 import logging

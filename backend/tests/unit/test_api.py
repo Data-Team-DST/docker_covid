@@ -1,6 +1,5 @@
 """Tests API — health, root, config."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.config import settings
@@ -73,3 +72,29 @@ def test_health_api_version_matches_settings():
 def test_health_classes_match_settings():
     response = client.get("/health")
     assert response.json()["classes"] == settings.class_names
+
+
+# ── Metrics ───────────────────────────────────────────────────────────────────
+
+def test_metrics_returns_200():
+    assert client.get("/metrics").status_code == 200
+
+
+def test_metrics_contains_uptime():
+    assert "ds_covid_uptime_seconds" in client.get("/metrics").text
+
+
+def test_metrics_contains_model_loaded():
+    assert "ds_covid_model_loaded" in client.get("/metrics").text
+
+
+def test_metrics_contains_predictions():
+    assert "ds_covid_predictions_total" in client.get("/metrics").text
+
+
+# ── Security (dev mode — api_key vide) ────────────────────────────────────────
+
+def test_predict_no_key_dev_mode_not_blocked():
+    """Sans api_key configuré, /predict doit répondre (503 = pas de modèle)."""
+    response = client.post("/api/v1/predict", files={})
+    assert response.status_code != 401

@@ -1,10 +1,11 @@
 # 07_conclusion_critique_perspective.py — Version présentation friendly
+# pylint: disable=line-too-long,invalid-name
 
 import streamlit as st
 
 
 def run():
-
+    """Affiche la page conclusion critique et perspectives."""
     try:
         from streamlit_extras.colored_header import colored_header
 

@@ -1,7 +1,9 @@
 # Theming metadata:
 # - Preferred: streamlit-extras mandatory; inherits app-wide dark theme.
 # - Palette: navy/dark background, high-contrast highlights; sans-serif font.
-# - File status: deep-dive template for best model — interpretability, error analysis, subgroup performance.
+# - File status: deep-dive template for best model — interpretability,
+#   error analysis, subgroup performance.
+# pylint: disable=line-too-long,invalid-name,non-ascii-file-name
 
 import os
 from pathlib import Path
@@ -11,6 +13,7 @@ from streamlit_extras.colored_header import colored_header
 
 
 def run():
+    """Affiche la page Deep Learning et interprétabilité."""
     # Header / hero
     colored_header(
         label="Deep learning et interprétabilité",
@@ -26,17 +29,13 @@ def run():
 
     chemin_absolu = rf"{chemin_global}/Inceptionv3.png"
     image_path = Path(chemin_absolu).relative_to(Path.cwd())
-    st.image(
-        str(image_path), caption="Schéma explicatif", use_container_width=True
-    )
+    st.image(str(image_path), caption="Schéma explicatif", use_container_width=True)
 
     st.markdown("**Courbes de loss et d’accuracy**")
 
     chemin_absolu = rf"{chemin_global}/courbe loss.png"
     image_path = Path(chemin_absolu).relative_to(Path.cwd())
-    st.image(
-        str(image_path), caption="Courbes de loss et d’accuracy", width=500
-    )
+    st.image(str(image_path), caption="Courbes de loss et d’accuracy", width=500)
 
     st.markdown("**Matrice de confusion**")
 
