@@ -72,7 +72,7 @@ known_first_party = ["app"]
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 python_files = ["test_*.py", "*_test.py"]
-pythonpath = ["backend"]
+pythonpath = ["backend", "."]
 addopts = [
     "--strict-markers",
 ]

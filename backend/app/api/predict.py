@@ -3,8 +3,10 @@
 import logging
 import time
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from app.api.metrics import stats
+from app.api.security import verify_api_key
 from app.config import settings
 from app.features.preprocessing import preprocess_image
 from app.models.loader import model_loader
@@ -15,7 +17,10 @@ router = APIRouter()
 
 
 @router.post("/predict", response_model=PredictionResponse)
-async def predict(file: UploadFile = File(...)):
+async def predict(
+    file: UploadFile = File(...),
+    _: None = Depends(verify_api_key),
+):
     """
     Prédit la classe d'une radiographie pulmonaire.
 
@@ -51,6 +56,7 @@ async def predict(file: UploadFile = File(...)):
             cls: float(predictions[i]) for i, cls in enumerate(settings.class_names)
         }
 
+        stats.increment_predict()
         logger.info(
             "Prédiction : %s (%.1f%%) | %sms",
             predicted_class,

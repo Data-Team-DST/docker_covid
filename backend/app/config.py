@@ -24,6 +24,9 @@ class Settings(BaseSettings):
         "Viral_Pneumonia",
     ]
 
+    # Sécurité (Phase 3) — vide = mode dev sans restriction
+    api_key: str = ""
+
     # Image preprocessing
     img_size: tuple[int, int] = (224, 224)
 

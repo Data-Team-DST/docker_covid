@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ds-covid-config
+  namespace: ds-covid
+data:
+  API_ENV: "production"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  MLFLOW_TRACKING_URI: "http://mlflow-service:5000"
+  MLFLOW_S3_ENDPOINT_URL: "http://minio-service:9000"
+  AWS_DEFAULT_REGION: "us-east-1"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ds-covid-secrets
+  namespace: ds-covid
+type: Opaque
+stringData:
+  API_KEY: ""                    # Définir en prod
+  MINIO_ROOT_USER: "minioadmin"
+  MINIO_ROOT_PASSWORD: "minioadmin"
+  POSTGRES_USER: "mlflow"
+  POSTGRES_PASSWORD: "mlflow"
+  POSTGRES_DB: "mlflow"

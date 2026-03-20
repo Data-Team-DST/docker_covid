@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.metrics import router as metrics_router
 from app.api.predict import router as predict_router
 from app.config import settings
 from app.models.loader import model_loader
@@ -52,6 +53,7 @@ app.add_middleware(
 
 app.include_router(health_router, tags=["Health"])
 app.include_router(predict_router, prefix="/api/v1", tags=["Prediction"])
+app.include_router(metrics_router, tags=["Monitoring"])
 
 
 @app.get("/", include_in_schema=False)

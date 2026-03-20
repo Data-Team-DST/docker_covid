@@ -14,7 +14,7 @@ def render_load_mode(save_dir: str):
 
     # Import Transformateurs AVANT joblib (requis pour unpickling)
     # pylint: disable=unused-import
-    from src.features.St_Pipeline.Transformateurs import (  # noqa: PLC0415
+    from src.features.St_Pipeline.Transformateurs import (  # noqa: PLC0415, F401
         ImageAnalyser,
         ImageAugmenter,
         ImageFlattener,

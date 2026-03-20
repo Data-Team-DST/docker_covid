@@ -28,7 +28,6 @@ from keras.applications.vgg16 import preprocess_input as vgg16_preprocess
 # Import from interpretability module
 from src.interpretability.gradcam import GradCAM, visualize_gradcam
 
-
 # Configure logger
 logger = logging.getLogger(__name__)
 
