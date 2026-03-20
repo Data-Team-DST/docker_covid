@@ -1,3 +1,12 @@
+"""
+Notes de développement :
+
+Numpy : Image (H, W) i.e (lignes, colonnes)
+cv2 : Image (W, H) 
+
+
+"""
+
 import argparse
 from pathlib import Path
 from PIL import Image
@@ -86,101 +95,15 @@ def process_single_image(
         cropping: bool,
         denoising_method: str | None, # if None we skip denoising
         clahe_processor: cv2.CLAHE | None, # if None we skip CLAHE
-        target_size: int) -> Image.Image:
+        target_size: int) -> np.ndarray:
     
     """
-    Traite une seule image selon les étapes du pipeline, avec les options choisies.
 
-    Args:
-         img_path: Path - chemin vers l'image à traiter
-         mask_path: Path | None - chemin vers le mask correspondant, ou None pour ne pas faire de masking
-         cropping: bool - appliquer le crop+padding pour recentrer les poumons si True (seulement actif si mask_path n'est pas None)
-         denoising_method: str | None - méthode de denoising à appliquer (ex: 'gaussian') ou None pour aucune
-         clahe_processor: cv2.CLAHE | None - instance de cv2.CLAHE à appliquer, ou None pour ne pas faire de CLAHE
-         target_size: int - résolution cible (carrée) pour l'image finale (ex: 128, 256)
-         
-    Returns:
-         Image.Image - image traitée au format PIL.Image, prête à être sauvegardée
+    Applique le pipeline de prétraitement à une seule image, selon les options choisies.
 
-    Raises:
-         FileNotFoundError - si l'image ou le mask (si masking activé) ne peuvent pas être chargés
-         ValueError - si le crop est activé mais que l'image masquée ne contient aucun pixel de poumon (tous les pixels sont à zéro)
-    """
+    Pipeline complet détaillé :
 
-    # Charger l'image
-
-    img_cv  = cv2.imread(str(img_path),  cv2.IMREAD_GRAYSCALE)  # raw resolution = 299x299, L (1 channel) or fake RGB (3 channels identiques), valeurs 0-255
-                                                                # imread renvoie directement un array numpy
-    if img_cv is None:
-        raise FileNotFoundError(f"Impossible de charger l'image: {img_path}")
-    
-    # Denoising (optionnel)
-    if denoising_method == 'gaussian':
-
-        img_cv = cv2.GaussianBlur(img_cv, (5, 5), 0)    # cv2.GaussianBlur(src, ksize, sigmaX) - ksize doit être impair, sigmaX est l'écart type du noyau gaussien
-                                                        # outputs an array of the same shape as img_cv, with values denoised
-
-    # Masking, cropping, padding (optionnel)
-
-    if mask_path:
-
-
-        mask_cv = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE) # raw resolution = 256x256, fake RGB (3 channels identiques), binaire : 0 | 255
-        
-        if mask_cv is None:
-            raise FileNotFoundError(f"Impossible de charger le mask: {mask_path}")
-        
-        # Redimensionner le mask à la taille de l'image (299x299) avec interpolation nearest pour garder les valeurs binaires
-
-        mask_resized_cv = cv2.resize(mask_cv, (img_cv.shape[1], img_cv.shape[0]), interpolation=cv2.INTER_NEAREST) # (width, height) order for cv2.resize
-
-        # Préparer le mask pour OpenCV (0/255 requis)
-
-        if mask_resized_cv.max() <= 1: # Should not be the case with our images, but just in case
-            mask_binary = (mask_resized_cv * 255).astype(np.uint8)
-        else:
-            mask_binary = mask_resized_cv.astype(np.uint8)
-        
-        # Appliquer le masquage avec bitwise_and
-        masked_cv = cv2.bitwise_and(img_cv, img_cv, mask=mask_binary) # cv2.bitwise_and(src1, src2, mask) - effectue une opération AND bit à bit entre src1 et src2, en utilisant le mask pour ne garder que les pixels où mask est non nul. Renvoie un array de la même forme que img_cv, avec les pixels de poumon conservés et le reste mis à zéro.
-        
-        # Optionnel : recadrage + padding pour recentrer les poumons
-        if cropping:
-            masked_cv = squared_crop_to_lungs(masked_cv)
-
-        img_cv = masked_cv
-    
-    # CLAHE (optionnel)
-
-    if clahe_processor:
-        img_cv = clahe_processor.apply(img_cv)
-    
-    # Redimensionner (cv2) avec LANCZOS4 pour préserver les détails
-    img_cv = cv2.resize(img_cv, (target_size, target_size), interpolation=cv2.INTER_LANCZOS4)
-
-    # Convertir en PIL.Image
-
-    img_pil = Image.fromarray(img_cv) # img_cv is already grayscale, so mode L is inferred automatically
-
-    return img_pil
-
-def preprocess_pipeline(
-    source_path: Path=SOURCE_PATH,
-    denoising_method: str | None,
-    masking: bool,
-    cropping: bool,
-    clahe: bool,
-    target_size: int
-                    ):
-
-    """
-    Applique le pipeline de preprocesssing sur le raw dataset pour créer un nouveau dataset d'images radiographiques, avec options à chaque étape.
-
-    On ne considère que des images en L car ce sont des radiographies.
-
-    Le pipeline est le suivant : 
-
-    1) chargement des raw data : l'image (299x299) et son Mask (256x256), si on veut faire du masking
+    1) chargement des raw data : l'image (299x299) et son Mask (256x256)
 
     1) a) [OPTIONNEL] Denoising avec une méthode comme Gaussian Blur, si jamais la qualité des images est mauvaise (pas notre cas, curated dataset, mais pourrait être le cas d'une image donnée dans predict/)
 
@@ -194,115 +117,208 @@ def preprocess_pipeline(
 
     6) Resize final vers le target size (ex : 128x128 ou 256x256) avec interpolation de type LANCZOS4 pour préserver les détails
 
-        
     Args:
-        source_path: Path - chemin vers le dataset raw
-        denoising_method: str | None - méthode de denoising à appliquer (ex: 'gaussian') ou None pour aucune
-        masking: bool - appliquer le masquage si True
-        cropping: bool - appliquer le crop+padding pour recentrer les poumons si True
-        clahe: bool - appliquer CLAHE pour améliorer le contraste local si True
-        target_size: int - résolution cible (carrée) pour les images finales (ex: 128, 256)
+         img_path: Path - chemin vers l'image à traiter
+         mask_path: Path | None - chemin vers le mask correspondant, ou None pour ne pas faire de masking
+         cropping: bool - appliquer le crop+padding pour recentrer les poumons si True (seulement actif si mask_path n'est pas None)
+         denoising_method: str | None - méthode de denoising à appliquer (ex: 'gaussian') ou None pour aucune
+         clahe_processor: cv2.CLAHE | None - instance de cv2.CLAHE à appliquer, ou None pour ne pas faire de CLAHE
+         target_size: int - résolution cible (carrée) pour l'image finale (ex: 128, 256)
+         
+    Returns:
+         np.ndarray - image traitée au format numpy array, prête à être sauvegardée
+
+    Raises:
+         FileNotFoundError - si l'image ou le mask (si masking activé) ne peuvent pas être chargés
+         ValueError - si le crop est activé mais que l'image masquée ne contient aucun pixel de poumon (tous les pixels sont à zéro)
     """
 
-                    # Charger le mask
-                    mask_path = masks_dir / img_path.name # same name as image but in masks/
+    # Charger l'image
+
+    img_array  = cv2.imread(str(img_path),  cv2.IMREAD_GRAYSCALE)   # raw resolution = 299x299, L (1 channel) or fake RGB (3 channels identiques), valeurs 0-255
+                                                                    # img_array est un array numpy
+    if img_array is None:
+        raise FileNotFoundError(f"Impossible de charger l'image: {img_path}")
+    
+    # Denoising (optionnel)
+    if denoising_method == 'gaussian':
+
+        img_array = cv2.GaussianBlur(img_array, (5, 5), 0)      # cv2.GaussianBlur(src, ksize, sigmaX) - ksize doit être impair, sigmaX est l'écart type du noyau gaussien
+                                                                # outputs an array of the same shape as img_array, with values denoised
+
+    # Masking, cropping, padding (optionnel)
+
+    if mask_path:
 
 
-    color_mode = 'L'  # Mode grayscale imposé pour la radiographie
+        mask_array = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)   # raw resolution = 256x256, fake RGB (3 channels identiques), binaire : 0 | 255
 
-    # We generate the dataset name based on the options chosen, to keep track of different versions
-    dataset_name_parts = [f"{target_size}x{target_size}_{color_mode}"]
-    if masking:
-        dataset_name_parts.append("masked")
-    if cropping:
-        dataset_name_parts.append("cropped")
-    if clahe:
-        dataset_name_parts.append("clahe")
-
-    OUTPUT_PATH = PROJECT_ROOT / "data" / "processed" / "_".join(dataset_name_parts)
-    OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
-
-    # Paramètres
-    TARGET_SIZE = (target_size, target_size)
-    CLASSES = ["COVID", "Normal", "Lung_Opacity", "Viral Pneumonia"]
-
-    print(f"Dataset source: {source_path}")
-    print(f"Dataset de sortie: {OUTPUT_PATH}")
-    print(f"Taille cible: {TARGET_SIZE}")
-    print(f"Mode couleur: L (grayscale) uniquement (radiographies)")
-    print(f"Avec masquage: {masking}")
-    print(f"Avec recadrage: {cropping}")
-
-    print(f"Classes: {CLASSES}")
-    print(f"\n{'='*60}")
-
-    # Statistiques
-    total_processed = 0
-    errors = []
-
-    # Traiter chaque classe
-    for class_name in CLASSES:
-        print(f"\nTraitement de la classe: {class_name}")
+                                                                        # mask_array est un array numpy 
         
-        # Chemins source et sortie
-        source_dir = source_path / class_name
-        output_dir = OUTPUT_PATH / class_name
-        output_dir.mkdir(parents=True, exist_ok=True)
+        if mask_array is None:
+            raise FileNotFoundError(f"Impossible de charger le mask: {mask_path}")
         
-        # Utiliser images/ dans tous les cas
-        images_dir = source_dir / "images"
-        image_files = sorted(images_dir.glob("*.png"))
+        # Redimensionner le mask à la taille de l'image (299x299) avec interpolation nearest pour garder les valeurs binaires
+
+        mask_array = cv2.resize(mask_array, (img_array.shape[1], img_array.shape[0]), interpolation=cv2.INTER_NEAREST) # (width, height) order for cv2.resize argument. Output is still a numpy array
+
+        # Préparer le mask pour OpenCV (0/255 requis)
+
+        if mask_array.max() <= 1: # Should not be the case with our images, but just in case
+            mask_binary = (mask_array * 255).astype(np.uint8)
+        else:
+            mask_binary = mask_array.astype(np.uint8)
         
-        if masking:
-            masks_dir = source_dir / "masks"
+        # Appliquer le masquage avec bitwise_and
+        masked_array = cv2.bitwise_and(img_array, img_array, mask=mask_binary) # cv2.bitwise_and(src1, src2, mask) - effectue une opération AND bit à bit entre src1 et src2, en utilisant le mask pour ne garder que les pixels où mask est non nul. Renvoie un array de la même forme que img_array, avec les pixels de poumon conservés et le reste mis à zéro.
         
-        print(f"Nombre d'images trouvées: {len(image_files)}")
-        
-        clahe_processor = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        # Optionnel : recadrage + padding pour recentrer les poumons
+        if cropping:
+            masked_array = squared_crop_to_lungs(masked_array)
 
-        # Traiter chaque image
-        for img_path in tqdm(image_files, desc=f"Processing {class_name}"):
+        img_array = masked_array
+    
+    # CLAHE (optionnel)
 
+    if clahe_processor:
+        img_array = clahe_processor.apply(img_array)
+    
+    # Redimensionner (cv2) avec LANCZOS4 pour préserver les détails
+    img_array = cv2.resize(img_array, (target_size, target_size), interpolation=cv2.INTER_LANCZOS4)
 
-                # Sauvegarder
-                output_file = output_dir / img_path.name
-                img_pil.save(output_file)
-                
-                total_processed += 1
-                
-            except Exception as e:
-                errors.append((img_path, str(e)))
-        
-        print(f"✓ {class_name}: {len(list(output_dir.glob('*.png')))} images créées")
-
-    print(f"\n{'='*60}")
-    print(f"RÉSUMÉ")
-    print(f"{'='*60}")
-    print(f"Total d'images traitées: {total_processed}")
-    print(f"Erreurs: {len(errors)}")
-
-    if errors:
-        print("\nPremières erreurs:")
-        for img, err in errors[:5]:
-            print(f"  - {img.name}: {err}")
-
-    # Vérification finale
-    print(f"\n{'='*60}")
-    print("Nombre d'images par classe dans le nouveau dataset:")
-    for class_name in CLASSES:
-        class_dir = OUTPUT_PATH / class_name
-        n_images = len(list(class_dir.glob("*.png")))
-        print(f"  {class_name}: {n_images}")
-
-    print(f"\n✓ Dataset créé avec succès dans: {OUTPUT_PATH}")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Créer un dataset d'images radiographiques en grayscale avec options de résolution, masquage et normalisation")
-    parser.add_argument("--resolution", type=int, default=256, help="Résolution cible (carrée)")
-    parser.add_argument("--with_masking", action='store_true', help="Appliquer les masques si activé")
-    parser.add_argument("--normalize", choices=['minmax', 'standard'], help="Normaliser les images: minmax=[0,1] ou standard=z-score")
   
-    args = parser.parse_args()
-    create_dataset(args.resolution, args.with_masking, args.normalize)
+    return img_array # uint8 (H, W)
+
+
+
+# def preprocess_pipeline(
+    
+#     denoising_method: str | None,
+#     masking: bool,
+#     cropping: bool,
+#     clahe: bool,
+#     target_size: int,
+#     source_path: Path=SOURCE_PATH,
+#                     ):
+
+#     """
+#     Applique le pipeline de preprocesssing sur le raw dataset pour créer un nouveau dataset d'images radiographiques, avec options à chaque étape.
+
+#     On ne considère que des images en L car ce sont des radiographies.
+
+#     Le pipeline est le suivant : 
+
+   
+
+        
+#     Args:
+#         source_path: Path - chemin vers le dataset raw
+#         denoising_method: str | None - méthode de denoising à appliquer (ex: 'gaussian') ou None pour aucune
+#         masking: bool - appliquer le masquage si True
+#         cropping: bool - appliquer le crop+padding pour recentrer les poumons si True
+#         clahe: bool - appliquer CLAHE pour améliorer le contraste local si True
+#         target_size: int - résolution cible (carrée) pour les images finales (ex: 128, 256)
+#     """
+
+#                     # # Charger le mask
+#                     # mask_path = masks_dir / img_path.name # same name as image but in masks/
+
+
+#     color_mode = 'L'  # Mode grayscale imposé pour la radiographie
+
+#     # We generate the dataset name based on the options chosen, to keep track of different versions
+#     dataset_name_parts = [f"{target_size}x{target_size}_{color_mode}"]
+#     if masking:
+#         dataset_name_parts.append("masked")
+#     if cropping:
+#         dataset_name_parts.append("cropped")
+#     if clahe:
+#         dataset_name_parts.append("clahe")
+
+#     OUTPUT_PATH = PROJECT_ROOT / "data" / "processed" / "_".join(dataset_name_parts)
+#     OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+
+#     # Paramètres
+#     TARGET_SIZE = (target_size, target_size)
+#     CLASSES = ["COVID", "Normal", "Lung_Opacity", "Viral Pneumonia"]
+
+#     print(f"Dataset source: {source_path}")
+#     print(f"Dataset de sortie: {OUTPUT_PATH}")
+#     print(f"Taille cible: {TARGET_SIZE}")
+#     print(f"Mode couleur: L (grayscale) uniquement (radiographies)")
+#     print(f"Avec masquage: {masking}")
+#     print(f"Avec recadrage: {cropping}")
+
+#     print(f"Classes: {CLASSES}")
+#     print(f"\n{'='*60}")
+
+#     # Statistiques
+#     total_processed = 0
+#     errors = []
+
+#     # Traiter chaque classe
+#     for class_name in CLASSES:
+#         print(f"\nTraitement de la classe: {class_name}")
+        
+#         # Chemins source et sortie
+#         source_dir = source_path / class_name
+#         output_dir = OUTPUT_PATH / class_name
+#         output_dir.mkdir(parents=True, exist_ok=True)
+        
+#         # Utiliser images/ dans tous les cas
+#         images_dir = source_dir / "images"
+#         image_files = sorted(images_dir.glob("*.png"))
+        
+#         if masking:
+#             masks_dir = source_dir / "masks"
+        
+#         print(f"Nombre d'images trouvées: {len(image_files)}")
+        
+#         clahe_processor = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+
+#         # Traiter chaque image
+#         for img_path in tqdm(image_files, desc=f"Processing {class_name}"):
+
+
+#                 # Sauvegarder
+#                 output_file = output_dir / img_path.name
+#                 img_pil.save(output_file)
+                
+#                 total_processed += 1
+                
+#             except Exception as e:
+#                 errors.append((img_path, str(e)))
+        
+#         print(f"✓ {class_name}: {len(list(output_dir.glob('*.png')))} images créées")
+
+#     print(f"\n{'='*60}")
+#     print(f"RÉSUMÉ")
+#     print(f"{'='*60}")
+#     print(f"Total d'images traitées: {total_processed}")
+#     print(f"Erreurs: {len(errors)}")
+
+#     if errors:
+#         print("\nPremières erreurs:")
+#         for img, err in errors[:5]:
+#             print(f"  - {img.name}: {err}")
+
+#     # Vérification finale
+#     print(f"\n{'='*60}")
+#     print("Nombre d'images par classe dans le nouveau dataset:")
+#     for class_name in CLASSES:
+#         class_dir = OUTPUT_PATH / class_name
+#         n_images = len(list(class_dir.glob("*.png")))
+#         print(f"  {class_name}: {n_images}")
+
+#     print(f"\n✓ Dataset créé avec succès dans: {OUTPUT_PATH}")
+
+
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(description="Créer un dataset d'images radiographiques en grayscale avec options de résolution, masquage et normalisation")
+#     parser.add_argument("--resolution", type=int, default=256, help="Résolution cible (carrée)")
+#     parser.add_argument("--with_masking", action='store_true', help="Appliquer les masques si activé")
+#     parser.add_argument("--normalize", choices=['minmax', 'standard'], help="Normaliser les images: minmax=[0,1] ou standard=z-score")
+  
+#     args = parser.parse_args()
+#     create_dataset(args.resolution, args.with_masking, args.normalize)
 
