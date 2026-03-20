@@ -4,7 +4,6 @@ import os
 
 import mlflow
 import mlflow.sklearn
-
 from src.ml.baseline import AdaBoost, GradientBoosting, LinearSVM, RandomForest
 from src.ml.evaluate import compute_metrics
 from src.ml.trainer import split_data, train_with_grid_search

@@ -4,7 +4,6 @@ requests==2.32.3
 kagglehub
 plotly
 mlflow
-boto3
 pillow==11.0.0
 scikit-image
 opencv-python

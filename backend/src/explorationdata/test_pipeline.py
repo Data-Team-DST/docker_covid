@@ -123,7 +123,6 @@ def test_mock_pipeline():
     try:
         import numpy as np
         import pandas as pd
-
         from src.explorationdata.pipeline.clustering_analyzer import (
             ClusteringAnalyzer,
         )

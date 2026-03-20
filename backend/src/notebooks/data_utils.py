@@ -25,16 +25,15 @@ from keras.applications.vgg16 import preprocess_input as vgg16_preprocess
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.utils.class_weight import compute_class_weight
-
-# ImageDataGenerator is deprecated in Keras 3, use tf.keras version
-# pylint: disable=import-error,no-name-in-module
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
 from src.features.Pipelines.Transformateurs.image_loaders import ImageLoader
 from src.features.Pipelines.Transformateurs.image_preprocessing import (
     ImageMasker,
     ImageResizer,
 )
+
+# ImageDataGenerator is deprecated in Keras 3, use tf.keras version
+# pylint: disable=import-error,no-name-in-module
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # Configure logger
 logger = logging.getLogger(__name__)

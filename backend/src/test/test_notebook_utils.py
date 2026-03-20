@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 from keras.utils import to_categorical
-
 from utils import (
     build_custom_cnn,
     build_transfer_learning_model,

@@ -1,5 +1,4 @@
 import numpy as np  # type: ignore
-
 from features.Pipelines.transformateurs.image_augmentation import (
     ImageAugmenter,
     ImageRandomCropper,
