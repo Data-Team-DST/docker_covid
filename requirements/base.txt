@@ -3,6 +3,6 @@ pandas
 scikit-learn
 matplotlib
 opencv-python
-pydicom
+# pydicom
 pillow
-boto3
+# boto3
