@@ -3,8 +3,10 @@
 import logging
 import time
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from app.api.metrics import stats
+from app.api.security import verify_api_key
 from app.config import settings
 from app.features.preprocessing import preprocess_image
 from app.models.loader import model_loader
@@ -15,7 +17,10 @@ router = APIRouter()
 
 
 @router.post("/predict", response_model=PredictionResponse)
-async def predict(file: UploadFile = File(...)):
+async def predict(
+    file: UploadFile = File(...),
+    _: None = Depends(verify_api_key),
+):
     """
     Prédit la classe d'une radiographie pulmonaire.
 
@@ -25,7 +30,10 @@ async def predict(file: UploadFile = File(...)):
     if not model_loader.is_loaded:
         raise HTTPException(
             status_code=503,
-            detail="Modèle non disponible — vérifier que data/models/ contient le fichier .keras",
+            detail=(
+                "Modèle non disponible — vérifier que"
+                " data/models/ contient le .keras"
+            ),
         )
 
     if file.content_type not in ("image/jpeg", "image/png"):
@@ -45,12 +53,15 @@ async def predict(file: UploadFile = File(...)):
         confidence = float(predictions[predicted_idx])
 
         scores = {
-            cls: float(predictions[i])
-            for i, cls in enumerate(settings.class_names)
+            cls: float(predictions[i]) for i, cls in enumerate(settings.class_names)
         }
 
+        stats.increment_predict()
         logger.info(
-            f"Prédiction : {predicted_class} ({confidence:.1%}) | {latency_ms}ms"
+            "Prédiction : %s (%.1f%%) | %sms",
+            predicted_class,
+            confidence * 100,
+            latency_ms,
         )
 
         return PredictionResponse(
@@ -61,7 +72,5 @@ async def predict(file: UploadFile = File(...)):
         )
 
     except Exception as e:
-        logger.error(f"Erreur prédiction : {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Erreur interne : {str(e)}"
-        ) from e
+        logger.error("Erreur prédiction : %s", e)
+        raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}") from e

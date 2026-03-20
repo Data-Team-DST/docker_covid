@@ -15,16 +15,26 @@ Classification automatique de radiographies pulmonaires
 git clone https://github.com/Data-Team-DST/docker_covid.git
 cd docker_covid
 
-# 2. Lancer le setup (choisir Développeur ou Utilisateur)
-./setup.sh
+# 2. Setup (venv, deps, .env, dossiers)
+make setup
 ```
 
-`setup.sh` vous guidera interactivement :
-- **[1] Développeur** — Docker + venv IDE optionnel. Construit les images localement.
-- **[2] Utilisateur** — Docker uniquement. Lance la stack telle quelle.
-
 > **Pré-requis** : [Docker Desktop](https://www.docker.com/products/docker-desktop/) installé et démarré.
-> WSL2 : activer la distro dans Docker Desktop > Settings > Resources > WSL Integration.
+>
+> **WSL2** : activer la distro dans Docker Desktop → Settings → Resources → WSL Integration.
+> Sans ça, `docker` ne sera pas trouvé dans le terminal WSL.
+
+### Commandes de dev (sans `make`)
+
+```bash
+# Depuis la racine du projet (WSL ou Git Bash)
+bash infrastructure/scripts/setup.sh          # setup
+bash infrastructure/scripts/check_quality.sh  # qualité
+bash infrastructure/scripts/fix_style.sh      # auto-style
+bash infrastructure/scripts/start_local.sh    # backend+frontend sans Docker
+```
+
+> ⚠️ Toujours utiliser des `/` (slash) et non des `\` (backslash) en WSL/bash.
 
 ---
 
@@ -63,25 +73,24 @@ docker_covid/
 │   │   ├── models/          # Chargement modèle Keras
 │   │   ├── features/        # Preprocessing image
 │   │   └── schemas/         # Schémas Pydantic
-│   ├── tests/unit/          # Tests unitaires (pytest)
-│   └── requirements.txt
+│   ├── src/                 # Code ML DS_COVID (training, features, interprétabilité)
+│   └── tests/unit/          # Tests unitaires (pytest)
 ├── frontend/                # Streamlit multi-pages
 │   ├── streamlit_app.py
 │   └── page/                # 01_accueil … 07_conclusion
-├── src/                     # Code ML DS_COVID (training, features, interprétabilité)
-├── docker/                  # Dockerfiles par service
-│   ├── backend/
-│   └── streamlit/
+├── infrastructure/
+│   ├── docker/              # Dockerfiles par service (backend, streamlit, trainer…)
+│   ├── kubernetes/          # Manifests K8s (Phase 3)
+│   ├── docker-compose.yml   # Stack complète
+│   └── scripts/             # setup.sh, check_quality.sh, fix_style.sh, start_local.sh
+├── docs/                    # Architecture, plan de base
 ├── data/
 │   └── models/              # ← Placer le fichier .keras ici
 ├── requirements/
 │   ├── local.txt            # Dev local (sans tensorflow)
 │   └── base.txt / streamlit.txt / trainer.txt
-├── docker-compose.yml       # Stack complète
-├── setup.sh                 # LANCER EN PREMIER
-├── start_local.sh           # Backend + frontend sans Docker (dev avancé)
-├── Makefile                 # Toutes les commandes
-├── .env.example             # Template — copié automatiquement par setup.sh
+├── Makefile                 # Toutes les commandes (`make help`)
+├── .env.example             # Template — copié automatiquement par make setup
 └── .github/workflows/
     └── cicd.yml             # CI/CD : lint → tests → SonarCloud → build GHCR
 ```
@@ -90,7 +99,7 @@ docker_covid/
 
 ## Configuration
 
-`setup.sh` copie automatiquement `.env.example` → `.env`.
+`make setup` copie automatiquement `.env.example` → `.env`.
 Adapter si besoin :
 
 ```env
@@ -107,7 +116,7 @@ MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
 ```bash
 make test
 # ou directement dans Docker :
-docker compose run --rm backend pytest tests/ --cov=app -v
+docker compose -f infrastructure/docker-compose.yml run --rm backend pytest tests/ --cov=app -v
 ```
 
 Coverage cible Phase 1 : >= 40 %
@@ -146,8 +155,8 @@ Documentation interactive : http://localhost:8000/docs
 
 | Phase | Contenu                       | Deadline   | Status      |
 |-------|-------------------------------|------------|-------------|
-| **1** | Env reproductible, API, CI/CD | 13/03/2026 | En cours    |
-| **2** | Microservices, MLflow, DVC    | 20/03/2026 | A faire     |
+| **1** | Env reproductible, API, CI/CD | 13/03/2026 | ✅ Livré    |
+| **2** | Microservices, MLflow, DVC    | 20/03/2026 | ✅ Livré    |
 | **3** | CI/CD complet, Kubernetes     | 24/04/2026 | A faire     |
 | **4** | Monitoring, Evidently, Drift  | 01/09/2026 | A faire     |
 | **Soutenance** | Présentation finale | 04/09/2026 | A faire |
