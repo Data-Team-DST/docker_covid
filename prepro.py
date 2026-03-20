@@ -101,6 +101,8 @@ def process_single_image(
 
     Applique le pipeline de prétraitement à une seule image, selon les options choisies.
 
+    ** On ne manipule que des images en L (grayscale) car ce sont des radiographies. **
+
     Pipeline complet détaillé :
 
     1) chargement des raw data : l'image (299x299) et son Mask (256x256)
@@ -191,134 +193,142 @@ def process_single_image(
 
 
 
-# def preprocess_pipeline(
+def preprocess_pipeline(
+    denoising_method: str | None,
+    masking: bool,
+    cropping: bool,
+    clahe: bool,
+    target_size: int,
+    source_path: Path=SOURCE_PATH,
+                    ):
+
+    """
+    Applique le pipeline de preprocesssing sur le raw dataset pour créer un nouveau dataset d'images radiographiques, avec options à chaque étape.
+
+    Voir pipeline détaillé dans process_single_image() pour les étapes appliquées à chaque image.
+
+    Args:
+        denoising_method: str | None - méthode de denoising à appliquer (ex: 'gaussian') ou None pour aucune
+        masking: bool - appliquer le masquage si True
+        cropping: bool - appliquer le crop+padding pour recentrer les poumons si True
+        clahe: bool - appliquer CLAHE pour améliorer le contraste local si True
+        target_size: int - résolution cible (carrée) pour les images finales (ex: 128, 256)
+        source_path: Path - chemin vers le dataset raw
+    """
+
+    # We generate the dataset name based on the options chosen, to keep track of different versions
+    dataset_name_parts = [f"{target_size}x{target_size}_L"]
+    if masking:
+        dataset_name_parts.append("masked")
+    if cropping:
+        dataset_name_parts.append("cropped")
+    if clahe:
+        dataset_name_parts.append("clahe")
+
+    OUTPUT_PATH = PROJECT_ROOT / "data" / "processed" / "_".join(dataset_name_parts)
+
+    OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+
+    # Paramètres
     
-#     denoising_method: str | None,
-#     masking: bool,
-#     cropping: bool,
-#     clahe: bool,
-#     target_size: int,
-#     source_path: Path=SOURCE_PATH,
-#                     ):
 
-#     """
-#     Applique le pipeline de preprocesssing sur le raw dataset pour créer un nouveau dataset d'images radiographiques, avec options à chaque étape.
+    CLASSES = ["COVID", "Normal", "Lung_Opacity", "Viral Pneumonia"]
 
-#     On ne considère que des images en L car ce sont des radiographies.
+    print(f"Dataset source: {source_path}")
+    print(f"Dataset de sortie: {OUTPUT_PATH}")
+    print(f"Taille cible: {target_size}x{target_size}")
+    print(f"Mode couleur: L (grayscale) uniquement (radiographies)")
+    print(f"Avec masquage: {masking}")
+    print(f"Avec recadrage: {cropping}")
+    print(f"Avec CLAHE: {clahe}")
+    print(f"Avec denoising: {denoising_method if denoising_method else 'aucun'}")
 
-#     Le pipeline est le suivant : 
+    print(f"Classes: {CLASSES}")
+    print(f"\n{'='*60}")
 
-   
+    # Statistiques
+    total_processed = 0
+    errors = []
 
+    
+    
+    clahe_processor = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if clahe else None
+
+    # Traiter chaque classe
+    for class_name in CLASSES:
+        print(f"\nTraitement de la classe: {class_name}")
         
-#     Args:
-#         source_path: Path - chemin vers le dataset raw
-#         denoising_method: str | None - méthode de denoising à appliquer (ex: 'gaussian') ou None pour aucune
-#         masking: bool - appliquer le masquage si True
-#         cropping: bool - appliquer le crop+padding pour recentrer les poumons si True
-#         clahe: bool - appliquer CLAHE pour améliorer le contraste local si True
-#         target_size: int - résolution cible (carrée) pour les images finales (ex: 128, 256)
-#     """
-
-#                     # # Charger le mask
-#                     # mask_path = masks_dir / img_path.name # same name as image but in masks/
-
-
-#     color_mode = 'L'  # Mode grayscale imposé pour la radiographie
-
-#     # We generate the dataset name based on the options chosen, to keep track of different versions
-#     dataset_name_parts = [f"{target_size}x{target_size}_{color_mode}"]
-#     if masking:
-#         dataset_name_parts.append("masked")
-#     if cropping:
-#         dataset_name_parts.append("cropped")
-#     if clahe:
-#         dataset_name_parts.append("clahe")
-
-#     OUTPUT_PATH = PROJECT_ROOT / "data" / "processed" / "_".join(dataset_name_parts)
-#     OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
-
-#     # Paramètres
-#     TARGET_SIZE = (target_size, target_size)
-#     CLASSES = ["COVID", "Normal", "Lung_Opacity", "Viral Pneumonia"]
-
-#     print(f"Dataset source: {source_path}")
-#     print(f"Dataset de sortie: {OUTPUT_PATH}")
-#     print(f"Taille cible: {TARGET_SIZE}")
-#     print(f"Mode couleur: L (grayscale) uniquement (radiographies)")
-#     print(f"Avec masquage: {masking}")
-#     print(f"Avec recadrage: {cropping}")
-
-#     print(f"Classes: {CLASSES}")
-#     print(f"\n{'='*60}")
-
-#     # Statistiques
-#     total_processed = 0
-#     errors = []
-
-#     # Traiter chaque classe
-#     for class_name in CLASSES:
-#         print(f"\nTraitement de la classe: {class_name}")
+        # Chemins source et sortie
+        source_dir = source_path / class_name
+        output_dir = OUTPUT_PATH / class_name
+        output_dir.mkdir(parents=True, exist_ok=True)
         
-#         # Chemins source et sortie
-#         source_dir = source_path / class_name
-#         output_dir = OUTPUT_PATH / class_name
-#         output_dir.mkdir(parents=True, exist_ok=True)
-        
-#         # Utiliser images/ dans tous les cas
-#         images_dir = source_dir / "images"
-#         image_files = sorted(images_dir.glob("*.png"))
-        
-#         if masking:
-#             masks_dir = source_dir / "masks"
-        
-#         print(f"Nombre d'images trouvées: {len(image_files)}")
-        
-#         clahe_processor = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        # Utiliser images/ dans tous les cas
+        images_dir = source_dir / "images"
+        image_files = sorted(images_dir.glob("*.png"))
 
-#         # Traiter chaque image
-#         for img_path in tqdm(image_files, desc=f"Processing {class_name}"):
+        print(f"Nombre d'images trouvées: {len(image_files)}")
+        
+        if masking:
+            masks_dir = source_dir / "masks"
+        
 
+        # Traiter chaque image
+        for img_path in tqdm(image_files, desc=f"Processing {class_name}"):
 
-#                 # Sauvegarder
-#                 output_file = output_dir / img_path.name
-#                 img_pil.save(output_file)
+            try:
+                mask_path = masks_dir / img_path.name if masking else None # same name as image but in masks/
+
+                img_processed_array = process_single_image(
+                    img_path=img_path,
+                    mask_path=mask_path,
+                    cropping=cropping,
+                    denoising_method=denoising_method,
+                    clahe_processor=clahe_processor,
+                    target_size=target_size
+                )
+
+                # Sauvegarder avec PIL
+
+                output_file = output_dir / img_path.name
+                img_pil = Image.fromarray(img_processed_array)
+                img_pil.save(output_file)
                 
-#                 total_processed += 1
+                total_processed += 1
                 
-#             except Exception as e:
-#                 errors.append((img_path, str(e)))
+            except Exception as e:
+                errors.append((img_path, str(e)))
         
-#         print(f"✓ {class_name}: {len(list(output_dir.glob('*.png')))} images créées")
+        print(f"✓ {class_name}: {len(list(output_dir.glob('*.png')))} images créées")
 
-#     print(f"\n{'='*60}")
-#     print(f"RÉSUMÉ")
-#     print(f"{'='*60}")
-#     print(f"Total d'images traitées: {total_processed}")
-#     print(f"Erreurs: {len(errors)}")
+    print(f"\n{'='*60}")
+    print(f"RÉSUMÉ")
+    print(f"{'='*60}")
+    print(f"Total d'images traitées: {total_processed}")
+    print(f"Erreurs: {len(errors)}")
 
-#     if errors:
-#         print("\nPremières erreurs:")
-#         for img, err in errors[:5]:
-#             print(f"  - {img.name}: {err}")
+    if errors:
+        print("\nPremières erreurs:")
+        for img, err in errors[:5]:
+            print(f"  - {img.name}: {err}")
 
-#     # Vérification finale
-#     print(f"\n{'='*60}")
-#     print("Nombre d'images par classe dans le nouveau dataset:")
-#     for class_name in CLASSES:
-#         class_dir = OUTPUT_PATH / class_name
-#         n_images = len(list(class_dir.glob("*.png")))
-#         print(f"  {class_name}: {n_images}")
+    # Vérification finale
+    print(f"\n{'='*60}")
+    print("Nombre d'images par classe dans le nouveau dataset:")
+    for class_name in CLASSES:
+        class_dir = OUTPUT_PATH / class_name
+        n_images = len(list(class_dir.glob("*.png")))
+        print(f"  {class_name}: {n_images}")
 
-#     print(f"\n✓ Dataset créé avec succès dans: {OUTPUT_PATH}")
+    print(f"\n✓ Dataset créé avec succès dans: {OUTPUT_PATH}")
 
 
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description="Créer un dataset d'images radiographiques en grayscale avec options de résolution, masquage et normalisation")
-#     parser.add_argument("--resolution", type=int, default=256, help="Résolution cible (carrée)")
-#     parser.add_argument("--with_masking", action='store_true', help="Appliquer les masques si activé")
-#     parser.add_argument("--normalize", choices=['minmax', 'standard'], help="Normaliser les images: minmax=[0,1] ou standard=z-score")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Créer un dataset d'images radiographiques en grayscale avec options de résolution, masquage et normalisation")
+    parser.add_argument("--resolution", type=int, default=256, help="Résolution cible (carrée)")
+    parser.add_argument("--with_masking", action='store_true', help="Appliquer les masques si activé")
+    parser.add_argument("--normalize", choices=['minmax', 'standard'], help="Normaliser les images: minmax=[0,1] ou standard=z-score")
   
-#     args = parser.parse_args()
-#     create_dataset(args.resolution, args.with_masking, args.normalize)
+    args = parser.parse_args()
+    create_dataset(args.resolution, args.with_masking, args.normalize)
 
