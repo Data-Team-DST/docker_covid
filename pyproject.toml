@@ -11,7 +11,7 @@ license = {file = "LICENSE"}
 requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["backend/src"]
 
 # ── Ruff : linting + formatage ────────────────────────────────────────────────
 [tool.ruff]
@@ -51,8 +51,8 @@ ignore = [
 "frontend/page/*.py" = ["W291", "W293", "B007"]
 "frontend/streamlit_app.py" = ["W291", "W293"]
 # Notebooks et code ML exploratoire — pas soumis au lint CI
-"src/**" = ["ALL"]
-"src/notebooks/**" = ["ALL"]
+"backend/src/**" = ["ALL"]
+"backend/src/notebooks/**" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
@@ -72,7 +72,7 @@ known_first_party = ["app"]
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 python_files = ["test_*.py", "*_test.py"]
-pythonpath = ["backend", "."]
+pythonpath = ["backend"]
 addopts = [
     "--strict-markers",
 ]

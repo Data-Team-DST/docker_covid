@@ -6,7 +6,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: docker/backend/Dockerfile
+      dockerfile: infrastructure/docker/backend/Dockerfile
     container_name: ds_covid_backend
     ports:
       - "8000:8000"
@@ -29,7 +29,7 @@ services:
   trainer:
     build:
       context: .
-      dockerfile: ${TRAINER_DOCKERFILE}
+      dockerfile: infrastructure/${TRAINER_DOCKERFILE}
       args:
         BASE_IMAGE: ${BASE_IMAGE}:${IMAGE_TAG}
 
@@ -41,9 +41,9 @@ services:
 
     volumes:
       - ./:${APP_WORKDIR}
-      - ${DATA_DIR}:${APP_WORKDIR}/data
-      - ${MODELS_DIR}:${APP_WORKDIR}/models
-      - ${OUTPUTS_DIR}:${APP_WORKDIR}/outputs
+      - ./data:${APP_WORKDIR}/data
+      - ./models:${APP_WORKDIR}/models
+      - ./outputs:${APP_WORKDIR}/outputs
 
     environment:
       TZ: ${TZ}
@@ -73,7 +73,7 @@ services:
   streamlit:
     build:
       context: .
-      dockerfile: ${STREAMLIT_DOCKERFILE}
+      dockerfile: infrastructure/${STREAMLIT_DOCKERFILE}
       args:
         BASE_IMAGE: ${BASE_IMAGE}:${IMAGE_TAG}
 
@@ -83,8 +83,8 @@ services:
 
     volumes:
       - ./:${APP_WORKDIR}
-      - ${MODELS_DIR}:${APP_WORKDIR}/models
-      - ${OUTPUTS_DIR}:${APP_WORKDIR}/outputs
+      - ./models:${APP_WORKDIR}/models
+      - ./outputs:${APP_WORKDIR}/outputs
 
     environment:
       TZ: ${TZ}
@@ -116,7 +116,7 @@ services:
   mlflow:
     build:
       context: .
-      dockerfile: docker/mlflow/Dockerfile
+      dockerfile: infrastructure/docker/mlflow/Dockerfile
     container_name: ${MLFLOW_CONTAINER_NAME}
 
     depends_on:

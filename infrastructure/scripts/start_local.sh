@@ -17,10 +17,11 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="${SCRIPT_DIR}/backend"
-FRONTEND_DIR="${SCRIPT_DIR}/frontend"
-LOG_DIR="${SCRIPT_DIR}/tmp/logs"
-VENV_DIR="${SCRIPT_DIR}/.venv"   # venv au ROOT (partage backend + frontend)
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+BACKEND_DIR="${PROJECT_ROOT}/backend"
+FRONTEND_DIR="${PROJECT_ROOT}/frontend"
+LOG_DIR="${PROJECT_ROOT}/tmp/logs"
+VENV_DIR="${PROJECT_ROOT}/.venv"   # venv au ROOT (partage backend + frontend)
 
 BACKEND_PORT=8000
 FRONTEND_PORT=8501

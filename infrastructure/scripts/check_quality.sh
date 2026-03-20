@@ -4,6 +4,9 @@
 
 set -e
 
+# Répertoire du script (pour référencer les scripts voisins)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Détection Python (WSL/Linux/Git Bash/Windows)
 if command -v python3 &>/dev/null && python3 -c "import sys; sys.exit(0)" 2>/dev/null; then
     PYTHON3=python3
@@ -52,6 +55,12 @@ SUMMARY="$ARTIFACT_DIR/summary.txt"
 
 > "$SUMMARY"
 
+# Préférer le Python du venv pour éviter les problèmes de shebang Windows/WSL
+VENV_PYTHON=".venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="$PYTHON3"
+fi
+
 # =========================
 # Gestion des arguments
 # =========================
@@ -86,9 +95,9 @@ run_check() {
 }
 
 auto_fix_style() {
-    if [ -f "fix_style.sh" ]; then
+    if [ -f "$SCRIPT_DIR/fix_style.sh" ]; then
         echo -e "${YELLOW}[0/8] Correction automatique du style (Black/Ruff/Isort)...${NC}"
-        ./fix_style.sh 2>&1 | grep -E "(✅|✨|⚠️)" || true
+        "$SCRIPT_DIR/fix_style.sh" 2>&1 | grep -E "(✅|✨|⚠️)" || true
         echo ""
     fi
 }
@@ -110,7 +119,7 @@ check_structure_complexity() {
     echo "========================================" >> "$STRUCTURE_REPORT"
     echo "" >> "$STRUCTURE_REPORT"
 
-    for root_dir in "backend/app" "frontend" "src" "tmp"; do
+    for root_dir in "backend/app" "frontend" "backend/src" "tmp"; do
         if [ ! -d "$root_dir" ]; then
             continue
         fi
@@ -220,15 +229,23 @@ check_code_smell() {
     echo "" >> "$CODE_SMELL_REPORT"
 
     PYTHONIOENCODING=utf-8 $PYTHON3 - <<PYEOF >> "$CODE_SMELL_REPORT"
-import sys, io
+import sys, io, os
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, ".")
 from pathlib import Path
 
-exec(open("check_code_smell_parser.py", encoding="utf-8").read())
+# Cherche le parser (depuis la racine projet ou depuis le répertoire du script)
+_candidates = [
+    "infrastructure/scripts/check_code_smell_parser.py",
+    os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "check_code_smell_parser.py"),
+]
+_parser = next((p for p in _candidates if os.path.isfile(p)), None)
+if _parser is None:
+    raise FileNotFoundError("check_code_smell_parser.py introuvable")
+exec(open(_parser, encoding="utf-8").read())
 
 MAX_LINES = $MAX_LINES_PER_FILE
-root_dirs = ["backend/app", "frontend", "tmp"]
+root_dirs = ["backend/app", "frontend"]
 
 total_ok = 0
 total_suppressed = 0
@@ -238,7 +255,7 @@ total_warning = 0
 total_error = 0
 total_files = 0
 
-for root_dir in root_dirs + ["tmp"]:
+for root_dir in root_dirs:
     root = Path(root_dir)
     if not root.exists():
         continue
@@ -387,16 +404,19 @@ fi
 # 6. Pylint
 # =========================
 if [ "$SKIP_PYLINT" = false ]; then
-    # Utiliser le pylint du venv pour voir les packages installés (fastapi, pydantic...)
-    PYLINT_BIN=".venv/bin/pylint"
-    if [ ! -f "$PYLINT_BIN" ]; then
-        PYLINT_BIN="pylint"
+    # Utiliser python -m pylint pour éviter les problèmes de shebang Windows/WSL
+    if $VENV_PYTHON -m pylint --version &>/dev/null 2>&1; then
+        PYLINT_CMD="$VENV_PYTHON -m pylint"
+    elif python -m pylint --version &>/dev/null 2>&1; then
+        PYLINT_CMD="python -m pylint"
+    else
+        PYLINT_CMD=""
     fi
 
-    if command -v "$PYLINT_BIN" &> /dev/null || [ -f "$PYLINT_BIN" ]; then
+    if [ -n "$PYLINT_CMD" ]; then
 
         echo -e "${YELLOW}[Pylint FE]${NC} Vérification frontend..."
-        $PYLINT_BIN frontend/ --rcfile=pyproject.toml > "$PYLINT_FE_LOG" 2>&1 || true
+        $PYLINT_CMD frontend/ --rcfile=pyproject.toml > "$PYLINT_FE_LOG" 2>&1 || true
 
         FE_SCORE=$($PYTHON3 - <<EOF
 import re
@@ -418,7 +438,7 @@ EOF
         fi
 
         echo -e "${YELLOW}[Pylint BE]${NC} Vérification backend..."
-        $PYLINT_BIN backend/app --rcfile=pyproject.toml > "$PYLINT_BE_LOG" 2>&1 || true
+        $PYLINT_CMD backend/app --rcfile=pyproject.toml > "$PYLINT_BE_LOG" 2>&1 || true
 
         BE_SCORE=$($PYTHON3 - <<EOF
 import re
@@ -441,6 +461,7 @@ EOF
 
     else
         echo -e "${RED}❌ Pylint non installé (ni dans .venv ni dans PATH)${NC}"
+
         exit 1
     fi
 else
@@ -451,14 +472,15 @@ fi
 # =========================
 # 7. Tests + couverture
 # =========================
-PYTEST_BIN=".venv/bin/pytest"
-if [ ! -f "$PYTEST_BIN" ]; then
-    PYTEST_BIN="pytest"
+# Préférer le Python du venv pour éviter les problèmes de shebang Windows
+VENV_PYTHON=".venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="$PYTHON3"
 fi
 
-if command -v "$PYTEST_BIN" &> /dev/null || [ -f "$PYTEST_BIN" ]; then
+if $VENV_PYTHON -m pytest --version &>/dev/null; then
     echo -e "${YELLOW}[Tests]${NC} Exécution pytest..."
-    if $PYTEST_BIN backend/tests \
+    if $VENV_PYTHON -m pytest backend/tests \
         --cov=backend/app \
         --cov-report=xml:backend/coverage.xml \
         --cov-fail-under=$COVERAGE_THRESHOLD -q > "$PYTEST_LOG" 2>&1; then

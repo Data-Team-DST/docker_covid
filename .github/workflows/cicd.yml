@@ -196,8 +196,8 @@ jobs:
             -Dsonar.projectKey=Data-Team-DST_docker_covid
             -Dsonar.organization=data-team-dst-1
             -Dsonar.python.coverage.reportPaths=reports/be-cov.xml
-            -Dsonar.sources=backend/app,frontend,src
-            -Dsonar.coverage.exclusions=**/tests/**,src/notebooks/**,src/test/**
+            -Dsonar.sources=backend/app,frontend,backend/src
+            -Dsonar.coverage.exclusions=**/tests/**,backend/src/notebooks/**,backend/src/test/**
             -Dsonar.python.version=3.11
 
   # ── BUILD & PUSH DOCKER (parallele BE + FE) ──────────────────────────────
@@ -236,7 +236,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/backend/Dockerfile
+          file: infrastructure/docker/backend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -285,7 +285,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/streamlit/Dockerfile
+          file: infrastructure/docker/streamlit/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
