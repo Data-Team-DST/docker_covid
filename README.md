@@ -73,12 +73,11 @@ docker_covid/
 │   │   ├── models/          # Chargement modèle Keras
 │   │   ├── features/        # Preprocessing image
 │   │   └── schemas/         # Schémas Pydantic
-│   ├── tests/unit/          # Tests unitaires (pytest)
-│   └── requirements.txt
+│   ├── src/                 # Code ML DS_COVID (training, features, interprétabilité)
+│   └── tests/unit/          # Tests unitaires (pytest)
 ├── frontend/                # Streamlit multi-pages
 │   ├── streamlit_app.py
 │   └── page/                # 01_accueil … 07_conclusion
-├── backend/src/             # Code ML DS_COVID (training, features, interprétabilité)
 ├── infrastructure/
 │   ├── docker/              # Dockerfiles par service (backend, streamlit, trainer…)
 │   ├── kubernetes/          # Manifests K8s (Phase 3)

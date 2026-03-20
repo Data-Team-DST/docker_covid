@@ -10,6 +10,12 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
+COMPOSE="docker compose -f infrastructure/docker-compose.yml --project-directory ."
+
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
@@ -78,15 +84,15 @@ case "$MODE" in
 
     stop)
         echo -e "${YELLOW}Arrêt de tous les services...${NC}"
-        docker compose down
+        $COMPOSE down
         echo -e "${GREEN}✅ Services arrêtés${NC}"
         exit 0
         ;;
 
     logs)
         echo -e "${YELLOW}Logs en direct (Ctrl+C pour quitter)...${NC}"
-        docker compose logs -f backend streamlit 2>/dev/null || \
-        docker compose logs -f backend
+        $COMPOSE logs -f backend streamlit 2>/dev/null || \
+        $COMPOSE logs -f backend
         exit 0
         ;;
 
@@ -97,7 +103,7 @@ case "$MODE" in
         echo -e "${GREEN}================================${NC}"
         echo ""
         echo -e "${YELLOW}Build et démarrage de la stack complète...${NC}"
-        docker compose up -d --build
+        $COMPOSE up -d --build
         wait_for_service "Backend" "${BACKEND_URL}/health"
         show_urls
         ;;
@@ -109,7 +115,7 @@ case "$MODE" in
         echo -e "${GREEN}==============================${NC}"
         echo ""
         echo -e "${YELLOW}Build et démarrage du backend...${NC}"
-        docker compose up -d --build backend
+        $COMPOSE up -d --build backend
         wait_for_service "Backend" "${BACKEND_URL}/health"
         show_urls
         ;;
@@ -121,6 +127,6 @@ echo -e "${YELLOW}Logs en direct (Ctrl+C pour quitter — services restent actif
 echo ""
 trap 'echo -e "\n${YELLOW}Arrêt des logs (services toujours actifs)${NC}"; exit 0' SIGINT SIGTERM
 
-docker compose logs -f backend 2>/dev/null &
+$COMPOSE logs -f backend 2>/dev/null &
 LOG_PID=$!
 wait $LOG_PID

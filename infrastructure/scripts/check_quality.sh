@@ -13,11 +13,8 @@ if command -v python3 &>/dev/null && python3 -c "import sys; sys.exit(0)" 2>/dev
 elif command -v python &>/dev/null && python -c "import sys; sys.exit(0)" 2>/dev/null; then
     PYTHON3=python
 else
-    # Fallback Windows Python
-    for _py in \
-        "/c/Users/steve/AppData/Local/Programs/Python/Python312/python.exe" \
-        "/c/Users/steve/AppData/Local/Programs/Python/Python311/python.exe" \
-        "/usr/bin/python3" "/usr/local/bin/python3"; do
+    # Fallback chemins standards
+    for _py in "/usr/bin/python3" "/usr/local/bin/python3" "/usr/bin/python"; do
         if [ -x "$_py" ]; then PYTHON3="$_py"; break; fi
     done
 fi

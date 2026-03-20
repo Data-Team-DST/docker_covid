@@ -20,7 +20,8 @@ STRICT=false
 SCAN_DIRS=(backend/app frontend backend/src)
 
 ARTIFACT_DIR="tmp/quality"
-mkdir -p "$ARTIFACT_DIR"
+IMPORT_CACHE_DIR="$ARTIFACT_DIR/.cache/imports"
+mkdir -p "$ARTIFACT_DIR" "$IMPORT_CACHE_DIR"
 REQ_REPORT="$ARTIFACT_DIR/requirements.txt"
 REQ_SCORE_FILE="$ARTIFACT_DIR/requirements_score.txt"
 > "$REQ_REPORT"
@@ -78,28 +79,64 @@ in_list() {
     return 1
 }
 
-# ── Index unique : UN SEUL grep sur toutes les sources ────────────────────────
+# ── Index par fichier avec cache mtime+taille ─────────────────────────────────
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Vérification requirements (imports)${NC}"
 echo -e "${GREEN}========================================${NC}"
 printf "Indexation des imports dans %s ... " "${SCAN_DIRS[*]}"
 
+# imports_from_file FILE
+# Lit les imports depuis le cache si le fichier n'a pas changé,
+# sinon re-grep et met à jour le cache.
+imports_from_file() {
+    local f="$1"
+    # Clé de cache : hash du chemin absolu → fichier stable même si renommé ailleurs
+    local ckey
+    ckey=$(echo "$f" | md5sum | cut -c1-12)
+    local cfile="$IMPORT_CACHE_DIR/${ckey}.cache"
+    # Empreinte : mtime (secondes) + taille (octets)
+    local fstat
+    fstat=$(stat -c "%Y %s" "$f" 2>/dev/null) || return
+    if [ -f "$cfile" ] && [ "$(head -1 "$cfile")" = "$fstat" ]; then
+        # Cache valide : lire les imports (toutes les lignes sauf la première)
+        tail -n +2 "$cfile"
+    else
+        # Cache absent ou périmé : re-grep ce seul fichier
+        local imports
+        imports=$(grep -h \
+            -E "^[[:space:]]*(import|from)[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]+" \
+            "$f" 2>/dev/null \
+            | grep -oE "(import|from)[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]+" \
+            | awk '{print $2}')
+        # Sauvegarder : ligne 1 = empreinte, reste = imports
+        { echo "$fstat"; echo "$imports"; } > "$cfile"
+        echo "$imports"
+    fi
+}
+
 IMPORT_INDEX=""
+_files_total=0
+_files_cached=0
 for dir in "${SCAN_DIRS[@]}"; do
     [ -d "$dir" ] || continue
-    IMPORT_INDEX+=$(
-        grep -rh --include="*.py" \
-            --exclude-dir=__pycache__ --exclude-dir=.venv \
-            -E "^[[:space:]]*(import|from)[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]+" \
-            "$dir" 2>/dev/null \
-        | grep -oE "(import|from)[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]+" \
-        | awk '{print $2}'
-    )
-    IMPORT_INDEX+=$'\n'
+    while IFS= read -r -d '' pyfile; do
+        _files_total=$((_files_total + 1))
+        ckey=$(echo "$pyfile" | md5sum | cut -c1-12)
+        cfile="$IMPORT_CACHE_DIR/${ckey}.cache"
+        fstat=$(stat -c "%Y %s" "$pyfile" 2>/dev/null)
+        if [ -f "$cfile" ] && [ "$(head -1 "$cfile")" = "$fstat" ]; then
+            _files_cached=$((_files_cached + 1))
+        fi
+        IMPORT_INDEX+=$(imports_from_file "$pyfile")
+        IMPORT_INDEX+=$'\n'
+    done < <(find "$dir" -name "*.py" \
+        -not -path "*/__pycache__/*" -not -path "*/.venv/*" \
+        -print0 2>/dev/null)
 done
 # Dédoublonner
 IMPORT_INDEX=$(echo "$IMPORT_INDEX" | sort -u)
-echo -e "${GREEN}OK${NC}"
+_files_fresh=$((_files_total - _files_cached))
+echo -e "${GREEN}OK${NC}  (${_files_total} fichiers : ${_files_cached} cache, ${_files_fresh} re-scannés)"
 
 is_imported() {
     echo "$IMPORT_INDEX" | grep -q "^${1}$"
