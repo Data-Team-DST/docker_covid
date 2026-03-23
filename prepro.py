@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 import cv2
 from tqdm import tqdm
-
+from image_processor import normalize_image
 
 def normalize_image(img_array, method='minmax'):
     """
@@ -17,17 +17,17 @@ def normalize_image(img_array, method='minmax'):
     Returns:
         np.array normalisée (float32)
     """
-    if method == 'minmax':
-        # Normalisation min-max vers [0, 1]
-        img_norm = (img_array - img_array.min()) / (img_array.max() - img_array.min() + 1e-8)
-    elif method == 'standard':
-        # Standardisation (z-score)
-        img_norm = (img_array - img_array.mean()) / (img_array.std() + 1e-8)
-    else:
-        raise ValueError("method doit être 'minmax' ou 'standard'")
-    
-    return img_norm.astype(np.float32)
-
+        if method == 'minmax':
+            # Normalisation min-max vers [0, 1]
+            img_norm = (img_array - img_array.min()) / (img_array.max() - img_array.min() + 1e-8)
+        elif method == 'standard':
+            # Standardisation (z-score)
+            img_norm = (img_array - img_array.mean()) / (img_array.std() + 1e-8)
+        else:
+            raise ValueError("method doit être 'minmax' ou 'standard'")
+        
+        return img_norm.astype(np.float32)
+        
 
 def create_dataset(resolution, with_masking, normalize_method=None):
     # Configuration
