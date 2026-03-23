@@ -1,54 +1,49 @@
-import typer
 from pathlib import Path
-from image_processor import ImagePreprocessor
-from typing import Literal
+from typing import Literal, Optional
+import typer
+from prepro import create_dataset  
 
-app = typer.Typer(help="Préprocesseur d'images médicales COVID-19")
+
+app = typer.Typer(help="Préprocesseur d'images radiographiques COVID-19")
+
 
 @app.command()
 def preprocess(
-    source: Path = typer.Argument(..., help="Dossier source des images"),
-    output: Path = typer.Argument(..., help="Dossier de sortie"),
-    size: str = typer.Option("256,256", "--size", help="Taille cible (ex: 256,256)"),
-    mode: Literal["L"] = typer.Option("L", "--mode", help="Mode image unique (L=grayscale)"),
-    with_masking: bool = typer.Option(False, "--with-masking", help="Appliquer les masques si True"),
-    classes: str = typer.Option(
-        "COVID,Normal,Lung_Opacity,Viral Pneumonia",
-        "--classes",
-        help="Classes séparées par virgules"
+    resolution: int = typer.Option(
+        256,
+        "--resolution",
+        "-r",
+        help="Résolution cible (carrée), ex: 256 pour 256x256",
     ),
-    normalization: str = typer.Option(
+    with_masking: bool = typer.Option(
+        False,
+        "--with-masking",
+        help="Appliquer les masques si activé",
+    ),
+    normalize: Optional[Literal["minmax", "standard"]] = typer.Option(
         None,
-        "--normalization",
         "--normalize",
-        help="Normalisation: 'minmax' ou 'standard' (z-score), None pour aucune",
-        case_sensitive=False,
+        "--normalization",
+        help="Normalisation: 'minmax' (0-1) ou 'standard' (z-score), None pour aucune",
     ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Ne fait que lister sans traiter")
 ):
-    """Prétraite un dataset d'images radiologiques"""
+    """
+    Crée un dataset prétraité à partir du dataset brut COVID-19_Radiography_Dataset.
 
-    # Parse les paramètres
-    target_size = tuple(map(int, size.split(",")))
-    classes_list = [c.strip() for c in classes.split(",")]
+    NB : les chemins source/sortie sont gérés à l'intérieur de create_dataset.
+    """
+    typer.echo(f"Résolution: {resolution}x{resolution}")
+    typer.echo(f"Masquage activé: {with_masking}")
+    typer.echo(f"Normalisation: {normalize or 'aucune'}")
 
-    processor = ImagePreprocessor(
-        source_path=source,
-        output_path=output,
-        target_size=target_size,
-        image_mode=mode,
-        classes=classes_list,
+    create_dataset(
+        resolution=resolution,
         with_masking=with_masking,
-        normalize_method=normalization 
+        normalize_method=normalize,
     )
 
-    if dry_run:
-        typer.echo("Mode dry-run: analyse seulement")
-        stats = processor.process(dry_run=True)
-        return
-   
-    stats = processor.process(dry_run=False)
-    typer.echo(f"\n✨ Dataset prêt: {output}")
+    typer.echo("Préprocessing terminé.")
+
 
 if __name__ == "__main__":
     app()
