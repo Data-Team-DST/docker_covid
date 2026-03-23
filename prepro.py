@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 import cv2
 from tqdm import tqdm
-from image_processor import normalize_image
+
 
 def normalize_image(img_array, method='minmax'):
     """
