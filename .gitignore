@@ -14,6 +14,10 @@ tmp/quality/
 
 # Env
 .env
+.venv
+data/
+__pycache__/
+*.pyc
 
 # Data & modèles (versionnés via DVC en Phase 2)
 data/raw/
