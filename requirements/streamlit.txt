@@ -1,6 +1,9 @@
-streamlit
+streamlit==1.41.1
+streamlit-extras==0.4.7
+requests==2.32.3
+kagglehub
 plotly
 mlflow
-boto3
-pillow
+pillow==11.0.0
+scikit-image
 opencv-python

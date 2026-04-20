@@ -1,0 +1,33 @@
+{
+  "description": "Registry des pipelines disponibles",
+  "default": {
+    "file": "../../src/features/Pipelines/Configs_Pipelines/pipeline_simple.json",
+    "description": "Pipeline simple et rapide",
+    "category": "data_processing"
+  },
+  "simple": {
+    "file": "../../src/features/Pipelines/Configs_Pipelines/pipeline_simple.json",
+    "description": "Pipeline simple et rapide",
+    "category": "data_processing"
+  },
+  "augmented": {
+    "file": "../../src/features/Pipelines/Configs_Pipelines/pipeline_augmented.json",
+    "description": "Pipeline avec augmentation et masquage",
+    "category": "data_processing"
+  },
+  "feature_engineering": {
+    "file": "../../src/features/Pipelines/Configs_Pipelines/pipeline_feature_engineering.json",
+    "description": "Pipeline avec feature engineering avancé",
+    "category": "feature_engineering"
+  },
+  "composite": {
+    "file": "../../src/features/Pipelines/Configs_Pipelines/pipeline_composite_example.json",
+    "description": "Exemple de pipeline composite avec visualisation",
+    "category": "composite"
+  },
+  "composite_no_viz": {
+    "file": "../../src/features/Pipelines/Configs_Pipelines/pipeline_composite_no_viz.json",
+    "description": "Pipeline composite sans visualisation (plus rapide)",
+    "category": "composite"
+  }
+}

@@ -1,5 +1,5 @@
 [core]
-    remote = origin
-['remote "origin"']
-    url = s3://dvc
-    endpointurl = https://dagshub.com/Cirinebmr/docker_covid.s3
+    remote = minio
+[remote "minio"]
+    url = s3://dvcstore
+    endpointurl = http://localhost:9000
