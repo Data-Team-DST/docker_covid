@@ -140,12 +140,9 @@ def run():
             if project_root not in sys.path:
                 sys.path.insert(0, project_root)
 
-            # Import des transformateurs
-            # IMPORTANT: Importer AVANT joblib pour que les classes soient disponibles lors du unpickling
-            # Importer joblib APRÈS les transformateurs
-            import joblib
-
-            from src.features.St_Pipeline.Transformateurs import (  # Loaders; Preprocessing; Analyse et features; Utilities
+            # Import des transformateurs (ordre intentionnel : src avant joblib pour unpickling)
+            import joblib  # noqa: I001
+            from src.features.St_Pipeline.Transformateurs import (  # noqa: I001 Loaders; Preprocessing; Analyse et features; Utilities
                 ImageAnalyser,
                 ImageAugmenter,
                 ImageFlattener,
