@@ -49,9 +49,7 @@ class VisualizeTransformer(BaseEstimator, TransformerMixin):
             plt.title(title)
             plt.axis("off")
             if self.save_dir:
-                path = os.path.join(
-                    self.save_dir, f"{self.prefix}_sample_{i}.png"
-                )
+                path = os.path.join(self.save_dir, f"{self.prefix}_sample_{i}.png")
                 plt.savefig(path, bbox_inches="tight")
                 print(f"Image sauvegardée : {path}")
             plt.show()

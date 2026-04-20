@@ -5,7 +5,6 @@ Tests for the configuration module.
 import json
 
 import pytest
-
 from utils.config import (
     Config,
     build_config,

@@ -105,9 +105,7 @@ class ImageAugmenter(BaseEstimator, TransformerMixin):
     def _apply_rotation(self, img: np.ndarray) -> np.ndarray:
         """Apply random rotation to image."""
         if self.rotation_range > 0:
-            angle = self.rng_.uniform(
-                -self.rotation_range, self.rotation_range
-            )
+            angle = self.rng_.uniform(-self.rotation_range, self.rotation_range)
             img = ndimage.rotate(img, angle, reshape=False, mode="nearest")
         return img
 
@@ -115,9 +113,7 @@ class ImageAugmenter(BaseEstimator, TransformerMixin):
         """Apply random brightness adjustment."""
         if self.brightness_range is not None:
             factor = self.rng_.uniform(*self.brightness_range)
-            img = np.clip(
-                img * factor, 0, 255 if img.dtype == np.uint8 else 1.0
-            )
+            img = np.clip(img * factor, 0, 255 if img.dtype == np.uint8 else 1.0)
         return img
 
     def _apply_noise(self, img: np.ndarray) -> np.ndarray:
@@ -166,9 +162,7 @@ class ImageAugmenter(BaseEstimator, TransformerMixin):
         if zoom_factor > 1:
             start_h = (new_h - h) // 2
             start_w = (new_w - w) // 2
-            img_padded = img_zoomed[
-                start_h : start_h + h, start_w : start_w + w, :
-            ]
+            img_padded = img_zoomed[start_h : start_h + h, start_w : start_w + w, :]
 
         return img_padded
 
@@ -191,20 +185,14 @@ class ImageAugmenter(BaseEstimator, TransformerMixin):
             self.fit(X)
 
         if self.verbose:
-            logger.info(
-                f"Augmenting {len(X)} images (p={self.probability})..."
-            )
+            logger.info(f"Augmenting {len(X)} images (p={self.probability})...")
 
         data_array = np.array(X)
         original_shape = data_array.shape
         data_aug = []
         n_augmented = 0
 
-        iterator = (
-            tqdm(data_array, desc="Augmentation")
-            if self.verbose
-            else data_array
-        )
+        iterator = tqdm(data_array, desc="Augmentation") if self.verbose else data_array
 
         for img in iterator:
             img_aug = img.copy()
@@ -224,9 +212,7 @@ class ImageAugmenter(BaseEstimator, TransformerMixin):
                     # Resize back to original shape if needed
                     from scipy.ndimage import zoom  # type: ignore
 
-                    zoom_factors = [
-                        t / s for t, s in zip(target_shape, img_aug.shape)
-                    ]
+                    zoom_factors = [t / s for t, s in zip(target_shape, img_aug.shape)]
                     img_aug = zoom(img_aug, zoom_factors, order=1)
 
             data_aug.append(img_aug)
@@ -243,9 +229,7 @@ class ImageAugmenter(BaseEstimator, TransformerMixin):
 
         # Final safety check
         if result.shape != original_shape:
-            logger.warning(
-                "Shape mismatch detected. Forcing shape consistency."
-            )
+            logger.warning("Shape mismatch detected. Forcing shape consistency.")
             result = result.reshape(original_shape)
 
         return result
@@ -395,9 +379,7 @@ class ImageRandomCropper(BaseEstimator, TransformerMixin):
         else:
             pad_h, pad_w = self.padding
 
-        iterator = (
-            tqdm(X, desc=f"Cropping ({self.mode})") if self.verbose else X
-        )
+        iterator = tqdm(X, desc=f"Cropping ({self.mode})") if self.verbose else X
 
         for img in iterator:
             # Add padding if specified
@@ -431,13 +413,9 @@ class ImageRandomCropper(BaseEstimator, TransformerMixin):
 
             # Perform crop
             if len(img.shape) == 2:
-                img_cropped = img[
-                    top : top + crop_height, left : left + crop_width
-                ]
+                img_cropped = img[top : top + crop_height, left : left + crop_width]
             else:
-                img_cropped = img[
-                    top : top + crop_height, left : left + crop_width, :
-                ]
+                img_cropped = img[top : top + crop_height, left : left + crop_width, :]
 
             cropped.append(img_cropped)
             n_cropped += 1
@@ -445,9 +423,7 @@ class ImageRandomCropper(BaseEstimator, TransformerMixin):
         self.n_images_cropped_ = n_cropped
 
         if self.verbose:
-            logger.info(
-                f"Cropping completed: {n_cropped}/{len(X)} images cropped"
-            )
+            logger.info(f"Cropping completed: {n_cropped}/{len(X)} images cropped")
             if cropped:
                 logger.info(f"Output shape: {cropped[0].shape}")
 

@@ -10,6 +10,7 @@ router = APIRouter()
 
 @router.get("/health")
 async def health():
+    """Retourne l'état de santé du service et du modèle chargé."""
     return {
         "status": "healthy",
         "model_loaded": model_loader.is_loaded,

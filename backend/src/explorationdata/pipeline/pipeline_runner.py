@@ -65,16 +65,10 @@ class EDAPipeline:
         self.logger = self._setup_logging()
 
         # Initialize components
-        self.data_loader = DatasetLoader(
-            base_path, metadata_path, logger=self.logger
-        )
+        self.data_loader = DatasetLoader(base_path, metadata_path, logger=self.logger)
         self.visualizer = Visualizer(random_state=seed, logger=self.logger)
-        self.dim_reducer = DimensionalityReducer(
-            random_state=seed, logger=self.logger
-        )
-        self.clustering = ClusteringAnalyzer(
-            random_state=seed, logger=self.logger
-        )
+        self.dim_reducer = DimensionalityReducer(random_state=seed, logger=self.logger)
+        self.clustering = ClusteringAnalyzer(random_state=seed, logger=self.logger)
         self.advanced = AdvancedAnalyzer(random_state=seed, logger=self.logger)
 
         # Track timing
@@ -229,9 +223,7 @@ class EDAPipeline:
 
         # Extract embeddings - full images
         self.embeddings, self.embedding_filenames = (
-            self.embedding_extractor.extract_embeddings(
-                self.image_df, apply_mask=False
-            )
+            self.embedding_extractor.extract_embeddings(self.image_df, apply_mask=False)
         )
 
         # Save embeddings
@@ -315,9 +307,7 @@ class EDAPipeline:
 
         if self.tsne_indices is not None:
             tsne_labels = [labels[i] for i in self.tsne_indices]
-            tsne_filenames = [
-                self.embedding_filenames[i] for i in self.tsne_indices
-            ]
+            tsne_filenames = [self.embedding_filenames[i] for i in self.tsne_indices]
         else:
             tsne_labels = labels
             tsne_filenames = self.embedding_filenames

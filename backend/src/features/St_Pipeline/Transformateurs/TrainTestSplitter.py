@@ -87,9 +87,7 @@ class TrainTestSplitter(BaseTransform):
             - Sinon: {'train': (X_train, y_train), 'val': (X_val, y_val), 'test': (X_test, y_test)}
         """
         if not isinstance(X, pd.DataFrame):
-            raise ValueError(
-                "TrainTestSplitter nécessite un DataFrame en entrée"
-            )
+            raise ValueError("TrainTestSplitter nécessite un DataFrame en entrée")
 
         if self.label_column not in X.columns:
             raise ValueError(
@@ -102,9 +100,7 @@ class TrainTestSplitter(BaseTransform):
 
         if self.val_size is None:
             # Split simple: train/test
-            self._log(
-                f"Split train/test: {1-self.test_size:.0%}/{self.test_size:.0%}"
-            )
+            self._log(f"Split train/test: {1-self.test_size:.0%}/{self.test_size:.0%}")
 
             X_train, X_test, y_train, y_test = train_test_split(
                 X,
@@ -173,9 +169,7 @@ class TrainTestSplitter(BaseTransform):
         import matplotlib.pyplot as plt
 
         split_names = (
-            ["Train", "Val", "Test"]
-            if len(label_arrays) == 3
-            else ["Train", "Test"]
+            ["Train", "Val", "Test"] if len(label_arrays) == 3 else ["Train", "Test"]
         )
 
         print("\n📊 Distribution des labels:")
@@ -208,9 +202,7 @@ class TrainTestSplitter(BaseTransform):
         plt.tight_layout()
         plt.show()
 
-    def visualize(
-        self, X_before: Any, X_after: Any, n_samples: int = 3
-    ) -> None:
+    def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """Visualise les statistiques des splits."""
         if not isinstance(X_after, dict):
             print("❌ La sortie doit être un dictionnaire de splits")

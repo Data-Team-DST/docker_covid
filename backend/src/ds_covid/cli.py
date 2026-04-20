@@ -328,9 +328,7 @@ def run_streamlit():
         print(f"📱 App path: {app_path}")
 
         # Run streamlit
-        subprocess.run(
-            [sys.executable, "-m", "streamlit", "run", str(app_path)]
-        )
+        subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path)])
 
     except Exception as e:
         print(f"❌ Error starting Streamlit: {e}")

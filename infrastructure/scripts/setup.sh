@@ -19,8 +19,9 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_DIR="${SCRIPT_DIR}/.venv"
-REQUIREMENTS_FILE="${SCRIPT_DIR}/requirements/local.txt"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+VENV_DIR="${PROJECT_ROOT}/.venv"
+REQUIREMENTS_FILE="${PROJECT_ROOT}/requirements/local.txt"
 
 log()   { echo -e "${GREEN}[DS_COVID]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[DS_COVID]${NC} $*"; }
@@ -73,6 +74,27 @@ find_python() {
         fi
     done
     return 1
+}
+
+# -- Verification / installation python3-venv (Ubuntu/WSL) --------------------
+ensure_venv_module() {
+    # Teste si le module venv est disponible
+    if "${PYTHON_BIN}" -m venv --help &>/dev/null 2>&1; then
+        return 0
+    fi
+    # Sur Ubuntu/WSL : python3-venv est un package apt séparé
+    if [ "$OS" = "wsl" ] || [ "$OS" = "linux" ]; then
+        local minor
+        minor="$("${PYTHON_BIN}" -c 'import sys; print(sys.version_info[1])' 2>/dev/null)"
+        local pkg="python3.${minor}-venv"
+        warn "Module venv absent -- installation de ${pkg}..."
+        if sudo apt-get install -y "${pkg}" &>/dev/null; then
+            log "${pkg} installe"
+        else
+            # Fallback générique
+            sudo apt-get install -y python3-venv &>/dev/null && log "python3-venv installe"
+        fi
+    fi
 }
 
 # -- Installation Python (WSL/Linux seulement) --------------------------------
@@ -131,14 +153,14 @@ check_docker() {
 # -- Setup .env ----------------------------------------------------------------
 setup_env() {
     title "Configuration .env"
-    if [ ! -f "${SCRIPT_DIR}/.env" ]; then
-        if [ -f "${SCRIPT_DIR}/.env.example" ]; then
-            cp "${SCRIPT_DIR}/.env.example" "${SCRIPT_DIR}/.env"
+    if [ ! -f "${PROJECT_ROOT}/.env" ]; then
+        if [ -f "${PROJECT_ROOT}/.env.example" ]; then
+            cp "${PROJECT_ROOT}/.env.example" "${PROJECT_ROOT}/.env"
             log ".env cree depuis .env.example"
             warn "  -> Editez .env si besoin (MODEL_PATH notamment)"
         else
             warn ".env.example absent, creation d'un .env minimal..."
-            cat > "${SCRIPT_DIR}/.env" << 'ENVEOF'
+            cat > "${PROJECT_ROOT}/.env" << 'ENVEOF'
 # DS_COVID -- Variables d'environnement
 BACKEND_URL=http://localhost:8000
 MODEL_PATH=/app/data/models/best_model.keras
@@ -159,13 +181,13 @@ ENVEOF
 # -- Creer les dossiers --------------------------------------------------------
 setup_dirs() {
     title "Creation des dossiers"
-    mkdir -p "${SCRIPT_DIR}/data/models" \
-             "${SCRIPT_DIR}/data/raw" \
-             "${SCRIPT_DIR}/data/processed" \
-             "${SCRIPT_DIR}/tmp/logs" \
-             "${SCRIPT_DIR}/tmp/quality"
-    touch "${SCRIPT_DIR}/data/models/.gitkeep" 2>/dev/null || true
-    touch "${SCRIPT_DIR}/data/processed/.gitkeep" 2>/dev/null || true
+    mkdir -p "${PROJECT_ROOT}/data/models" \
+             "${PROJECT_ROOT}/data/raw" \
+             "${PROJECT_ROOT}/data/processed" \
+             "${PROJECT_ROOT}/tmp/logs" \
+             "${PROJECT_ROOT}/tmp/quality"
+    touch "${PROJECT_ROOT}/data/models/.gitkeep" 2>/dev/null || true
+    touch "${PROJECT_ROOT}/data/processed/.gitkeep" 2>/dev/null || true
     log "Dossiers data/ et tmp/ prets"
 }
 
@@ -211,7 +233,7 @@ setup_dev() {
     local BASE_IMAGE="ghcr.io/data-team-dst/covid-xray-base:latest"
 
     # Charger les variables du .env si present
-    local env_file="${SCRIPT_DIR}/.env"
+    local env_file="${PROJECT_ROOT}/.env"
     local stored_token="" stored_user=""
     if [ -f "${env_file}" ]; then
         stored_token="$(grep -E '^GHCR_TOKEN=' "${env_file}" | cut -d= -f2- | tr -d '"' | tr -d "'")"
@@ -340,7 +362,7 @@ setup_dev() {
     # Build des images Docker localement
     title "Build des images Docker"
     log "docker compose build (backend + trainer + streamlit)..."
-    if docker compose -f "${SCRIPT_DIR}/docker-compose.yml" build; then
+    if docker compose -f "${SCRIPT_DIR}/../docker-compose.yml" --project-directory "${PROJECT_ROOT}" build; then
         log "Images construites avec succes"
     else
         warn "Build partiel -- l'image de base GHCR est peut-etre inaccessible"
@@ -354,6 +376,7 @@ setup_dev() {
     read -r answer
     if [[ "$answer" =~ ^[oOyY]$ ]]; then
         if find_python; then
+            ensure_venv_module
             if [ ! -d "${VENV_DIR}" ]; then
                 "${PYTHON_BIN}" -m venv "${VENV_DIR}"
             fi
@@ -421,17 +444,17 @@ setup_check() {
 
     # .env
     title "Configuration"
-    if [ -f "${SCRIPT_DIR}/.env" ]; then
+    if [ -f "${PROJECT_ROOT}/.env" ]; then
         log ".env : OK"
     else
-        warn ".env : ABSENT (sera cree au premier ./setup.sh)"
+        warn ".env : ABSENT (sera cree au premier make setup)"
         ok=false
     fi
 
     # Dossiers data/
     title "Dossiers data/"
     for d in data/raw data/processed data/models; do
-        if [ -d "${SCRIPT_DIR}/${d}" ]; then
+        if [ -d "${PROJECT_ROOT}/${d}" ]; then
             log "  $d : OK"
         else
             warn "  $d : ABSENT"
@@ -441,7 +464,7 @@ setup_check() {
 
     # Modele
     local model_count
-    model_count=$(ls "${SCRIPT_DIR}/data/models/"*.keras 2>/dev/null | wc -l)
+    model_count=$(ls "${PROJECT_ROOT}/data/models/"*.keras 2>/dev/null | wc -l)
     if [ "$model_count" -gt 0 ]; then
         log "  Modele .keras : $model_count fichier(s)"
     else
@@ -483,14 +506,15 @@ case "$MODE" in
     --ci)
         # Mode CI : comme --dev mais sans prompts interactifs
         find_python || err "Python >= 3.10 requis en CI"
+        ensure_venv_module
         if [ ! -d "${VENV_DIR}" ]; then
             "${PYTHON_BIN}" -m venv "${VENV_DIR}"
         fi
         "${VENV_DIR}/bin/pip" install -q --upgrade pip wheel setuptools
         "${VENV_DIR}/bin/pip" install -q -r "${REQUIREMENTS_FILE}"
         setup_dirs
-        if [ ! -f "${SCRIPT_DIR}/.env" ] && [ -f "${SCRIPT_DIR}/.env.example" ]; then
-            cp "${SCRIPT_DIR}/.env.example" "${SCRIPT_DIR}/.env"
+        if [ ! -f "${PROJECT_ROOT}/.env" ] && [ -f "${PROJECT_ROOT}/.env.example" ]; then
+            cp "${PROJECT_ROOT}/.env.example" "${PROJECT_ROOT}/.env"
         fi
         log "Setup CI termine"
         ;;

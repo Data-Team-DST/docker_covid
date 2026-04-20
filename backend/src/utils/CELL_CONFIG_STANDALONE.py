@@ -132,9 +132,7 @@ if ENV == "colab":
     project_root = Path("/content/DS_COVID_ORGA")
 else:  # local
     # Depuis un notebook dans notebooks/ ou à la racine
-    project_root = (
-        Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
-    )
+    project_root = Path.cwd().parent if Path.cwd().name == "notebooks" else Path.cwd()
 
 # Ajouter au sys.path pour les imports
 if str(project_root) not in sys.path:
@@ -152,9 +150,7 @@ DATA_DIR = (
 CATEGORIES = ["COVID", "Lung_Opacity", "Normal", "Viral Pneumonia"]
 IMG_SIZE = (299, 299) if ENV == "colab" else (128, 128)  # Plus grand en colab
 BATCH_SIZE = 128 if ENV == "colab" else 32  # Plus grand batch en colab
-EPOCHS = (
-    50 if ENV == "colab" else 10
-)  # Moins d'époques en local pour tests rapides
+EPOCHS = 50 if ENV == "colab" else 10  # Moins d'époques en local pour tests rapides
 MAX_SAMPLES_PER_CLASS = (
     None if ENV == "colab" else 100
 )  # Pour tests rapides, None pour tout utiliser

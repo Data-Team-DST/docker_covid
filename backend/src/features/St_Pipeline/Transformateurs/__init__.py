@@ -6,27 +6,29 @@ préprocesser, analyser et extraire des features d'images médicales.
 """
 
 from .base import BaseTransform, TransformLogger, UIHandler
-
-# Nouveaux transformateurs V4
 from .DatasetStatistics import DatasetStatistics
-from .HistogramVisualizer import HistogramVisualizer
 from .ImageAnalyser import ImageAnalyser
 from .ImageAugmenter import ImageAugmenter
-from .ImageComparisonVisualizer import ImageComparisonVisualizer
-from .ImageFlattener import ImageFlattener
-from .ImageHistogram import ImageHistogram
-from .ImageMasker import ImageMasker
-from .ImageNormalizer import ImageNormalizer
 from .ImagePCA import ImagePCA
 from .ImageRandomCropper import ImageRandomCropper
-from .ImageResizer import ImageResizer
-from .ImageStandardScaler import ImageStandardScaler
 from .loaders import ImagePathLoader, TupleToDataFrame
-from .PCAVisualizer import PCAVisualizer
-from .RGB_to_L import RGB_to_L
+
+# Preprocessing transformers (sous-package processing/)
+from .processing.ImageFlattener import ImageFlattener
+from .processing.ImageMasker import ImageMasker
+from .processing.ImageNormalizer import ImageNormalizer
+from .processing.ImageResizer import ImageResizer
+from .processing.ImageStandardScaler import ImageStandardScaler
+from .processing.RGB_to_L import RGB_to_L
 from .SaveTransformer import SaveTransformer
 from .TrainTestSplitter import TrainTestSplitter
-from .VisualizeTransformer import VisualizeTransformer
+
+# Visualization transformers (sous-package visualization/)
+from .visualization.HistogramVisualizer import HistogramVisualizer
+from .visualization.ImageComparisonVisualizer import ImageComparisonVisualizer
+from .visualization.ImageHistogram import ImageHistogram
+from .visualization.PCAVisualizer import PCAVisualizer
+from .visualization.VisualizeTransformer import VisualizeTransformer
 
 __all__ = [
     # Classes de base

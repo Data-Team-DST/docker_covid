@@ -38,7 +38,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/base/Dockerfile
+          file: infrastructure/docker/base/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/covid-xray-base:latest
 
@@ -75,7 +75,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: docker/${{ matrix.image }}/Dockerfile
+          file: infrastructure/docker/${{ matrix.image }}/Dockerfile
           build-args: |
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/covid-xray-base:latest
           push: ${{ github.event_name != 'pull_request' }}

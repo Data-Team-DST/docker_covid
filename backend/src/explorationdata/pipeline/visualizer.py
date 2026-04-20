@@ -17,9 +17,7 @@ from PIL import Image
 class Visualizer:
     """Generate visualizations for the dataset"""
 
-    def __init__(
-        self, random_state: int = 42, logger: Optional[logging.Logger] = None
-    ):
+    def __init__(self, random_state: int = 42, logger: Optional[logging.Logger] = None):
         """
         Initialize visualizer
 
@@ -68,9 +66,7 @@ class Visualizer:
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
         # Width distribution
-        df["width"].hist(
-            bins=30, ax=axes[0, 0], color="skyblue", edgecolor="black"
-        )
+        df["width"].hist(bins=30, ax=axes[0, 0], color="skyblue", edgecolor="black")
         axes[0, 0].set_xlabel("Width (pixels)")
         axes[0, 0].set_ylabel("Frequency")
         axes[0, 0].set_title("Image Width Distribution")
@@ -80,9 +76,7 @@ class Visualizer:
         axes[0, 0].legend()
 
         # Height distribution
-        df["height"].hist(
-            bins=30, ax=axes[0, 1], color="lightcoral", edgecolor="black"
-        )
+        df["height"].hist(bins=30, ax=axes[0, 1], color="lightcoral", edgecolor="black")
         axes[0, 1].set_xlabel("Height (pixels)")
         axes[0, 1].set_ylabel("Frequency")
         axes[0, 1].set_title("Image Height Distribution")
@@ -145,20 +139,14 @@ class Visualizer:
         if "masked_mean" in df.columns:
             df_masked = df.dropna(subset=["masked_mean"])
             if not df_masked.empty:
-                df_masked.boxplot(
-                    column="masked_mean", by="class", ax=axes[1, 1]
-                )
+                df_masked.boxplot(column="masked_mean", by="class", ax=axes[1, 1])
                 axes[1, 1].set_xlabel("Class")
                 axes[1, 1].set_ylabel("Masked Mean Intensity")
                 axes[1, 1].set_title("Masked Region Mean Intensity by Class")
             else:
-                axes[1, 1].text(
-                    0.5, 0.5, "No masked data", ha="center", va="center"
-                )
+                axes[1, 1].text(0.5, 0.5, "No masked data", ha="center", va="center")
         else:
-            axes[1, 1].text(
-                0.5, 0.5, "No masked data", ha="center", va="center"
-            )
+            axes[1, 1].text(0.5, 0.5, "No masked data", ha="center", va="center")
 
         plt.tight_layout()
         plt.savefig(output_path, dpi=150, bbox_inches="tight")
@@ -234,16 +222,10 @@ class Visualizer:
                     axes[i, j].axis("off")
 
                     if j == 0:
-                        axes[i, j].set_ylabel(
-                            cls, fontsize=10, rotation=0, ha="right"
-                        )
+                        axes[i, j].set_ylabel(cls, fontsize=10, rotation=0, ha="right")
                 except Exception as e:
-                    self.logger.warning(
-                        f"Error loading image {row['filename']}: {e}"
-                    )
-                    axes[i, j].text(
-                        0.5, 0.5, "Error", ha="center", va="center"
-                    )
+                    self.logger.warning(f"Error loading image {row['filename']}: {e}")
+                    axes[i, j].text(0.5, 0.5, "Error", ha="center", va="center")
                     axes[i, j].axis("off")
 
         plt.suptitle(title, fontsize=14, y=0.995)
@@ -311,9 +293,7 @@ class Visualizer:
                     f"Error creating overlay for {row['filename']}: {e}"
                 )
                 for j in range(3):
-                    axes[i, j].text(
-                        0.5, 0.5, "Error", ha="center", va="center"
-                    )
+                    axes[i, j].text(0.5, 0.5, "Error", ha="center", va="center")
                     axes[i, j].axis("off")
 
         plt.tight_layout()

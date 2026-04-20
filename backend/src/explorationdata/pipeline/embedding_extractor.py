@@ -57,9 +57,7 @@ class EmbeddingExtractor:
 
         # Determine device
         if device is None:
-            self.device = torch.device(
-                "cuda" if torch.cuda.is_available() else "cpu"
-            )
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device(device)
 
@@ -68,9 +66,7 @@ class EmbeddingExtractor:
         # Adapt batch size based on device
         if self.device.type == "cpu" and batch_size > 8:
             self.batch_size = 8
-            self.logger.info(
-                f"Reduced batch size to {self.batch_size} for CPU"
-            )
+            self.logger.info(f"Reduced batch size to {self.batch_size} for CPU")
 
         # Load model
         self.model = self._load_model()
@@ -142,9 +138,7 @@ class EmbeddingExtractor:
 
                 img = Image.fromarray(masked_img)
             except Exception as e:
-                self.logger.warning(
-                    f"Failed to apply mask for {image_path}: {e}"
-                )
+                self.logger.warning(f"Failed to apply mask for {image_path}: {e}")
 
         return self.transform(img)
 
@@ -191,9 +185,7 @@ class EmbeddingExtractor:
                         batch_tensors.append(tensor)
                         filenames.append(row["filename"])
                     except Exception as e:
-                        self.logger.error(
-                            f"Error processing {row['filename']}: {e}"
-                        )
+                        self.logger.error(f"Error processing {row['filename']}: {e}")
                         continue
 
                 if batch_tensors:
@@ -210,9 +202,7 @@ class EmbeddingExtractor:
         # Concatenate all embeddings
         if embeddings_list:
             embeddings_array = np.vstack(embeddings_list)
-            self.logger.info(
-                f"Extracted embeddings shape: {embeddings_array.shape}"
-            )
+            self.logger.info(f"Extracted embeddings shape: {embeddings_array.shape}")
             return embeddings_array, filenames
         else:
             self.logger.error("No embeddings extracted")

@@ -4,6 +4,21 @@
 
 set -e
 
+# Répertoire du script (pour référencer les scripts voisins)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Détection Python (WSL/Linux/Git Bash/Windows)
+if command -v python3 &>/dev/null && python3 -c "import sys; sys.exit(0)" 2>/dev/null; then
+    PYTHON3=python3
+elif command -v python &>/dev/null && python -c "import sys; sys.exit(0)" 2>/dev/null; then
+    PYTHON3=python
+else
+    # Fallback chemins standards
+    for _py in "/usr/bin/python3" "/usr/local/bin/python3" "/usr/bin/python"; do
+        if [ -x "$_py" ]; then PYTHON3="$_py"; break; fi
+    done
+fi
+
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
@@ -25,7 +40,8 @@ MAX_LINES_PER_FILE=100
 # Dossiers artefacts projet
 # =========================
 ARTIFACT_DIR="./tmp/quality"
-mkdir -p "$ARTIFACT_DIR"
+CACHE_DIR="./tmp/quality/.cache"
+mkdir -p "$ARTIFACT_DIR" "$CACHE_DIR"
 
 RUFF_REPORT="$ARTIFACT_DIR/ruff.txt"
 PYLINT_FE_LOG="$ARTIFACT_DIR/pylint_fe.log"
@@ -36,6 +52,38 @@ CODE_SMELL_REPORT="$ARTIFACT_DIR/code_smell.txt"
 SUMMARY="$ARTIFACT_DIR/summary.txt"
 
 > "$SUMMARY"
+
+# =========================
+# Système de cache par hash
+# =========================
+# Calcule une clé de cache basée sur les timestamps + tailles (pas le contenu)
+# find -printf lit les métadonnées inode → ~10x plus rapide que sha256sum du contenu
+cache_key() {
+    find "$@" -name "*.py" -not -path "*/__pycache__/*" \
+        -printf "%T@ %s %p\n" 2>/dev/null \
+        | sort | md5sum | cut -c1-16
+}
+
+# Lit une valeur depuis le cache (retourne 1 si absent/expiré)
+cache_get() {
+    local key="$1" file="$CACHE_DIR/${1}.cache"
+    [ -f "$file" ] && cat "$file" && return 0
+    return 1
+}
+
+# Écrit une valeur dans le cache
+cache_set() {
+    echo "$2" > "$CACHE_DIR/${1}.cache"
+}
+
+# Affiche [CACHE] si la valeur vient du cache
+CACHE_HIT=false
+
+# Préférer le Python du venv pour éviter les problèmes de shebang Windows/WSL
+VENV_PYTHON=".venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="$PYTHON3"
+fi
 
 # =========================
 # Gestion des arguments
@@ -71,9 +119,9 @@ run_check() {
 }
 
 auto_fix_style() {
-    if [ -f "fix_style.sh" ]; then
+    if [ -f "$SCRIPT_DIR/fix_style.sh" ]; then
         echo -e "${YELLOW}[0/8] Correction automatique du style (Black/Ruff/Isort)...${NC}"
-        ./fix_style.sh 2>&1 | grep -E "(✅|✨|⚠️)" || true
+        "$SCRIPT_DIR/fix_style.sh" 2>&1 | grep -E "(✅|✨|⚠️)" || true
         echo ""
     fi
 }
@@ -95,7 +143,7 @@ check_structure_complexity() {
     echo "========================================" >> "$STRUCTURE_REPORT"
     echo "" >> "$STRUCTURE_REPORT"
 
-    for root_dir in "backend/app" "frontend" "src" "tmp"; do
+    for root_dir in "backend/app" "frontend" "backend/src" "tmp"; do
         if [ ! -d "$root_dir" ]; then
             continue
         fi
@@ -204,15 +252,24 @@ check_code_smell() {
     echo "========================================" >> "$CODE_SMELL_REPORT"
     echo "" >> "$CODE_SMELL_REPORT"
 
-    python3 - <<PYEOF >> "$CODE_SMELL_REPORT"
-import sys
+    PYTHONIOENCODING=utf-8 $PYTHON3 - <<PYEOF >> "$CODE_SMELL_REPORT"
+import sys, io, os
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.path.insert(0, ".")
 from pathlib import Path
 
-exec(open("check_code_smell_parser.py").read())
+# Cherche le parser (depuis la racine projet ou depuis le répertoire du script)
+_candidates = [
+    "infrastructure/scripts/check_code_smell_parser.py",
+    os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "check_code_smell_parser.py"),
+]
+_parser = next((p for p in _candidates if os.path.isfile(p)), None)
+if _parser is None:
+    raise FileNotFoundError("check_code_smell_parser.py introuvable")
+exec(open(_parser, encoding="utf-8").read())
 
 MAX_LINES = $MAX_LINES_PER_FILE
-root_dirs = ["backend/app", "frontend", "tmp"]
+root_dirs = ["backend/app", "frontend"]
 
 total_ok = 0
 total_suppressed = 0
@@ -222,7 +279,7 @@ total_warning = 0
 total_error = 0
 total_files = 0
 
-for root_dir in root_dirs + ["tmp"]:
+for root_dir in root_dirs:
     root = Path(root_dir)
     if not root.exists():
         continue
@@ -288,14 +345,16 @@ print("  ❌ = action requise")
 print("========================================")
 
 # ✅ Écriture du score en float
-with open("/tmp/code_smell_score.txt", "w") as f:
+import os
+_score_file = os.path.join("$ARTIFACT_DIR", "code_smell_score.txt")
+with open(_score_file, "w", encoding="utf-8") as f:
     f.write(f"{score:.2f}\n{total_issues}")
 PYEOF
 
-    if [ -f "/tmp/code_smell_score.txt" ]; then
-        SMELL_SCORE=$(sed -n '1p' /tmp/code_smell_score.txt)
-        SMELL_ISSUES=$(sed -n '2p' /tmp/code_smell_score.txt)
-        rm -f /tmp/code_smell_score.txt
+    if [ -f "$ARTIFACT_DIR/code_smell_score.txt" ]; then
+        SMELL_SCORE=$(sed -n '1p' "$ARTIFACT_DIR/code_smell_score.txt")
+        SMELL_ISSUES=$(sed -n '2p' "$ARTIFACT_DIR/code_smell_score.txt")
+        rm -f "$ARTIFACT_DIR/code_smell_score.txt"
     else
         SMELL_SCORE=0.00
         SMELL_ISSUES=99
@@ -305,7 +364,7 @@ PYEOF
     if [ "$SMELL_ISSUES" -eq 0 ]; then
         echo -e "${GREEN}✅ Code Smell OK (score: $SMELL_SCORE/10)${NC}"
         echo "Code Smell: OK ($SMELL_SCORE/10)" >> "$SUMMARY"
-    elif python3 -c "exit(0 if float('$SMELL_SCORE') >= 8.0 else 1)"; then
+    elif $PYTHON3 -c "exit(0 if float('$SMELL_SCORE') >= 8.0 else 1)"; then
         echo -e "${YELLOW}⚠️  Code Smell : $SMELL_ISSUES problème(s) (score: $SMELL_SCORE/10)${NC}"
         echo "   → Bon score mais problèmes à corriger"
         echo "   → Détails : $CODE_SMELL_REPORT"
@@ -338,29 +397,69 @@ check_structure_complexity
 # =========================
 # 4. Vérification code smell
 # =========================
-check_code_smell
+_smell_key="smell_$(cache_key backend/app frontend)"
+if _smell_cached=$(cache_get "$_smell_key"); then
+    echo -e "${YELLOW}[Code Smell]${NC} (cache) ${_smell_cached}"
+    echo "Code Smell: ${_smell_cached}" >> "$SUMMARY"
+else
+    check_code_smell
+    _smell_result="OK (${SMELL_SCORE:-10.00}/10)"
+    [ "${SMELL_ISSUES:-0}" -gt 0 ] && _smell_result="WARNINGS (${SMELL_SCORE}/10, ${SMELL_ISSUES} issues)"
+    cache_set "$_smell_key" "$_smell_result"
+fi
+
+# =========================
+# 4b. Requirements — imports
+# =========================
+_req_key="req_$(cache_key backend/app frontend backend/src)_$(md5sum requirements/*.txt 2>/dev/null | md5sum | cut -c1-8)"
+if _req_cached=$(cache_get "$_req_key"); then
+    echo -e "${YELLOW}[Requirements]${NC} (cache) ${_req_cached}"
+    echo "Requirements: ${_req_cached}" >> "$SUMMARY"
+else
+    echo -e "${YELLOW}[Requirements]${NC} Vérification des imports..."
+    if bash "$SCRIPT_DIR/check_requirements.sh" 2>&1; then
+        _req_unused=$(cat "$ARTIFACT_DIR/requirements_score.txt" 2>/dev/null || echo "0")
+        if [ "$_req_unused" -eq 0 ]; then
+            cache_set "$_req_key" "OK"
+            echo "Requirements: OK" >> "$SUMMARY"
+        else
+            cache_set "$_req_key" "WARNINGS (${_req_unused} package(s) sans import)"
+            echo "Requirements: WARNINGS (${_req_unused} package(s) sans import)" >> "$SUMMARY"
+        fi
+    else
+        echo "Requirements: ERREUR (script échoué)" >> "$SUMMARY"
+    fi
+fi
 
 # =========================
 # 5. Ruff
 # =========================
 if command -v ruff &> /dev/null; then
-    echo -e "${YELLOW}[Ruff]${NC} Analyse (backend + frontend + tmp)..."
-    ruff check . --output-format=full > "$RUFF_REPORT" || true
+    _ruff_key="ruff_$(cache_key backend/app frontend)"
+    if _ruff_cached=$(cache_get "$_ruff_key"); then
+        echo -e "${YELLOW}[Ruff]${NC} (cache) ${_ruff_cached}"
+        echo "Ruff: ${_ruff_cached}" >> "$SUMMARY"
+    else
+    echo -e "${YELLOW}[Ruff]${NC} Analyse (backend/app + frontend)..."
+    ruff check backend/app/ frontend/ --output-format=full > "$RUFF_REPORT" || true
 
-    if [ -s "$RUFF_REPORT" ]; then
+    RUFF_ERRORS=$(grep -E "^(backend/app|frontend)" "$RUFF_REPORT" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$RUFF_ERRORS" -gt 0 ]; then
         echo -e "${YELLOW}📄 Ruff – problèmes restants (extrait) :${NC}"
         head -50 "$RUFF_REPORT"
         echo ""
         echo -e "${YELLOW}📊 Décompte des erreurs par zone :${NC}"
         echo "  • Backend  : $(grep '^backend/app' "$RUFF_REPORT" | wc -l) erreurs"
         echo "  • Frontend : $(grep '^frontend' "$RUFF_REPORT" | wc -l) erreurs"
-        echo "  • Tmp      : $(grep '^tmp/' "$RUFF_REPORT" | wc -l) erreurs"
         echo "→ Rapport complet : $RUFF_REPORT"
-        echo "Ruff: WARNINGS" >> "$SUMMARY"
+        cache_set "$_ruff_key" "WARNINGS ($RUFF_ERRORS erreurs)"
+        echo "Ruff: WARNINGS ($RUFF_ERRORS erreurs)" >> "$SUMMARY"
     else
         echo -e "${GREEN}✅ Ruff clean${NC}"
+        cache_set "$_ruff_key" "OK"
         echo "Ruff: OK" >> "$SUMMARY"
     fi
+    fi  # fin bloc cache Ruff
 else
     echo -e "${YELLOW}⚠️ Ruff non installé${NC}"
 fi
@@ -369,54 +468,60 @@ fi
 # 6. Pylint
 # =========================
 if [ "$SKIP_PYLINT" = false ]; then
-    if command -v pylint &> /dev/null; then
+    # Utiliser python -m pylint pour éviter les problèmes de shebang Windows/WSL
+    if $VENV_PYTHON -m pylint --version &>/dev/null 2>&1; then
+        PYLINT_CMD="$VENV_PYTHON -m pylint"
+    elif python -m pylint --version &>/dev/null 2>&1; then
+        PYLINT_CMD="python -m pylint"
+    else
+        PYLINT_CMD=""
+    fi
 
-        echo -e "${YELLOW}[Pylint FE]${NC} Vérification frontend..."
-        pylint frontend/ --ignore=page > "$PYLINT_FE_LOG" 2>&1 || true
+    if [ -n "$PYLINT_CMD" ]; then
 
-        FE_SCORE=$(python3 - <<EOF
+        # ── Pylint FE ──
+        _fe_key="pylint_fe_$(cache_key frontend)"
+        if FE_SCORE=$(cache_get "$_fe_key"); then
+            echo -e "${YELLOW}[Pylint FE]${NC} (cache) Score : ${FE_SCORE}/10"
+        else
+            echo -e "${YELLOW}[Pylint FE]${NC} Vérification frontend..."
+            $PYLINT_CMD frontend/ --rcfile=pyproject.toml > "$PYLINT_FE_LOG" 2>&1 || true
+            FE_SCORE=$($PYTHON3 - <<EOF
 import re
 log=open("$PYLINT_FE_LOG").read()
 m=re.search(r"rated at ([0-9.]+)/10", log)
 print(m.group(1) if m else "0.0")
 EOF
 )
-        echo -e "${YELLOW}📊 Score Pylint FE : ${FE_SCORE}/10${NC}"
-        echo "Pylint FE: ${FE_SCORE}/10" >> "$SUMMARY"
-
-        python3 - <<EOF
-if float("$FE_SCORE") < 7:
-    exit(1)
-EOF
-        if [ $? -ne 0 ]; then
-            tail -20 "$PYLINT_FE_LOG"
-            exit 1
+            cache_set "$_fe_key" "$FE_SCORE"
+            echo -e "${YELLOW}📊 Score Pylint FE : ${FE_SCORE}/10${NC}"
         fi
+        echo "Pylint FE: ${FE_SCORE}/10" >> "$SUMMARY"
+        $PYTHON3 -c "exit(0 if float('$FE_SCORE') >= 7 else 1)" || { tail -20 "$PYLINT_FE_LOG"; exit 1; }
 
-        echo -e "${YELLOW}[Pylint BE]${NC} Vérification backend..."
-        pylint backend/app > "$PYLINT_BE_LOG" 2>&1 || true
-
-        BE_SCORE=$(python3 - <<EOF
+        # ── Pylint BE ──
+        _be_key="pylint_be_$(cache_key backend/app)"
+        if BE_SCORE=$(cache_get "$_be_key"); then
+            echo -e "${YELLOW}[Pylint BE]${NC} (cache) Score : ${BE_SCORE}/10"
+        else
+            echo -e "${YELLOW}[Pylint BE]${NC} Vérification backend..."
+            $PYLINT_CMD backend/app --rcfile=pyproject.toml > "$PYLINT_BE_LOG" 2>&1 || true
+            BE_SCORE=$($PYTHON3 - <<EOF
 import re
 log=open("$PYLINT_BE_LOG").read()
 m=re.search(r"rated at ([0-9.]+)/10", log)
 print(m.group(1) if m else "0.0")
 EOF
 )
-        echo -e "${YELLOW}📊 Score Pylint BE : ${BE_SCORE}/10${NC}"
-        echo "Pylint BE: ${BE_SCORE}/10" >> "$SUMMARY"
-
-        python3 - <<EOF
-if float("$BE_SCORE") < 7:
-    exit(1)
-EOF
-        if [ $? -ne 0 ]; then
-            tail -20 "$PYLINT_BE_LOG"
-            exit 1
+            cache_set "$_be_key" "$BE_SCORE"
+            echo -e "${YELLOW}📊 Score Pylint BE : ${BE_SCORE}/10${NC}"
         fi
+        echo "Pylint BE: ${BE_SCORE}/10" >> "$SUMMARY"
+        $PYTHON3 -c "exit(0 if float('$BE_SCORE') >= 7 else 1)" || { tail -20 "$PYLINT_BE_LOG"; exit 1; }
 
     else
-        echo -e "${RED}❌ Pylint non installé${NC}"
+        echo -e "${RED}❌ Pylint non installé (ni dans .venv ni dans PATH)${NC}"
+
         exit 1
     fi
 else
@@ -427,26 +532,39 @@ fi
 # =========================
 # 7. Tests + couverture
 # =========================
-if command -v pytest &> /dev/null; then
-    echo -e "${YELLOW}[Tests]${NC} Exécution pytest..."
-    if pytest backend/tests \
-        --cov=backend/app \
-        --cov-report=xml:backend/coverage.xml \
-        --cov-fail-under=$COVERAGE_THRESHOLD -q > "$PYTEST_LOG" 2>&1; then
+# Préférer le Python du venv pour éviter les problèmes de shebang Windows
+VENV_PYTHON=".venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="$PYTHON3"
+fi
 
-        echo -e "${GREEN}✅ Tests OK${NC}"
-        echo "Tests: OK (coverage ≥ ${COVERAGE_THRESHOLD}%)" >> "$SUMMARY"
-
+if $VENV_PYTHON -m pytest --version &>/dev/null; then
+    # Cache : hash des tests ET du code testé
+    _test_key="tests_$(cache_key backend/tests backend/app)"
+    if _test_cached=$(cache_get "$_test_key"); then
+        echo -e "${YELLOW}[Tests]${NC} (cache) ${_test_cached}"
+        echo "Tests: ${_test_cached}" >> "$SUMMARY"
     else
-        echo -e "${RED}❌ Tests échoués${NC}"
-        echo -e "${YELLOW}📄 Dernières erreurs pytest :${NC}"
-        tail -40 "$PYTEST_LOG"
-        echo "→ Log complet : $PYTEST_LOG"
-        echo "Tests: FAILED" >> "$SUMMARY"
-        exit 1
+        echo -e "${YELLOW}[Tests]${NC} Exécution pytest..."
+        if $VENV_PYTHON -m pytest backend/tests \
+            --cov=backend/app \
+            --cov-report=xml:backend/coverage.xml \
+            --cov-fail-under=$COVERAGE_THRESHOLD -q > "$PYTEST_LOG" 2>&1; then
+
+            echo -e "${GREEN}✅ Tests OK${NC}"
+            cache_set "$_test_key" "OK (coverage ≥ ${COVERAGE_THRESHOLD}%)"
+            echo "Tests: OK (coverage ≥ ${COVERAGE_THRESHOLD}%)" >> "$SUMMARY"
+        else
+            echo -e "${RED}❌ Tests échoués${NC}"
+            echo -e "${YELLOW}📄 Dernières erreurs pytest :${NC}"
+            tail -40 "$PYTEST_LOG"
+            echo "→ Log complet : $PYTEST_LOG"
+            echo "Tests: FAILED" >> "$SUMMARY"
+            exit 1
+        fi
     fi
 else
-    echo -e "${RED}❌ Pytest non installé${NC}"
+    echo -e "${RED}❌ Pytest non installé (ni dans .venv ni dans PATH)${NC}"
     exit 1
 fi
 

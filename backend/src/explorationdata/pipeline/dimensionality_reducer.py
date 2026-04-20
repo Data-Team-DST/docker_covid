@@ -25,9 +25,7 @@ except ImportError:
 class DimensionalityReducer:
     """Perform dimensionality reduction on embeddings"""
 
-    def __init__(
-        self, random_state: int = 42, logger: Optional[logging.Logger] = None
-    ):
+    def __init__(self, random_state: int = 42, logger: Optional[logging.Logger] = None):
         """
         Initialize dimensionality reducer
 
@@ -57,9 +55,7 @@ class DimensionalityReducer:
         """
         self.logger.info(f"Fitting PCA with {n_components} components...")
 
-        self.pca_model = PCA(
-            n_components=n_components, random_state=self.random_state
-        )
+        self.pca_model = PCA(n_components=n_components, random_state=self.random_state)
         pca_embeddings = self.pca_model.fit_transform(embeddings)
 
         # Log variance explained
@@ -67,8 +63,7 @@ class DimensionalityReducer:
         cumsum_var = np.cumsum(var_explained)
 
         self.logger.info(
-            f"PCA variance explained by top 10 components: "
-            f"{cumsum_var[9]:.3f}"
+            f"PCA variance explained by top 10 components: " f"{cumsum_var[9]:.3f}"
         )
         self.logger.info(
             f"PCA variance explained by all {n_components} components: "
@@ -162,8 +157,7 @@ class DimensionalityReducer:
             return np.array([])
 
         self.logger.info(
-            f"Fitting UMAP (n_neighbors={n_neighbors}, "
-            f"min_dist={min_dist})..."
+            f"Fitting UMAP (n_neighbors={n_neighbors}, " f"min_dist={min_dist})..."
         )
 
         self.umap_model = umap.UMAP(
@@ -177,9 +171,7 @@ class DimensionalityReducer:
 
         umap_embeddings = self.umap_model.fit_transform(embeddings)
 
-        self.logger.info(
-            f"UMAP transformation complete: {umap_embeddings.shape}"
-        )
+        self.logger.info(f"UMAP transformation complete: {umap_embeddings.shape}")
 
         return umap_embeddings
 
@@ -226,9 +218,7 @@ class DimensionalityReducer:
 
         tsne_embeddings = self.tsne_model.fit_transform(embeddings_sample)
 
-        self.logger.info(
-            f"t-SNE transformation complete: {tsne_embeddings.shape}"
-        )
+        self.logger.info(f"t-SNE transformation complete: {tsne_embeddings.shape}")
 
         return tsne_embeddings, sample_indices
 
@@ -260,6 +250,4 @@ class DimensionalityReducer:
         )
 
         df.to_csv(output_path, index=False)
-        self.logger.info(
-            f"Saved {method.upper()} projections to {output_path}"
-        )
+        self.logger.info(f"Saved {method.upper()} projections to {output_path}")

@@ -105,9 +105,7 @@ class TransformLogger:
     Uses UIHandler for message display.
     """
 
-    def __init__(
-        self, name: str, verbose: bool = True, use_streamlit: bool = False
-    ):
+    def __init__(self, name: str, verbose: bool = True, use_streamlit: bool = False):
         """
         Initialize the logger.
 
@@ -245,9 +243,7 @@ class BaseTransform(BaseEstimator, TransformerMixin):
         else:
             self.logger.info(message)
 
-    def visualize(
-        self, X_before: Any, X_after: Any, n_samples: int = 3
-    ) -> None:
+    def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """
         Visualize data before/after transformation.
 
@@ -324,9 +320,7 @@ class ImageResizer(BaseTransform):
             if "image_array" not in X.columns:
                 raise ValueError("DataFrame must contain 'image_array' column")
 
-            self._log(
-                f"Resizing {len(X)} images to {self.img_size} (DataFrame)"
-            )
+            self._log(f"Resizing {len(X)} images to {self.img_size} (DataFrame)")
 
             X_transformed = X.copy()
             resized_images = []
@@ -363,9 +357,7 @@ class ImageResizer(BaseTransform):
 
         # Case 3: Numpy array (batch of images)
         elif isinstance(X, np.ndarray):
-            self._log(
-                f"Resizing {X.shape[0]} images to {self.img_size} (numpy array)"
-            )
+            self._log(f"Resizing {X.shape[0]} images to {self.img_size} (numpy array)")
 
             resized = []
             for img in tqdm(
@@ -407,9 +399,7 @@ class ImageResizer(BaseTransform):
 
         return np.array(img_resized)
 
-    def visualize(
-        self, X_before: Any, X_after: Any, n_samples: int = 3
-    ) -> None:
+    def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """Visualize resizing before/after."""
         # Extract images from DataFrame if necessary
         if isinstance(X_before, pd.DataFrame):
@@ -550,9 +540,7 @@ class ImageAugmenter(BaseTransform):
             if "image_array" not in X.columns:
                 raise ValueError("DataFrame must contain 'image_array' column")
 
-            self._log(
-                f"Augmenting {len(X)} images (p={self.probability}) (DataFrame)"
-            )
+            self._log(f"Augmenting {len(X)} images (p={self.probability}) (DataFrame)")
 
             X_transformed = X.copy()
             aug_images = []
@@ -584,9 +572,7 @@ class ImageAugmenter(BaseTransform):
         # Case 2: List or numpy array
         else:
             data_array = np.array(X)
-            self._log(
-                f"Augmenting {len(data_array)} images (p={self.probability})"
-            )
+            self._log(f"Augmenting {len(data_array)} images (p={self.probability})")
 
             data_aug = []
             n_augmented = 0
@@ -636,34 +622,24 @@ class ImageAugmenter(BaseTransform):
 
         # Rotation
         if self.rotation_range > 0:
-            angle = self.rng_.uniform(
-                -self.rotation_range, self.rotation_range
-            )
-            img_aug = ndimage.rotate(
-                img_aug, angle, reshape=False, mode="nearest"
-            )
+            angle = self.rng_.uniform(-self.rotation_range, self.rotation_range)
+            img_aug = ndimage.rotate(img_aug, angle, reshape=False, mode="nearest")
 
         # Brightness
         if self.brightness_range is not None:
             factor = self.rng_.uniform(
                 self.brightness_range[0], self.brightness_range[1]
             )
-            img_aug = np.clip(
-                img_aug * factor, 0, 255 if img_aug.max() > 1 else 1
-            )
+            img_aug = np.clip(img_aug * factor, 0, 255 if img_aug.max() > 1 else 1)
 
         # Noise
         if self.noise_std > 0:
             noise = self.rng_.normal(0, self.noise_std, img_aug.shape)
-            img_aug = np.clip(
-                img_aug + noise, 0, 255 if img_aug.max() > 1 else 1
-            )
+            img_aug = np.clip(img_aug + noise, 0, 255 if img_aug.max() > 1 else 1)
 
         # Zoom
         if self.zoom_range is not None:
-            zoom_factor = self.rng_.uniform(
-                self.zoom_range[0], self.zoom_range[1]
-            )
+            zoom_factor = self.rng_.uniform(self.zoom_range[0], self.zoom_range[1])
             h, w = img_aug.shape[:2]
             new_h, new_w = int(h * zoom_factor), int(w * zoom_factor)
 
@@ -678,9 +654,7 @@ class ImageAugmenter(BaseTransform):
                     # Crop at center
                     start_h = (new_h - h) // 2
                     start_w = (new_w - w) // 2
-                    img_aug = img_zoomed[
-                        start_h : start_h + h, start_w : start_w + w
-                    ]
+                    img_aug = img_zoomed[start_h : start_h + h, start_w : start_w + w]
                 else:
                     # Pad
                     pad_h = (h - new_h) // 2
@@ -715,9 +689,7 @@ class ImageAugmenter(BaseTransform):
 
         return img_aug.astype(img.dtype)
 
-    def visualize(
-        self, X_before: Any, X_after: Any, n_samples: int = 3
-    ) -> None:
+    def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """Visualize augmentation effects."""
         # Extract images
         if isinstance(X_before, pd.DataFrame):
@@ -867,9 +839,7 @@ class ImageNormalizer(BaseTransform):
 
         return img_norm
 
-    def visualize(
-        self, X_before: Any, X_after: Any, n_samples: int = 3
-    ) -> None:
+    def visualize(self, X_before: Any, X_after: Any, n_samples: int = 3) -> None:
         """Visualize normalization with histograms."""
         # Extract images
         if isinstance(X_before, pd.DataFrame):
@@ -992,9 +962,7 @@ class ImageMasker(BaseTransform):
         # Case 1: DataFrame with 'image_array' and 'mask_path' columns
         if isinstance(X, pd.DataFrame):
             if "image_array" not in X.columns or "mask_path" not in X.columns:
-                raise ValueError(
-                    "DataFrame must contain 'image_array' and 'mask_path'"
-                )
+                raise ValueError("DataFrame must contain 'image_array' and 'mask_path'")
 
             self._log(f"Applying masks to {len(X)} images (DataFrame)")
 
@@ -1022,9 +990,7 @@ class ImageMasker(BaseTransform):
         # Case 2: List or numpy array with mask_paths provided
         else:
             if self.mask_paths is None:
-                raise ValueError(
-                    "mask_paths must be provided for lists/arrays"
-                )
+                raise ValueError("mask_paths must be provided for lists/arrays")
 
             data_array = np.array(X)
 
@@ -1147,9 +1113,7 @@ class ImageFlattener(BaseTransform):
             data_array = np.array(X)
             n_samples = data_array.shape[0]
 
-            self._log(
-                f"Flattening {n_samples} images of shape {data_array.shape}"
-            )
+            self._log(f"Flattening {n_samples} images of shape {data_array.shape}")
 
             # Flatten while preserving first dimension (n_samples)
             X_flat = []

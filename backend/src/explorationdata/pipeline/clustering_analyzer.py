@@ -22,9 +22,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 class ClusteringAnalyzer:
     """Perform clustering analysis on embeddings"""
 
-    def __init__(
-        self, random_state: int = 42, logger: Optional[logging.Logger] = None
-    ):
+    def __init__(self, random_state: int = 42, logger: Optional[logging.Logger] = None):
         """
         Initialize clustering analyzer
 
@@ -38,9 +36,7 @@ class ClusteringAnalyzer:
         self.kmeans_model = None
         self.dbscan_model = None
 
-    def fit_kmeans(
-        self, embeddings: np.ndarray, n_clusters: int = 4
-    ) -> np.ndarray:
+    def fit_kmeans(self, embeddings: np.ndarray, n_clusters: int = 4) -> np.ndarray:
         """
         Fit KMeans clustering
 
@@ -82,9 +78,7 @@ class ClusteringAnalyzer:
         Returns:
             Cluster labels
         """
-        self.logger.info(
-            f"Fitting DBSCAN (eps={eps}, min_samples={min_samples})..."
-        )
+        self.logger.info(f"Fitting DBSCAN (eps={eps}, min_samples={min_samples})...")
 
         self.dbscan_model = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1)
 
@@ -120,9 +114,7 @@ class ClusteringAnalyzer:
         if isinstance(true_labels[0], str):
             unique_labels = sorted(set(true_labels))
             label_map = {label: i for i, label in enumerate(unique_labels)}
-            true_labels_numeric = np.array(
-                [label_map[label] for label in true_labels]
-            )
+            true_labels_numeric = np.array([label_map[label] for label in true_labels])
         else:
             true_labels_numeric = true_labels
 
@@ -148,13 +140,9 @@ class ClusteringAnalyzer:
             Similarity matrix
         """
         if sample_size and len(embeddings) > sample_size:
-            self.logger.info(
-                f"Sampling {sample_size} points for similarity matrix"
-            )
+            self.logger.info(f"Sampling {sample_size} points for similarity matrix")
             rng = np.random.RandomState(self.random_state)
-            indices = rng.choice(
-                len(embeddings), size=sample_size, replace=False
-            )
+            indices = rng.choice(len(embeddings), size=sample_size, replace=False)
             embeddings_sample = embeddings[indices]
         else:
             embeddings_sample = embeddings
@@ -185,9 +173,7 @@ class ClusteringAnalyzer:
         # If labels provided, sort by label
         if labels is not None:
             sorted_indices = np.argsort(labels)
-            similarity_matrix = similarity_matrix[sorted_indices][
-                :, sorted_indices
-            ]
+            similarity_matrix = similarity_matrix[sorted_indices][:, sorted_indices]
 
         sns.heatmap(
             similarity_matrix,
@@ -275,9 +261,7 @@ class ClusteringAnalyzer:
         plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.close()
 
-        self.logger.info(
-            f"Saved inter-class similarity heatmap to {output_path}"
-        )
+        self.logger.info(f"Saved inter-class similarity heatmap to {output_path}")
 
     def save_cluster_results(
         self,

@@ -65,9 +65,7 @@ class MaskApplicator:
         mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
 
         if image is None or mask is None:
-            raise ValueError(
-                f"Impossible de charger {image_path} ou {mask_path}"
-            )
+            raise ValueError(f"Impossible de charger {image_path} ou {mask_path}")
 
         # Redimensionner le masque si nécessaire
         if image.shape != mask.shape:
@@ -85,9 +83,7 @@ class MaskApplicator:
             mask_colored[:, :, 0] = mask  # Canal rouge
             # Mélanger l'image et le masque
             alpha = 0.3  # Transparence du masque
-            result = cv2.addWeighted(
-                image_rgb, 1 - alpha, mask_colored, alpha, 0
-            )
+            result = cv2.addWeighted(image_rgb, 1 - alpha, mask_colored, alpha, 0)
 
         elif method == "multiply":
             # Multiplier l'image par le masque
@@ -113,17 +109,13 @@ class MaskApplicator:
         # Prendre les premiers échantillons
         samples = pairs[: min(num_samples, len(pairs))]
 
-        fig, axes = plt.subplots(
-            len(samples), 3, figsize=(15, 5 * len(samples))
-        )
+        fig, axes = plt.subplots(len(samples), 3, figsize=(15, 5 * len(samples)))
         if len(samples) == 1:
             axes = axes.reshape(1, -1)
 
         for i, (image_path, mask_path) in enumerate(samples):
             try:
-                image, mask, result = self.apply_mask(
-                    image_path, mask_path, method
-                )
+                image, mask, result = self.apply_mask(image_path, mask_path, method)
 
                 # Image originale
                 axes[i, 0].imshow(image, cmap="gray")
@@ -163,9 +155,7 @@ class MaskApplicator:
 
         print(f"🔄 Traitement de {len(pairs)} images pour {category}...")
 
-        for image_path, mask_path in tqdm(
-            pairs, desc=f"Processing {category}"
-        ):
+        for image_path, mask_path in tqdm(pairs, desc=f"Processing {category}"):
             try:
                 _, _, result = self.apply_mask(image_path, mask_path, method)
 
@@ -191,12 +181,8 @@ class MaskApplicator:
             image_dir = self.dataset_path / category / "images"
             mask_dir = self.dataset_path / category / "masks"
 
-            num_images = (
-                len(list(image_dir.glob("*.png"))) if image_dir.exists() else 0
-            )
-            num_masks = (
-                len(list(mask_dir.glob("*.png"))) if mask_dir.exists() else 0
-            )
+            num_images = len(list(image_dir.glob("*.png"))) if image_dir.exists() else 0
+            num_masks = len(list(mask_dir.glob("*.png"))) if mask_dir.exists() else 0
             num_pairs = len(pairs)
 
             print(
@@ -207,9 +193,7 @@ class MaskApplicator:
             total_masks += num_masks
 
         print("-" * 50)
-        print(
-            f"{'TOTAL':15} | Images: {total_images:4d} | Masques: {total_masks:4d}"
-        )
+        print(f"{'TOTAL':15} | Images: {total_images:4d} | Masques: {total_masks:4d}")
 
 
 def main():
@@ -261,9 +245,7 @@ def main():
         if args.category == "all":
             for cat in applicator.categories:
                 try:
-                    applicator.visualize_sample(
-                        cat, num_samples=2, method=args.method
-                    )
+                    applicator.visualize_sample(cat, num_samples=2, method=args.method)
                 except Exception as e:
                     print(f"Erreur avec {cat}: {e}")
         else:
@@ -280,9 +262,7 @@ def main():
             for cat in applicator.categories:
                 applicator.process_category(cat, args.output, args.method)
         else:
-            applicator.process_category(
-                args.category, args.output, args.method
-            )
+            applicator.process_category(args.category, args.output, args.method)
 
 
 if __name__ == "__main__":

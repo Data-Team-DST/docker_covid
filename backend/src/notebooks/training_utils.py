@@ -207,11 +207,7 @@ def evaluate_model(
         print("\n" + "=" * 70)
         print("CLASSIFICATION REPORT")
         print("=" * 70)
-        print(
-            classification_report(
-                y_true, y_pred, target_names=class_names, digits=4
-            )
-        )
+        print(classification_report(y_true, y_pred, target_names=class_names, digits=4))
 
     # Add predictions to results
     results["y_true"] = y_true
@@ -299,8 +295,7 @@ def save_run_metadata(
             "final_epoch": len(history.history["loss"]),
             "total_epochs_trained": len(history.history["loss"]),
             "final_metrics": {
-                key: float(values[-1])
-                for key, values in history.history.items()
+                key: float(values[-1]) for key, values in history.history.items()
             },
         }
 

@@ -15,16 +15,26 @@ Classification automatique de radiographies pulmonaires
 git clone https://github.com/Data-Team-DST/docker_covid.git
 cd docker_covid
 
-# 2. Lancer le setup (choisir Développeur ou Utilisateur)
-./setup.sh
+# 2. Setup (venv, deps, .env, dossiers)
+make setup
 ```
 
-`setup.sh` vous guidera interactivement :
-- **[1] Développeur** — Docker + venv IDE optionnel. Construit les images localement.
-- **[2] Utilisateur** — Docker uniquement. Lance la stack telle quelle.
-
 > **Pré-requis** : [Docker Desktop](https://www.docker.com/products/docker-desktop/) installé et démarré.
-> WSL2 : activer la distro dans Docker Desktop > Settings > Resources > WSL Integration.
+>
+> **WSL2** : activer la distro dans Docker Desktop → Settings → Resources → WSL Integration.
+> Sans ça, `docker` ne sera pas trouvé dans le terminal WSL.
+
+### Commandes de dev (sans `make`)
+
+```bash
+# Depuis la racine du projet (WSL ou Git Bash)
+bash infrastructure/scripts/setup.sh          # setup
+bash infrastructure/scripts/check_quality.sh  # qualité
+bash infrastructure/scripts/fix_style.sh      # auto-style
+bash infrastructure/scripts/start_local.sh    # backend+frontend sans Docker
+```
+
+> ⚠️ Toujours utiliser des `/` (slash) et non des `\` (backslash) en WSL/bash.
 
 ---
 
@@ -89,9 +99,10 @@ docker_covid/
 │   └── templates/
 ├── infrastructure/
 │   ├── docker/              # Dockerfiles par service (backend, streamlit, trainer…)
+│   ├── kubernetes/          # Manifests K8s (Phase 3)
 │   ├── docker-compose.yml   # Stack complète (8 services)
 │   └── scripts/             # setup.sh, check_quality.sh, fix_style.sh, start_local.sh
-├── docs/                    # Architecture, SMART, backlogs
+├── docs/                    # Architecture, SMART, backlogs, plan de base
 ├── data/
 │   ├── raw.dvc              # 42 330 images trackées DVC (806 MB)
 │   └── models/              # ← Placer le fichier .keras ici
@@ -108,7 +119,7 @@ docker_covid/
 
 ## Configuration
 
-`setup.sh` copie automatiquement `.env.example` → `.env`.
+`make setup` copie automatiquement `.env.example` → `.env`.
 Adapter si besoin :
 
 ```env
@@ -125,7 +136,7 @@ MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
 ```bash
 make test
 # ou directement dans Docker :
-docker compose run --rm backend pytest tests/ --cov=app -v
+docker compose -f infrastructure/docker-compose.yml run --rm backend pytest tests/ --cov=app -v
 ```
 
 Coverage cible Phase 1 : >= 40 %
@@ -164,8 +175,8 @@ Documentation interactive : http://localhost:8000/docs
 
 | Phase | Contenu                       | Deadline   | Status      |
 |-------|-------------------------------|------------|-------------|
-| **1** | Env reproductible, API, CI/CD | 13/03/2026 | En cours    |
-| **2** | Microservices, MLflow, DVC    | 20/03/2026 | A faire     |
+| **1** | Env reproductible, API, CI/CD | 13/03/2026 | ✅ Livré    |
+| **2** | Microservices, MLflow, DVC    | 20/03/2026 | ✅ Livré    |
 | **3** | CI/CD complet, Kubernetes     | 24/04/2026 | A faire     |
 | **4** | Monitoring, Evidently, Drift  | 01/09/2026 | A faire     |
 | **Soutenance** | Présentation finale | 04/09/2026 | A faire |
