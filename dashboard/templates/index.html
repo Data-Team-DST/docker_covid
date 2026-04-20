@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ backlog.project }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="navbar navbar-dark bg-dark px-4">
+    <span class="navbar-brand fw-bold">🫁 DS_COVID MLOps — Backlog</span>
+    <span class="text-light small">Chef de projet : {{ backlog.chef_projet }} · Stack : {{ backlog.stack }}</span>
+    <div class="d-flex gap-2">
+      <a href="data" class="btn btn-sm btn-outline-light">🗂 Data Explorer</a>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4">
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+          <div class="card-body">
+            <div class="display-6 fw-bold text-primary">{{ stats.pct_points }}%</div>
+            <div class="text-muted">Points complétés</div>
+            <div class="small">{{ stats.done_points }} / {{ stats.total_points }} pts</div>
+            <div class="progress mt-2" style="height:6px">
+              <div class="progress-bar bg-primary" style="width:{{ stats.pct_points }}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+          <div class="card-body">
+            <div class="display-6 fw-bold text-success">{{ stats.done_stories }}</div>
+            <div class="text-muted">User Stories terminées</div>
+            <div class="small">sur {{ stats.total_stories }} au total</div>
+            <div class="progress mt-2" style="height:6px">
+              <div class="progress-bar bg-success" style="width:{{ stats.pct_stories }}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+          <div class="card-body">
+            <div class="display-6 fw-bold text-warning">{{ stats.sprints_done }}</div>
+            <div class="text-muted">Sprints complétés</div>
+            <div class="small">sur {{ stats.sprints_total }} sprints</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center shadow-sm">
+          <div class="card-body">
+            <div class="display-6 fw-bold text-info">{{ backlog.total_semaines }}</div>
+            <div class="text-muted">Semaines planifiées</div>
+            <div class="small">{{ backlog.total_sprints }} sprints · Démarrage {{ backlog.date_debut }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sprints -->
+    {% for sprint in backlog.sprints %}
+    {% set done_count = sprint.stories | selectattr('done') | list | length %}
+    {% set total_count = sprint.stories | length %}
+    {% set pct = (done_count / total_count * 100) | round | int if total_count > 0 else 0 %}
+    {% set status_class = {
+      'not_started': 'secondary',
+      'in_progress': 'warning',
+      'completed': 'success',
+      'blocked': 'danger'
+    }[sprint.status] %}
+    {% set status_label = {
+      'not_started': 'À démarrer',
+      'in_progress': 'En cours',
+      'completed': 'Terminé',
+      'blocked': 'Bloqué'
+    }[sprint.status] %}
+
+    <div class="card mb-3 shadow-sm sprint-card" id="sprint-{{ sprint.id }}">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div>
+          <span class="badge bg-dark me-2">{{ sprint.id }}</span>
+          <strong>{{ sprint.name }}</strong>
+          <span class="text-muted small ms-2">{{ sprint.duration }} · {{ sprint.points }} pts</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <div class="progress" style="width:120px;height:8px">
+            <div class="progress-bar bg-{{ status_class }}" style="width:{{ pct }}%"></div>
+          </div>
+          <span class="small text-muted">{{ done_count }}/{{ total_count }}</span>
+          <select class="form-select form-select-sm status-select" style="width:auto"
+                  data-sprint-id="{{ sprint.id }}">
+            <option value="not_started" {% if sprint.status == 'not_started' %}selected{% endif %}>À démarrer</option>
+            <option value="in_progress" {% if sprint.status == 'in_progress' %}selected{% endif %}>En cours</option>
+            <option value="completed" {% if sprint.status == 'completed' %}selected{% endif %}>Terminé</option>
+            <option value="blocked" {% if sprint.status == 'blocked' %}selected{% endif %}>Bloqué</option>
+          </select>
+          <span class="badge bg-{{ status_class }}">{{ status_label }}</span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:40px"></th>
+              <th style="width:80px">ID</th>
+              <th>User Story</th>
+              <th style="width:80px">Points</th>
+              <th style="width:80px">Priorité</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for story in sprint.stories %}
+            <tr class="story-row {% if story.done %}table-success{% endif %}" id="row-{{ story.id }}">
+              <td class="text-center">
+                <input type="checkbox" class="form-check-input story-check"
+                       data-sprint-id="{{ sprint.id }}"
+                       data-story-id="{{ story.id }}"
+                       {% if story.done %}checked{% endif %}>
+              </td>
+              <td><code class="text-muted">{{ story.id }}</code></td>
+              <td>
+                <div class="fw-semibold {% if story.done %}text-decoration-line-through text-muted{% endif %}">
+                  {{ story.title }}
+                </div>
+                <div class="small text-muted">{{ story.description }}</div>
+              </td>
+              <td><span class="badge bg-secondary">{{ story.points }} pts</span></td>
+              <td>
+                {% if story.priority == 'MUST' %}
+                <span class="badge bg-danger">MUST</span>
+                {% elif story.priority == 'SHOULD' %}
+                <span class="badge bg-warning text-dark">SHOULD</span>
+                {% else %}
+                <span class="badge bg-info">{{ story.priority }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    // BASE = URL courante avec slash final garanti.
+    const BASE = document.baseURI.replace(/\/[^/]*$/, '/');
+
+    function apiPost(path, data) {
+      return fetch(BASE + path, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      }).then(r => {
+        if (!r.ok) console.error('API error', r.status);
+        return r;
+      }).catch(err => console.error('Fetch error:', err));
+    }
+
+    // Recalcule et met à jour les KPI cards sans reload
+    function updateKPIs() {
+      const allChecks = document.querySelectorAll('.story-check');
+      const totalStories = allChecks.length;
+      const doneStories = [...allChecks].filter(c => c.checked).length;
+      // Points : lire depuis les badges de chaque ligne
+      let totalPoints = 0, donePoints = 0;
+      document.querySelectorAll('.story-check').forEach(cb => {
+        const row = document.getElementById('row-' + cb.dataset.storyId);
+        const pts = Number.parseInt(row.querySelector('.badge.bg-secondary')?.textContent) || 0;
+        totalPoints += pts;
+        if (cb.checked) donePoints += pts;
+      });
+      const pctPoints = totalPoints ? Math.round(donePoints / totalPoints * 100) : 0;
+
+      // Mise à jour KPI points
+      const kpiPoints = document.querySelector('.display-6.text-primary');
+      if (kpiPoints) kpiPoints.textContent = pctPoints + '%';
+      const kpiPointsSub = kpiPoints?.closest('.card-body')?.querySelector('.small');
+      if (kpiPointsSub) kpiPointsSub.textContent = donePoints + ' / ' + totalPoints + ' pts';
+      const barPoints = kpiPoints?.closest('.card-body')?.querySelector('.progress-bar');
+      if (barPoints) barPoints.style.width = pctPoints + '%';
+
+      // Mise à jour KPI stories
+      const kpiStories = document.querySelector('.display-6.text-success');
+      if (kpiStories) kpiStories.textContent = doneStories;
+      const barStories = kpiStories?.closest('.card-body')?.querySelector('.progress-bar');
+      if (barStories) barStories.style.width = (totalStories ? Math.round(doneStories/totalStories*100) : 0) + '%';
+
+      // Progress bar par sprint
+      document.querySelectorAll('.sprint-card').forEach(card => {
+        const checks = card.querySelectorAll('.story-check');
+        const done = [...checks].filter(c => c.checked).length;
+        const total = checks.length;
+        const pct = total ? Math.round(done / total * 100) : 0;
+        const bar = card.querySelector('.card-header .progress-bar');
+        if (bar) bar.style.width = pct + '%';
+        const counter = card.querySelector('.card-header .small.text-muted');
+        if (counter) counter.textContent = done + '/' + total;
+      });
+    }
+
+    document.querySelectorAll('.story-check').forEach(cb => {
+      cb.addEventListener('change', function() {
+        const sprintId = this.dataset.sprintId;
+        const storyId = this.dataset.storyId;
+        const done = this.checked;
+        apiPost('api/toggle', {sprint_id: sprintId, story_id: storyId, done: done})
+          .then(r => {
+            if (!r || !r.ok) { this.checked = !done; return; }
+            const row = document.getElementById('row-' + storyId);
+            if (done) {
+              row.classList.add('table-success');
+              row.querySelector('.fw-semibold').classList.add('text-decoration-line-through', 'text-muted');
+            } else {
+              row.classList.remove('table-success');
+              row.querySelector('.fw-semibold').classList.remove('text-decoration-line-through', 'text-muted');
+            }
+            updateKPIs();
+          });
+      });
+    });
+
+    document.querySelectorAll('.status-select').forEach(sel => {
+      sel.addEventListener('change', function() {
+        const sprintId = this.dataset.sprintId;
+        const status = this.value;
+        apiPost('api/sprint-status', {sprint_id: sprintId, status: status})
+          .then(r => { if (r && r.ok) location.reload(); });
+      });
+    });
+  </script>
+</body>
+</html>

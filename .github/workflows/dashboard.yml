@@ -1,0 +1,34 @@
+name: Dashboard (internal)
+
+# Workflow séparé du CI/CD principal : le dashboard est un outil interne
+# de suivi agile, pas un service de production livré aux utilisateurs.
+# Pas de build Docker, pas de push GHCR.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/dashboard.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/dashboard.yml"
+
+jobs:
+  lint_dashboard:
+    name: "Lint Dashboard"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint deps
+        run: pip install -q ruff
+
+      - name: Ruff check (dashboard)
+        run: ruff check dashboard/

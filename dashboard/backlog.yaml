@@ -1,0 +1,175 @@
+project: "DS_COVID — Industrialisation pipeline ML (MLOps)"
+team: "Data-Team-DST"
+chef_projet: "Steven"
+stack: "FastAPI + Docker + DVC + MLflow + GitHub Actions + Prometheus/Grafana"
+version: "1.0"
+date_debut: "2026-03"
+total_sprints: 4
+total_semaines: 26
+soutenance: "2026-09-04"
+
+sprints:
+
+  - id: S1
+    name: "Fondations & API d'inférence containerisée"
+    duration: "2 semaines"
+    deadline: "2026-03-13"
+    points: 18
+    status: completed
+    stories:
+      - id: US-01
+        title: "Repo Git unifié + structure microservices"
+        description: "✅ Fusion DS_COVID + docker_covid. Structure backend/app, frontend/, infrastructure/. Branches : main, dev, feature/*."
+        points: 3
+        priority: MUST
+        done: true
+      - id: US-02
+        title: "API FastAPI GET /health + POST /predict"
+        description: "✅ FastAPI avec /health (status + model_loaded) et /predict (multipart image → classe + confidence + scores). Modèle .keras chargé via loader.py."
+        points: 5
+        priority: MUST
+        done: true
+      - id: US-03
+        title: "Docker Compose + images GHCR"
+        description: "✅ docker-compose.yml avec backend + frontend. Images publiées sur GHCR via GitHub Actions (cicd.yml). Tags : sha-*, branche, latest sur main."
+        points: 4
+        priority: MUST
+        done: true
+      - id: US-04
+        title: "Tests unitaires ≥ 40% coverage"
+        description: "✅ 9 tests unitaires backend (preprocessing, schémas, API). Coverage ≥ 40% via pytest-cov. CI vert sur main."
+        points: 3
+        priority: MUST
+        done: true
+      - id: US-05
+        title: "DVC initialisé + remote MinIO"
+        description: "✅ data/raw.dvc tracke 42 330 images (806 MB). Remote MinIO configuré. dvc push/pull opérationnel."
+        points: 3
+        priority: MUST
+        done: true
+
+  - id: S2
+    name: "Microservices, MLflow & Versioning"
+    duration: "1 semaine"
+    deadline: "2026-03-20"
+    points: 20
+    status: completed
+    stories:
+      - id: US-06
+        title: "MLflow Tracking Server containerisé"
+        description: "✅ Service mlflow dans docker-compose (port 5000). Backend PostgreSQL + artifacts sur MinIO. Accessible sur http://localhost:5000."
+        points: 4
+        priority: MUST
+        done: true
+      - id: US-07
+        title: "Architecture microservices complète"
+        description: "✅ 7 services dans docker-compose : backend, trainer, streamlit, mlflow, postgres, minio, minio-init. Réseau Docker interne. infrastructure/docker-compose.yml avec --project-directory ."
+        points: 5
+        priority: MUST
+        done: true
+      - id: US-08
+        title: "DVC pipeline reproductible (dvc.yaml)"
+        description: "✅ Pipeline DVC versionné. dvc repro rejoue preprocessing → training. Données + modèles versionnés avec tags sémantiques dans MLflow Registry."
+        points: 4
+        priority: MUST
+        done: true
+      - id: US-09
+        title: "Qualité code : check_quality.sh + check_requirements.sh"
+        description: "✅ check_quality.sh : ruff + pylint + tests + structure + code smell + requirements. Cache par timestamp (×17 speedup). check_requirements.sh : single-pass grep, 3 catégories (TOOL/IMPLICIT/ACTIVE), rapport tmp/quality/requirements.txt."
+        points: 4
+        priority: SHOULD
+        done: true
+      - id: US-10
+        title: "Refactoring scripts : infrastructure/scripts/"
+        description: "✅ Tous les scripts dans infrastructure/scripts/. setup.sh détecte OS. start_services.sh avec COMPOSE=-f infrastructure/docker-compose.yml. src/ → backend/src/."
+        points: 3
+        priority: SHOULD
+        done: true
+
+  - id: S3
+    name: "CI/CD complet & API production-ready"
+    duration: "5 semaines"
+    deadline: "2026-04-24"
+    points: 26
+    status: in_progress
+    stories:
+      - id: US-11
+        title: "⚠️ CI/CD pipeline complet (lint → test → build → push → deploy)"
+        description: "GitHub Actions : lint_be + lint_fe → test_be → sonarcloud → build_be + build_fe → summary. Déploiement auto sur push main. CI < 10 min. 100% vert sur main."
+        points: 5
+        priority: MUST
+        done: false
+      - id: US-12
+        title: "Sécurité API : authentification + rate limiting"
+        description: "API key obligatoire sur tous les endpoints (401 si absent). Rate limiting (ex: 100 req/min). Validation Pydantic stricte sur /predict (type, taille image). 0 endpoint non authentifié exposé."
+        points: 5
+        priority: MUST
+        done: false
+      - id: US-13
+        title: "Logs structurés + OpenAPI documentation complète"
+        description: "Logs JSON structurés (structlog ou logging JSON). /docs OpenAPI exportable. Tous les endpoints documentés avec exemples. logging_config.py."
+        points: 3
+        priority: MUST
+        done: false
+      - id: US-14
+        title: "Docker Compose production-ready"
+        description: "restart: unless-stopped sur tous les services. Health checks définis. Resource limits (memory, cpu). Variables d'env externalisées dans .env. 0 secret hardcodé."
+        points: 3
+        priority: MUST
+        done: false
+      - id: US-15
+        title: "Load test /predict P95 < 500ms"
+        description: "Script locust ou k6 : 10 req/s concurrent sur /predict. P95 < 500ms. Rapport HTML dans outputs/load_test/. Intégré dans CI Phase 3."
+        points: 4
+        priority: SHOULD
+        done: false
+      - id: US-16
+        title: "Data augmentation + DVC pipeline augmenté"
+        description: "Pipeline DVC : raw → augmented → processed → train. Transformations : rotation, flip, zoom, brightness. Sauvegarde images augmentées dans data/processed/. dvc repro rejoue tout. 42 330 images → ~170 000 après augmentation."
+        points: 4
+        priority: SHOULD
+        done: false
+      - id: US-17
+        title: "Dashboard agile opérationnel (ce sprint)"
+        description: "Flask dashboard : backlog.yaml DS_COVID, suivi sprints/stories, data explorer DVC, état persisté dans state.json. Lancé via make dashboard."
+        points: 2
+        priority: SHOULD
+        done: false
+
+  - id: S4
+    name: "Monitoring, Drift & Maintenance"
+    duration: "18 semaines"
+    deadline: "2026-09-01"
+    points: 22
+    status: not_started
+    stories:
+      - id: US-18
+        title: "Prometheus + instrumentation FastAPI"
+        description: "prometheus-fastapi-instrumentator sur /predict et /health. Métriques exposées : latence P50/P95, throughput, error rate, confidence distribution, class distribution. Endpoint /metrics."
+        points: 4
+        priority: MUST
+        done: false
+      - id: US-19
+        title: "Grafana dashboard (≥5 panels + alertes)"
+        description: "Dashboard Grafana : latence P50/P95, error rate, throughput, confidence moyenne, distribution classes. Alertes : latence P95 > 1s, error rate > 5%. Provisioning automatique via docker-compose."
+        points: 5
+        priority: MUST
+        done: false
+      - id: US-20
+        title: "Evidently : détection dérive données"
+        description: "Rapport Evidently : PSI + Jensen-Shannon sur features d'entrée (distribution pixels, classes). Comparaison production vs train. Rapport HTML générable en 1 commande. Alerte si PSI > 0.2."
+        points: 5
+        priority: MUST
+        done: false
+      - id: US-21
+        title: "Pipeline re-entraînement semi-automatique"
+        description: "Script trigger_retrain.sh : détecte dérive (PSI > 0.2) → lance training → log MLflow → promeut modèle si accuracy ≥ 85%. Semi-auto : alerte + confirmation manuelle avant promotion."
+        points: 5
+        priority: SHOULD
+        done: false
+      - id: US-22
+        title: "Documentation finale : README + ADRs + runbooks"
+        description: "README : clone → services up en 3 commandes. ADRs (Architecture Decision Records) pour les choix clés. Runbooks : restart service, rollback modèle, forcer re-entraînement. Peer review équipe."
+        points: 3
+        priority: MUST
+        done: false
