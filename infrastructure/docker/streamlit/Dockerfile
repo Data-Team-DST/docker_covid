@@ -9,7 +9,7 @@ RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install --ignore-installed blinker \
  && python -m pip install -r /tmp/streamlit.txt
 
-COPY src/ /workspace/src/
+COPY backend/src/ /workspace/src/
 COPY frontend/ /workspace/frontend/
 
 EXPOSE 8501
