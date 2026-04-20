@@ -49,11 +49,16 @@ def _run_dvc(cmd: list[str]) -> dict:
         if out["success"]:
             logger.info("dvc %s OK (rc=0)", cmd[0])
         else:
-            logger.warning("dvc %s failed rc=%s stderr=%s", cmd[0], result.returncode, result.stderr.strip()[:200])
+            logger.warning(
+                "dvc %s failed rc=%s stderr=%s",
+                cmd[0], result.returncode, result.stderr.strip()[:200],
+            )
         return out
     except FileNotFoundError:
         logger.error("dvc not found in container")
-        raise HTTPException(status_code=500, detail="DVC non installé dans ce container")
+        raise HTTPException(
+            status_code=500, detail="DVC non installé dans ce container"
+        )
     except subprocess.TimeoutExpired:
         logger.error("dvc %s timeout after 300s", cmd[0])
         raise HTTPException(status_code=504, detail="DVC timeout (> 5 min)")
@@ -110,8 +115,17 @@ def dvc_pull(background_tasks: BackgroundTasks, target: str | None = None):
         cmd.append(target)
     result = _run_dvc(cmd)
     if not result["success"]:
+        stderr = result["stderr"] or ""
+        if "Missing cache files" in stderr or "not in cache" in stderr:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "Données absentes du remote MinIO — "
+                    "faire dvc push depuis une machine avec data/raw/ complet"
+                )
+            )
         raise HTTPException(
-            status_code=500, detail=result["stderr"] or "dvc pull échoué"
+            status_code=500, detail=stderr or "dvc pull échoué"
         )
     return result
 
