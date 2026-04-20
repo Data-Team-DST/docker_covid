@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ds-covid-mlops"
+version = "0.1.0"
+description = "COVID-19 Radiography Analysis — MLOps Pipeline"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["backend/src"]
+
+# ── Ruff : linting + formatage ────────────────────────────────────────────────
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    ".eggs",
+    "notebooks",
+    "data",
+    "tmp",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long — géré par le formateur
+    "B008",  # function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Pages Streamlit : trailing whitespace dans CSS strings, loop vars de déstructuration
+"frontend/page/*.py" = ["W291", "W293", "B007"]
+"frontend/streamlit_app.py" = ["W291", "W293"]
+# Notebooks et code ML exploratoire — pas soumis au lint CI
+"backend/src/**" = ["ALL"]
+"backend/src/notebooks/**" = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+# ── isort ─────────────────────────────────────────────────────────────────────
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["app"]
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+python_files = ["test_*.py", "*_test.py"]
+pythonpath = ["backend"]
+addopts = [
+    "--strict-markers",
+]
+markers = [
+    "slow: tests lents (désélectionner avec '-m not slow')",
+    "integration: tests d'intégration",
+]
+
+# ── pylint ────────────────────────────────────────────────────────────────────
+[tool.pylint.main]
+ignored-modules = ["tensorflow", "tensorflow.keras", "tensorflow.keras.models"]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114",  # missing-module-docstring (docstring fichier déjà présent)
+    "R0903",  # too-few-public-methods (Pydantic models / dataclasses)
+    "C0415",  # import-outside-toplevel (lazy import tensorflow intentionnel)
+    "W0718",  # broad-exception-caught (résilience chargement modèle)
+    "E1101",  # no-member (PIL.LANCZOS et tf.keras : faux positifs)
+]
+
+[tool.pylint.format]
+max-line-length = 88
+
+# ── mypy ──────────────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
