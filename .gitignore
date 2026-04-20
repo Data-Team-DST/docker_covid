@@ -7,9 +7,11 @@ venv/
 backend/.venv/
 *.egg-info/
 
-# Logs locaux
+# Logs locaux (contenu ignoré, dossiers trackés via .gitkeep)
 tmp/logs/
 tmp/quality/
+!tmp/logs/.gitkeep
+!tmp/quality/.gitkeep
 *.pid
 
 # Env
