@@ -130,6 +130,20 @@
                   {{ story.title }}
                 </div>
                 <div class="small text-muted">{{ story.description }}</div>
+                <div class="mt-1 d-flex flex-wrap gap-1">
+                  {% if story.assignee %}
+                  <span class="badge bg-dark border">👤 {{ story.assignee }}</span>
+                  {% endif %}
+                  {% if story.branch %}
+                  <span class="badge" style="background:#1b2a3b; color:#58a6ff; border:1px solid #30363d">⎇ {{ story.branch }}</span>
+                  {% endif %}
+                  {% for dep in story.depends_on or [] %}
+                  <span class="badge bg-warning text-dark" title="Bloquée par {{ dep }}">⛔ attend {{ dep }}</span>
+                  {% endfor %}
+                  {% for blk in story.blocks or [] %}
+                  <span class="badge bg-info text-dark" title="Bloque {{ blk }}">🔒 bloque {{ blk }}</span>
+                  {% endfor %}
+                </div>
               </td>
               <td><span class="badge bg-secondary">{{ story.points }} pts</span></td>
               <td>

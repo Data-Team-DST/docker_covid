@@ -131,6 +131,55 @@ MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
 
 ---
 
+## Pipeline DVC — `dvc repro`
+
+Le pipeline ML est défini dans [`dvc.yaml`](dvc.yaml) avec 3 stages :
+
+```
+data/raw  →  preprocess  →  data/processed/  →  train  →  data/models/covid_model.keras
+                                                              ↓
+                                                          evaluate  →  outputs/evaluation_report.json
+```
+
+### Lancer le pipeline complet
+
+```bash
+# Prérequis : data/raw/ pullé (make data-start puis DVC pull via dashboard)
+dvc repro          # rejoue uniquement les stages dont les dépendances ont changé
+dvc repro --force  # rejoue tout sans vérifier le cache
+```
+
+### Paramètres ([`params.yaml`](params.yaml))
+
+```yaml
+preprocess:
+  img_size: [256, 256]
+  max_samples_per_class: null   # null = toutes les images (42 330)
+  test_split: 0.2
+
+train:
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.001
+```
+
+Modifier `params.yaml` → `dvc repro` rejoue uniquement les stages impactés.
+
+### Résultats
+
+| Fichier | Contenu |
+|---|---|
+| `outputs/metrics.json` | val_accuracy, val_loss |
+| `outputs/evaluation_report.json` | accuracy, matrice de confusion, rapport par classe |
+| `outputs/preprocess_stats.json` | nb images par classe, split train/test |
+
+```bash
+dvc metrics show   # affiche outputs/metrics.json
+dvc params diff    # compare les params entre commits
+```
+
+---
+
 ## Tests
 
 ```bash
