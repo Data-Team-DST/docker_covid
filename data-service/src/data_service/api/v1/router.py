@@ -71,16 +71,16 @@ def _run_dvc(cmd: list[str]) -> dict:
         raise HTTPException(status_code=504, detail="DVC timeout (> 5 min)")
 
 
-def _local_dir_stats(path: Path) -> dict:
+def _local_dir_stats(path: Path, build_index: bool = False) -> dict:
     if not path.exists():
-        return {"exists": False, "nfiles": 0, "size_mb": 0, "labels": []}
+        return {"exists": False, "nfiles": 0, "size_mb": 0, "labels": [], "index": []}
     files = [f for f in path.rglob("*") if f.is_file()
              and f.suffix.lower() not in SKIP_EXTS]
     labels = sorted({
         p.name for p in path.iterdir()
         if p.is_dir() and not p.name.startswith(".")
     })
-    return {
+    result = {
         "exists": True,
         "nfiles": len(files),
         "size_mb": round(
@@ -88,6 +88,15 @@ def _local_dir_stats(path: Path) -> dict:
         ),
         "labels": labels,
     }
+    if build_index:
+        index = []
+        for f in files:
+            if f.suffix.lower() in IMAGE_EXTS:
+                rel = str(f.relative_to(path)).replace("\\", "/")
+                parts = rel.split("/")
+                index.append({"path": rel, "filename": f.name, "label": parts[0] if len(parts) > 1 else ""})
+        result["index"] = index
+    return result
 
 
 def _current_dvc_hash() -> str:
@@ -140,7 +149,7 @@ def data_stats(refresh: bool = False):
         dvc_file = DATA_DIR / f"{name}.dvc"
         stats[name] = {
             "dvc": _dvc_file_info(dvc_file),
-            "local": _local_dir_stats(DATA_DIR / name),
+            "local": _local_dir_stats(DATA_DIR / name, build_index=(name == "raw")),
         }
     stats["models"] = {"local": _local_dir_stats(DATA_DIR / "models")}
     _save_cache(stats)
@@ -152,37 +161,27 @@ def data_stats(refresh: bool = False):
 @api_router.get("/data/image", tags=["data"])
 def get_image(
     dataset: str = "raw",
-    label: str = "",
-    filename: str = "",
+    path: str = "",
 ):
     """
     Sert une image depuis data/<dataset>/.
-    Ex: /v1/data/image?dataset=raw&label=COVID&filename=COVID-1.png
+    Ex: /v1/data/image?dataset=raw&path=COVID-19_Radiography_Dataset/COVID/images/COVID-1.png
     """
     if dataset not in ("raw", "processed", "models"):
         raise HTTPException(status_code=400, detail="dataset invalide")
+    if not path:
+        raise HTTPException(status_code=400, detail="path requis")
 
     base = DATA_DIR / dataset
-    # Cherche récursivement si label absent
-    if label and filename:
-        candidates = list(base.rglob(f"{label}*/{filename}"))
-        if not candidates:
-            candidates = [base / label / filename]
-    elif filename:
-        candidates = list(base.rglob(filename))
-    else:
-        raise HTTPException(
-            status_code=400, detail="filename requis"
-        )
+    candidate = (base / path).resolve()
 
-    for candidate in candidates:
-        if (candidate.exists()
-                and candidate.suffix.lower() in IMAGE_EXTS
-                and candidate.is_relative_to(base)):
-            mime = mimetypes.guess_type(str(candidate))[0] or "image/png"
-            return FileResponse(str(candidate), media_type=mime)
+    if not candidate.is_relative_to(base.resolve()):
+        raise HTTPException(status_code=400, detail="path invalide")
+    if not candidate.exists() or candidate.suffix.lower() not in IMAGE_EXTS:
+        raise HTTPException(status_code=404, detail="Image introuvable")
 
-    raise HTTPException(status_code=404, detail="Image introuvable")
+    mime = mimetypes.guess_type(str(candidate))[0] or "image/png"
+    return FileResponse(str(candidate), media_type=mime)
 
 
 @api_router.get("/data/search", tags=["data"])
@@ -192,7 +191,7 @@ def search_images(
     limit: int = 20,
 ):
     """
-    Cherche des images par nom dans data/<dataset>/.
+    Cherche des images par nom dans data/<dataset>/ via index en cache.
     Retourne max `limit` chemins relatifs (depuis data/<dataset>/).
     """
     if dataset not in ("raw", "processed", "models"):
@@ -207,20 +206,25 @@ def search_images(
         return {"results": [], "total": 0}
 
     q = query.lower()
+
+    # Essayer de servir depuis l'index en cache
+    cached = _load_cache()
+    if cached and dataset in cached:
+        index = cached[dataset].get("local", {}).get("index")
+        if index is not None:
+            results = [item for item in index if q in item["filename"].lower()]
+            return {"results": results[:limit], "total": min(len(results), limit), "query": query}
+
+    # Fallback : scan filesystem (index pas encore construit)
     results = []
     for f in base.rglob("*"):
-        if (f.is_file()
-                and f.suffix.lower() in IMAGE_EXTS
-                and q in f.name.lower()):
-            # Chemin relatif depuis base, ex: "COVID/images/COVID-1.png"
+        if f.is_file() and f.suffix.lower() in IMAGE_EXTS and q in f.name.lower():
             rel = str(f.relative_to(base)).replace("\\", "/")
-            # label = premier répertoire
             parts = rel.split("/")
-            label = parts[0] if len(parts) > 1 else ""
             results.append({
                 "path": rel,
                 "filename": f.name,
-                "label": label,
+                "label": parts[0] if len(parts) > 1 else "",
             })
             if len(results) >= limit:
                 break

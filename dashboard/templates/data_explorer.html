@@ -207,7 +207,7 @@
         info.textContent = data.total + ' résultat(s)';
         data.results.forEach(item => {
           const filename = item.path.split('/').pop();
-          const imgUrl = `/api/ds/image?dataset=${encodeURIComponent(dataset)}&label=${encodeURIComponent(item.label)}&filename=${encodeURIComponent(filename)}`;
+          const imgUrl = `/api/ds/image?dataset=${encodeURIComponent(dataset)}&path=${encodeURIComponent(item.path)}`;
           const card = document.createElement('div');
           card.className = 'img-card';
           card.innerHTML = `

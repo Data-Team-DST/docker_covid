@@ -134,7 +134,29 @@ def index():
 
 @app.route("/data")
 def data_explorer():
-    stats = load_data_stats()
+    try:
+        r = requests.get(f"{DATA_SERVICE_URL}/v1/data/stats", timeout=10)
+        ds = r.json()
+        # Normalise vers le format attendu par le template
+        raw_dvc = ds.get("raw", {}).get("dvc") or {}
+        data_dirs = {}
+        for key in ("raw", "processed", "models"):
+            local = ds.get(key, {}).get("local") or {}
+            if local.get("exists"):
+                exts: dict = {}
+                data_dirs[key] = {
+                    "nfiles": local.get("nfiles", 0),
+                    "size_mb": local.get("size_mb", 0),
+                    "types": exts,
+                }
+        models = []
+        stats = {
+            "raw_dvc": raw_dvc or None,
+            "data_dirs": data_dirs,
+            "models": models,
+        }
+    except Exception:
+        stats = load_data_stats()
     return render_template("data_explorer.html", stats=stats)
 
 
