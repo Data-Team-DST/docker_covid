@@ -60,10 +60,10 @@
     }
     #modal-overlay.open { display:flex; }
     #modal-box { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:1.5rem; max-width:95vw; text-align:center; position:relative; }
-    #modal-box img { border-radius:6px; transition:max-width .2s, max-height .2s; }
-    #modal-box img.zoom-0 { max-width:55vw; max-height:55vh; }
-    #modal-box img.zoom-1 { max-width:75vw; max-height:75vh; }
-    #modal-box img.zoom-2 { max-width:90vw; max-height:88vh; }
+    #modal-box img { border-radius:6px; transition:width .2s; display:block; margin:0 auto; }
+    #modal-box img.zoom-0 { width:clamp(200px, 28vw, 420px); }
+    #modal-box img.zoom-1 { width:clamp(300px, 48vw, 680px); }
+    #modal-box img.zoom-2 { width:clamp(400px, 72vw, 1000px); }
     #modal-box .modal-info { color:#8b949e; font-size:.85rem; margin-top:.5rem; }
     #modal-close { position:absolute; top:.8rem; right:1rem; font-size:1.5rem; cursor:pointer; color:#8b949e; }
     #modal-close:hover { color:#fff; }
