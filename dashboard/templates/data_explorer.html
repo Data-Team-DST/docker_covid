@@ -10,8 +10,6 @@
     h2 { color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: .5rem; margin-top: 2rem; }
     .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.2rem; margin: 1rem 0; }
     .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: .8rem; margin: 2px; }
-    .badge-blue { background: #1f6feb; color: #fff; }
-    .badge-green { background: #1a7f37; color: #fff; }
     .badge-gray { background: #30363d; color: #cdd5e0; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
     .stat { text-align: center; }
@@ -28,6 +26,33 @@
     .btn-dvc.danger { background:#b62324; }
     .btn-dvc.danger:hover { background:#da3633; }
     #dvc-output { background:#0d1117; border:1px solid #30363d; border-radius:6px; padding:.8rem; font-size:.8rem; min-height:2rem; white-space:pre-wrap; margin-top:.8rem; color:#8b949e; }
+    /* Search */
+    .search-bar { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+    .search-bar input, .search-bar select {
+      background:#21262d; border:1px solid #30363d; color:#c9d1d9;
+      padding:6px 10px; border-radius:6px; font-family:monospace; font-size:.9rem;
+    }
+    .search-bar input { flex:1; min-width:180px; }
+    #search-results { display:flex; flex-wrap:wrap; gap:.8rem; margin-top:1rem; }
+    .img-card {
+      background:#21262d; border:1px solid #30363d; border-radius:8px;
+      padding:.5rem; text-align:center; cursor:pointer; width:140px;
+    }
+    .img-card:hover { border-color:#58a6ff; }
+    .img-card img { width:120px; height:120px; object-fit:cover; border-radius:4px; }
+    .img-card .img-name { font-size:.7rem; color:#8b949e; margin-top:.3rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .img-card .img-label { font-size:.7rem; color:#58a6ff; }
+    /* Modal */
+    #modal-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
+      z-index:100; align-items:center; justify-content:center;
+    }
+    #modal-overlay.open { display:flex; }
+    #modal-box { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:1.5rem; max-width:90vw; text-align:center; position:relative; }
+    #modal-box img { max-width:70vw; max-height:70vh; border-radius:6px; }
+    #modal-box .modal-info { color:#8b949e; font-size:.85rem; margin-top:.5rem; }
+    #modal-close { position:absolute; top:.8rem; right:1rem; font-size:1.5rem; cursor:pointer; color:#8b949e; }
+    #modal-close:hover { color:#fff; }
   </style>
 </head>
 <body>
@@ -78,13 +103,37 @@
         <div class="label">fichiers — {{ info.size_mb }} MB</div>
       </div>
       {% for ext, count in info.types.items() %}
+      {% if ext not in ('.xlsx', '.xls', '.txt', '.csv') %}
       <span class="badge badge-gray">{{ ext or 'no-ext' }} ×{{ count }}</span>
+      {% endif %}
       {% endfor %}
       {% endif %}
     </div>
     {% else %}
     <p class="empty">Aucun sous-dossier trouvé dans data/</p>
     {% endfor %}
+  </div>
+
+  <h2>🔍 Recherche d'images</h2>
+  <div class="card">
+    <div class="search-bar">
+      <select id="search-dataset" onchange="clearResults()">
+        <option value="raw">raw</option>
+        <option value="processed">processed</option>
+        <option value="models">models</option>
+      </select>
+      <input type="text" id="search-query"
+             placeholder="ex: COVID-1, Normal, Lung_Opacity-42…"
+             onkeydown="if(event.key==='Enter') doSearch()">
+      <button class="btn-dvc" onclick="doSearch()">🔍 Chercher</button>
+      <select id="search-limit">
+        <option value="12">12 résultats</option>
+        <option value="24">24</option>
+        <option value="48">48</option>
+      </select>
+      <span id="search-info" style="color:#8b949e; font-size:.85rem;"></span>
+    </div>
+    <div id="search-results"></div>
   </div>
 
   <h2>🧠 Modèles disponibles</h2>
@@ -99,11 +148,21 @@
       </tbody>
     </table>
     {% else %}
-    <p class="empty">Aucun modèle .keras/.h5 dans data/models/ — placer le fichier .keras ici</p>
+    <p class="empty">Aucun modèle .keras/.h5 dans data/models/</p>
     {% endif %}
   </div>
 
+  <!-- Modal image plein écran -->
+  <div id="modal-overlay" onclick="closeModal()">
+    <div id="modal-box" onclick="event.stopPropagation()">
+      <span id="modal-close" onclick="closeModal()">✕</span>
+      <img id="modal-img" src="" alt="">
+      <div class="modal-info" id="modal-info"></div>
+    </div>
+  </div>
+
   <script>
+    // ── DVC ops ──────────────────────────────────────────────────────────────
     async function dvcOp(action) {
       const out = document.getElementById('dvc-output');
       const spinner = document.getElementById('dvc-spinner');
@@ -113,18 +172,66 @@
         const method = ['pull', 'push', 'repro'].includes(action) ? 'POST' : 'GET';
         const r = await fetch('/api/dvc/' + action, { method });
         const data = await r.json();
-        if (data.error) {
-          out.textContent = '❌ ' + data.error;
-        } else {
-          out.textContent = (data.stdout || '(pas de sortie)') +
-            (data.stderr ? '\n⚠️ stderr:\n' + data.stderr : '');
-        }
+        out.textContent = data.error
+          ? '❌ ' + data.error
+          : (data.stdout || '(pas de sortie)') + (data.stderr ? '\n⚠️ ' + data.stderr : '');
       } catch (e) {
-        out.textContent = '❌ data-service inaccessible (http://localhost:5001)\n' + e;
+        out.textContent = '❌ ' + e;
       } finally {
         spinner.style.display = 'none';
       }
     }
+
+    // ── Image search ─────────────────────────────────────────────────────────
+    function clearResults() {
+      document.getElementById('search-results').innerHTML = '';
+      document.getElementById('search-info').textContent = '';
+    }
+
+    async function doSearch() {
+      const dataset = document.getElementById('search-dataset').value;
+      const query   = document.getElementById('search-query').value.trim();
+      const limit   = document.getElementById('search-limit').value;
+      const info    = document.getElementById('search-info');
+      const results = document.getElementById('search-results');
+      if (!query) { info.textContent = 'Entrer un terme.'; return; }
+      info.textContent = '⏳ Recherche…';
+      results.innerHTML = '';
+      try {
+        const r = await fetch(
+          `/api/ds/search?dataset=${encodeURIComponent(dataset)}&query=${encodeURIComponent(query)}&limit=${limit}`
+        );
+        const data = await r.json();
+        if (data.error) { info.textContent = '❌ ' + data.error; return; }
+        if (!data.results?.length) { info.textContent = 'Aucun résultat pour "' + query + '"'; return; }
+        info.textContent = data.total + ' résultat(s)';
+        data.results.forEach(item => {
+          const filename = item.path.split('/').pop();
+          const imgUrl = `/api/ds/image?dataset=${encodeURIComponent(dataset)}&label=${encodeURIComponent(item.label)}&filename=${encodeURIComponent(filename)}`;
+          const card = document.createElement('div');
+          card.className = 'img-card';
+          card.innerHTML = `
+            <img src="${imgUrl}" alt="${filename}" loading="lazy"
+                 onerror="this.style.opacity='.3'">
+            <div class="img-label">${item.label || dataset}</div>
+            <div class="img-name" title="${filename}">${filename}</div>`;
+          card.onclick = () => openModal(imgUrl, filename, item.label);
+          results.appendChild(card);
+        });
+      } catch (e) { info.textContent = '❌ ' + e; }
+    }
+
+    // ── Modal ────────────────────────────────────────────────────────────────
+    function openModal(src, filename, label) {
+      document.getElementById('modal-img').src = src;
+      document.getElementById('modal-info').textContent = (label || '') + ' / ' + filename;
+      document.getElementById('modal-overlay').classList.add('open');
+    }
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+      document.getElementById('modal-img').src = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
   </script>
 </body>
 </html>

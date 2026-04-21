@@ -194,6 +194,50 @@ def dvc_proxy(action: str):
         }), 503
 
 
+# ── Proxy data-service : stats, search, image ─────────────────────────────
+
+@app.route("/api/ds/stats")
+def ds_stats_proxy():
+    refresh = request.args.get("refresh", "false")
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/stats",
+            params={"refresh": refresh}, timeout=30,
+        )
+        return jsonify(r.json()), r.status_code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/search")
+def ds_search_proxy():
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/search",
+            params=request.args, timeout=10,
+        )
+        return jsonify(r.json()), r.status_code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/image")
+def ds_image_proxy():
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/image",
+            params=request.args, stream=True, timeout=10,
+        )
+        from flask import Response
+        return Response(
+            r.content,
+            status=r.status_code,
+            content_type=r.headers.get("content-type", "image/png"),
+        )
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
 if __name__ == "__main__":
     port = int(os.getenv("DASHBOARD_PORT", "5050"))
     app.run(host="0.0.0.0", port=port, debug=False)
