@@ -134,7 +134,50 @@ def index():
 
 @app.route("/data")
 def data_explorer():
-    stats = load_data_stats()
+    try:
+        r = requests.get(f"{DATA_SERVICE_URL}/v1/data/stats", timeout=10)
+        ds = r.json()
+        # Normalise vers le format attendu par le template
+        raw_dvc = ds.get("raw", {}).get("dvc") or {}
+        data_dirs = {}
+        for key in ("raw", "processed", "models"):
+            local = ds.get(key, {}).get("local") or {}
+            if local.get("exists"):
+                exts: dict = {}
+                data_dirs[key] = {
+                    "nfiles": local.get("nfiles", 0),
+                    "size_mb": local.get("size_mb", 0),
+                    "types": exts,
+                }
+        models = []
+        stats = {
+            "raw_dvc": raw_dvc or None,
+            "data_dirs": data_dirs,
+            "models": models,
+        }
+    except Exception:
+        # Fallback 1 : lire le cache JSON écrit par data-service (instantané)
+        cache_file = ROOT / "tmp" / "data_cache.json"
+        if cache_file.exists():
+            try:
+                with open(cache_file, encoding="utf-8") as f:
+                    cached = json.load(f).get("stats", {})
+                raw_dvc = cached.get("raw", {}).get("dvc") or {}
+                data_dirs = {}
+                for key in ("raw", "processed", "models"):
+                    local = cached.get(key, {}).get("local") or {}
+                    if local.get("exists"):
+                        data_dirs[key] = {
+                            "nfiles": local.get("nfiles", 0),
+                            "size_mb": local.get("size_mb", 0),
+                            "types": {},
+                        }
+                stats = {"raw_dvc": raw_dvc or None, "data_dirs": data_dirs, "models": []}
+            except Exception:
+                stats = load_data_stats()
+        else:
+            # Fallback 2 : scan filesystem (lent, dernier recours)
+            stats = load_data_stats()
     return render_template("data_explorer.html", stats=stats)
 
 
@@ -192,6 +235,50 @@ def dvc_proxy(action: str):
             "stdout": "",
             "stderr": "Lancer : make data-start",
         }), 503
+
+
+# ── Proxy data-service : stats, search, image ─────────────────────────────
+
+@app.route("/api/ds/stats")
+def ds_stats_proxy():
+    refresh = request.args.get("refresh", "false")
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/stats",
+            params={"refresh": refresh}, timeout=30,
+        )
+        return jsonify(r.json()), r.status_code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/search")
+def ds_search_proxy():
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/search",
+            params=request.args, timeout=10,
+        )
+        return jsonify(r.json()), r.status_code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/image")
+def ds_image_proxy():
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/image",
+            params=request.args, stream=True, timeout=10,
+        )
+        from flask import Response
+        return Response(
+            r.content,
+            status=r.status_code,
+            content_type=r.headers.get("content-type", "image/png"),
+        )
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
 
 
 if __name__ == "__main__":

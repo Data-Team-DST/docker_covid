@@ -184,7 +184,9 @@ dashboard: ## Lance le dashboard agile + data-service sur :5050/:5001
 	@sleep 6
 	@$(COMPOSE) up -d --build data-service 2>/dev/null || echo "$(YELLOW)⚠ Docker non disponible — boutons DVC désactivés$(NC)"
 	@echo "$(YELLOW)Dashboard DS_COVID → http://localhost:5050$(NC)"
-	@. .venv/bin/activate && cd dashboard && pip install -q -r requirements.txt && python app.py
+	@echo "$(YELLOW)(Ctrl+C pour tout arrêter)$(NC)"
+	@trap '$(COMPOSE) stop data-service minio 2>/dev/null; exit 0' INT; \
+	 . .venv/bin/activate && cd dashboard && pip install -q -r requirements.txt && python app.py
 
 clean-docker: ## Supprime les images et volumes Docker du projet
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true
