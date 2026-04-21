@@ -1,0 +1,50 @@
+stages:
+
+  preprocess:
+    cmd: python scripts/preprocess.py
+    deps:
+      - scripts/preprocess.py
+      - backend/src/ds_covid/features.py
+      - data/raw
+    params:
+      - params.yaml:
+          - preprocess
+    outs:
+      - data/processed/X_train.npy
+      - data/processed/X_test.npy
+      - data/processed/y_train.npy
+      - data/processed/y_test.npy
+    metrics:
+      - outputs/preprocess_stats.json:
+          cache: false
+
+  train:
+    cmd: python scripts/train.py
+    deps:
+      - scripts/train.py
+      - backend/src/ds_covid/models.py
+      - data/processed/X_train.npy
+      - data/processed/y_train.npy
+      - data/processed/X_test.npy
+      - data/processed/y_test.npy
+    params:
+      - params.yaml:
+          - train
+          - mlflow
+          - preprocess.img_size
+    outs:
+      - data/models/covid_model.keras
+    metrics:
+      - outputs/metrics.json:
+          cache: false
+
+  evaluate:
+    cmd: python scripts/evaluate.py
+    deps:
+      - scripts/evaluate.py
+      - data/models/covid_model.keras
+      - data/processed/X_test.npy
+      - data/processed/y_test.npy
+    outs:
+      - outputs/evaluation_report.json:
+          cache: false

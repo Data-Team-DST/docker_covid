@@ -69,10 +69,13 @@ sprints:
         done: true
       - id: US-08
         title: "DVC pipeline reproductible (dvc.yaml)"
-        description: "✅ Pipeline DVC versionné. dvc repro rejoue preprocessing → training. Données + modèles versionnés avec tags sémantiques dans MLflow Registry."
+        description: "Pipeline DVC versionné : preprocess → train → evaluate. dvc repro rejoue tout le pipeline. params.yaml pour hyperparamètres. Métriques dans outputs/metrics.json. Tracking MLflow depuis le stage train."
+        branch: us-08-steven
+        assignee: Steven
+        blocks: ["US-16"]
         points: 4
         priority: MUST
-        done: true
+        done: false
       - id: US-09
         title: "Qualité code : check_quality.sh + check_requirements.sh"
         description: "✅ check_quality.sh : ruff + pylint + tests + structure + code smell + requirements. Cache par timestamp (×17 speedup). check_requirements.sh : single-pass grep, 3 catégories (TOOL/IMPLICIT/ACTIVE), rapport tmp/quality/requirements.txt."
@@ -94,47 +97,68 @@ sprints:
     status: in_progress
     stories:
       - id: US-11
-        title: "⚠️ CI/CD pipeline complet (lint → test → build → push → deploy)"
-        description: "GitHub Actions : lint_be + lint_fe → test_be → sonarcloud → build_be + build_fe → summary. Déploiement auto sur push main. CI < 10 min. 100% vert sur main."
+        title: "CI/CD pipeline complet (lint → test → build → push → deploy)"
+        description: "GitHub Actions : lint + test → sonarcloud → build/push GHCR → deploy smoke-test (docker run + curl /health). CI < 10 min. 100% vert sur main."
+        branch: us-11-steven
+        assignee: Steven
+        depends_on: ["US-13", "US-14"]
         points: 5
         priority: MUST
         done: false
       - id: US-12
         title: "Sécurité API : authentification + rate limiting"
         description: "API key obligatoire sur tous les endpoints (401 si absent). Rate limiting (ex: 100 req/min). Validation Pydantic stricte sur /predict (type, taille image). 0 endpoint non authentifié exposé."
+        branch: us-12-cirine
+        assignee: Cirine
+        blocks: ["US-15"]
         points: 5
         priority: MUST
         done: false
       - id: US-13
-        title: "Logs structurés + OpenAPI documentation complète"
-        description: "Logs JSON structurés (structlog ou logging JSON). /docs OpenAPI exportable. Tous les endpoints documentés avec exemples. logging_config.py."
+        title: "Logs structurés backend FastAPI + OpenAPI documentation"
+        description: "Logs JSON structurés (logging JSON) sur backend FastAPI. /docs OpenAPI exportable. Tous les endpoints documentés avec exemples. logging_config.py (déjà fait sur data-service)."
+        branch: us-13-steven
+        assignee: Steven
+        blocks: ["US-11", "US-14"]
         points: 3
         priority: MUST
         done: false
       - id: US-14
         title: "Docker Compose production-ready"
-        description: "restart: unless-stopped sur tous les services. Health checks définis. Resource limits (memory, cpu). Variables d'env externalisées dans .env. 0 secret hardcodé."
+        description: "restart: unless-stopped sur tous les services. Health checks définis. Resource limits (memory, cpu). Variables d'env externalisées dans .env. 0 secret hardcodé (fix Postgres password)."
+        branch: us-14-cirine
+        assignee: Cirine
+        depends_on: ["US-13"]
+        blocks: ["US-11"]
         points: 3
         priority: MUST
         done: false
       - id: US-15
         title: "Load test /predict P95 < 500ms"
         description: "Script locust ou k6 : 10 req/s concurrent sur /predict. P95 < 500ms. Rapport HTML dans outputs/load_test/. Intégré dans CI Phase 3."
+        branch: us-15-cirine
+        assignee: Cirine
+        depends_on: ["US-12"]
         points: 4
         priority: SHOULD
         done: false
       - id: US-16
         title: "Data augmentation + DVC pipeline augmenté"
-        description: "Pipeline DVC : raw → augmented → processed → train. Transformations : rotation, flip, zoom, brightness. Sauvegarde images augmentées dans data/processed/. dvc repro rejoue tout. 42 330 images → ~170 000 après augmentation."
+        description: "Ajouter stage augment dans dvc.yaml : rotation, flip, zoom, brightness. raw → augmented → processed → train. 42 330 images → ~170 000 après augmentation."
+        branch: us-16-cirine
+        assignee: Cirine
+        depends_on: ["US-08"]
         points: 4
         priority: SHOULD
         done: false
       - id: US-17
-        title: "Dashboard agile opérationnel (ce sprint)"
-        description: "Flask dashboard : backlog.yaml DS_COVID, suivi sprints/stories, data explorer DVC, état persisté dans state.json. Lancé via make dashboard."
+        title: "Dashboard agile opérationnel"
+        description: "✅ Flask dashboard : backlog.yaml DS_COVID, suivi sprints/stories, data explorer DVC + search index, modal zoom, état persisté dans state.json. Lancé via make dashboard."
+        branch: us-17-steven
+        assignee: Steven
         points: 2
         priority: SHOULD
-        done: false
+        done: true
 
   - id: S4
     name: "Monitoring, Drift & Maintenance"

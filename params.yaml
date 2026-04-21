@@ -1,0 +1,20 @@
+preprocess:
+  img_size: [256, 256]
+  max_samples_per_class: null   # null = toutes les images
+  test_split: 0.2
+  random_seed: 42
+  classes:
+    COVID: 0
+    Normal: 1
+    "Viral Pneumonia": 2
+    Lung_Opacity: 3
+
+train:
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.001
+
+mlflow:
+  experiment_name: ds_covid_cnn
+  tracking_uri: http://mlflow:5000
+  model_name: covid_xray_cnn
