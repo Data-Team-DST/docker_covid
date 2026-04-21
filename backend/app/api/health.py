@@ -8,7 +8,15 @@ from app.models.loader import model_loader
 router = APIRouter()
 
 
-@router.get("/health")
+@router.get(
+    "/health",
+    summary="État du service",
+    responses={200: {"content": {"application/json": {"example": {
+        "status": "healthy", "model_loaded": True,
+        "model_version": "1.0.0", "api_version": "1.0.0",
+        "classes": ["COVID", "Lung_Opacity", "Normal", "Viral_Pneumonia"],
+    }}}}},
+)
 async def health():
     """Retourne l'état de santé du service et du modèle chargé."""
     return {
