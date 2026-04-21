@@ -1,62 +1,14 @@
-"""Logging configuration — writes JSON logs to tmp/logs/data-service.log."""
+"""Wrapper logging data-service — délègue à shared/logging_config.py."""
 import logging
-import logging.handlers
-import os
+import sys
 from pathlib import Path
 
+# Permet l'import de shared/ depuis la racine du projet
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
-class _JSONFormatter(logging.Formatter):
-    """One JSON object per line for easy grep/parsing."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        import json
-        import datetime
-
-        payload = {
-            "ts": (
-                datetime.datetime.utcfromtimestamp(record.created).isoformat() + "Z"
-            ),
-            "level": record.levelname,
-            "logger": record.name,
-            "msg": record.getMessage(),
-        }
-        if record.exc_info:
-            payload["exc"] = self.formatException(record.exc_info)
-        if hasattr(record, "extra"):
-            payload.update(record.extra)
-        return json.dumps(payload, ensure_ascii=False)
+from shared.logging_config import setup_logging as _setup  # noqa: E402
 
 
-def setup_logging(log_dir: Path | None = None) -> None:
-    """Configure root logger: console (INFO) + rotating file (DEBUG, JSON)."""
-    if log_dir is None:
-        project_root = Path(os.getenv("PROJECT_ROOT", "/app"))
-        log_dir = project_root / "tmp" / "logs"
-
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-
-    # Console handler — toujours actif
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    console.setFormatter(
-        logging.Formatter("%(asctime)s [%(levelname)s] %(name)s — %(message)s",
-                          datefmt="%H:%M:%S")
-    )
-    root.addHandler(console)
-
-    # Rotating file handler — JSON, DEBUG+, 5 × 2 MB
-    # Désactivé si répertoire inaccessible (CI, tests)
-    try:
-        log_dir.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.handlers.RotatingFileHandler(
-            log_dir / "data-service.log",
-            maxBytes=2 * 1024 * 1024, backupCount=5, encoding="utf-8",
-        )
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(_JSONFormatter())
-        root.addHandler(file_handler)
-    except (PermissionError, OSError):
-        pass  # console-only en CI ou environnement sans /app
-
+def setup_logging(log_dir: Path | None = None) -> None:  # noqa: ARG001
+    _setup(service_name="data-service")
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)

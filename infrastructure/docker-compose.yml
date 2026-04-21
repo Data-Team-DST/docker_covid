@@ -14,11 +14,14 @@ services:
     volumes:
       - ./data:/app/data:ro
       - ./backend/app:/app/app
+      - ./shared:/app/shared:ro
+      - ./tmp/logs:/app/tmp/logs
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
       - API_ENV=${API_ENV:-development}
       - MODEL_PATH=${MODEL_PATH:-data/models/best_model.keras}
+      - LOG_SERVICE_URL=http://log-service:5002/v1/log
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -43,6 +46,7 @@ services:
       - ./.git:/app/.git:ro
       - ./tmp/logs:/app/tmp/logs
       - ./infrastructure/dvc_container_config.local:/app/.dvc/config.local:ro
+      - ./shared:/app/shared:ro
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
@@ -51,6 +55,7 @@ services:
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minio}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minio123}
       - AWS_DEFAULT_REGION=us-east-1
+      - LOG_SERVICE_URL=http://log-service:5002/v1/log
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
       interval: 30s
@@ -127,6 +132,28 @@ services:
     depends_on:
       - postgres
       - minio
+    restart: unless-stopped
+    networks:
+      - covid-net
+
+  # ── Log Service (agrégateur logs JSON) ───────────────────────────────────────
+  log-service:
+    build:
+      context: ./log-service
+      dockerfile: Dockerfile
+    container_name: covid-xray-log-service
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./tmp/logs:/app/tmp/logs
+    environment:
+      - LOG_SERVICE_PORT=5002
+      - LOG_DIR=/app/tmp/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
     networks:
       - covid-net
