@@ -55,17 +55,21 @@
     .img-card .img-label { font-size:.7rem; color:#58a6ff; }
     /* Modal */
     #modal-overlay {
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,.85);
-      z-index:100; align-items:center; justify-content:center;
+      border:none; padding:0; background:transparent;
+      max-width:none; max-height:none;
     }
-    #modal-overlay.open { display:flex; }
-    #modal-box { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:1.5rem; max-width:95vw; text-align:center; position:relative; }
-    #modal-box img { border-radius:6px; transition:width .2s; display:block; margin:0 auto; }
+    #modal-overlay::backdrop { background:rgba(0,0,0,.85); }
+    #modal-box {
+      background:#161b22; border:1px solid #30363d; border-radius:12px;
+      padding:1.5rem; max-width:95vw; max-height:95vh;
+      overflow-y:auto; text-align:center; position:relative;
+    }
+    #modal-box img { border-radius:6px; transition:width .2s; display:block; margin:0 auto; max-height:80vh; object-fit:contain; }
     #modal-box img.zoom-0 { width:clamp(200px, 28vw, 420px); }
     #modal-box img.zoom-1 { width:clamp(300px, 48vw, 680px); }
     #modal-box img.zoom-2 { width:clamp(400px, 72vw, 1000px); }
     #modal-box .modal-info { color:#8b949e; font-size:.85rem; margin-top:.5rem; }
-    #modal-close { position:absolute; top:.8rem; right:1rem; font-size:1.5rem; cursor:pointer; color:#8b949e; }
+    #modal-close { background:none; border:none; position:absolute; top:.8rem; right:1rem; font-size:1.5rem; cursor:pointer; color:#8b949e; }
     #modal-close:hover { color:#fff; }
     .zoom-btns { display:flex; gap:.4rem; justify-content:center; margin-bottom:.6rem; }
     .zoom-btn { background:#21262d; border:1px solid #30363d; color:#c9d1d9; border-radius:5px; padding:3px 10px; cursor:pointer; font-size:.8rem; }
@@ -175,9 +179,9 @@
   </div>
 
   <!-- Modal image plein écran -->
-  <div id="modal-overlay" onclick="closeModal()">
-    <div id="modal-box" onclick="event.stopPropagation()">
-      <span id="modal-close" onclick="closeModal()">✕</span>
+  <dialog id="modal-overlay">
+    <div id="modal-box">
+      <button id="modal-close" onclick="closeModal()" aria-label="Fermer">✕</button>
       <div class="zoom-btns">
         <button class="zoom-btn active" onclick="setZoom(0)">S</button>
         <button class="zoom-btn" onclick="setZoom(1)">M</button>
@@ -186,7 +190,7 @@
       <img id="modal-img" src="" alt="" class="zoom-0">
       <div class="modal-info" id="modal-info"></div>
     </div>
-  </div>
+  </dialog>
 
   <script>
     // ── DVC ops ──────────────────────────────────────────────────────────────
@@ -199,9 +203,10 @@
         const method = ['pull', 'push', 'repro'].includes(action) ? 'POST' : 'GET';
         const r = await fetch('/api/dvc/' + action, { method });
         const data = await r.json();
+        const stderr = data.stderr ? '\n⚠️ ' + data.stderr : '';
         out.textContent = data.error
           ? '❌ ' + data.error
-          : (data.stdout || '(pas de sortie)') + (data.stderr ? '\n⚠️ ' + data.stderr : '');
+          : (data.stdout || '(pas de sortie)') + stderr;
       } catch (e) {
         out.textContent = '❌ ' + e;
       } finally {
@@ -313,32 +318,35 @@
 
     // ── Modal & zoom ─────────────────────────────────────────────────────────
     let _zoom = 0;
+    const _dlg = () => document.getElementById('modal-overlay');
 
     function setZoom(level) {
       _zoom = level;
-      const img = document.getElementById('modal-img');
-      img.className = 'zoom-' + level;
-      document.querySelectorAll('.zoom-btn').forEach((b, i) => {
-        b.classList.toggle('active', i === level);
-      });
+      document.getElementById('modal-img').className = 'zoom-' + level;
+      document.querySelectorAll('.zoom-btn').forEach((b, i) => b.classList.toggle('active', i === level));
     }
 
     function openModal(src, filename, label) {
       document.getElementById('modal-img').src = src;
       document.getElementById('modal-img').className = 'zoom-' + _zoom;
       document.getElementById('modal-info').textContent = (label || '') + ' / ' + filename;
-      document.getElementById('modal-overlay').classList.add('open');
+      _dlg().showModal();
     }
 
     function closeModal() {
-      document.getElementById('modal-overlay').classList.remove('open');
+      _dlg().close();
       document.getElementById('modal-img').src = '';
     }
 
+    // Close on backdrop click (click lands on <dialog> itself, not on #modal-box)
+    _dlg().addEventListener('click', e => { if (e.target === _dlg()) closeModal(); });
+    // Native Escape already fires 'cancel' on <dialog>
+    _dlg().addEventListener('cancel', () => { document.getElementById('modal-img').src = ''; });
+
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeModal();
-      if (e.key === '+' || e.key === '=') { if (document.getElementById('modal-overlay').classList.contains('open')) setZoom(Math.min(_zoom+1, 2)); }
-      if (e.key === '-') { if (document.getElementById('modal-overlay').classList.contains('open')) setZoom(Math.max(_zoom-1, 0)); }
+      if (!_dlg().open) return;
+      if (e.key === '+' || e.key === '=') setZoom(Math.min(_zoom + 1, 2));
+      if (e.key === '-') setZoom(Math.max(_zoom - 1, 0));
     });
   </script>
 </body>
