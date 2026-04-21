@@ -1,5 +1,6 @@
 """Wrapper logging data-service — délègue à shared/logging_config.py."""
 import logging
+from pathlib import Path
 
 from shared.logging_config import setup_logging as _setup
 
