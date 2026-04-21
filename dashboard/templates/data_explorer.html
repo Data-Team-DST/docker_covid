@@ -33,6 +33,17 @@
       padding:6px 10px; border-radius:6px; font-family:monospace; font-size:.9rem;
     }
     .search-bar input { flex:1; min-width:180px; }
+    .search-wrap { position:relative; flex:1; min-width:180px; }
+    .search-wrap input { width:100%; box-sizing:border-box; }
+    #search-suggest {
+      display:none; position:absolute; top:100%; left:0; right:0; z-index:50;
+      background:#21262d; border:1px solid #30363d; border-radius:0 0 6px 6px;
+      max-height:220px; overflow-y:auto;
+    }
+    #search-suggest .sug-item {
+      padding:6px 10px; cursor:pointer; font-size:.85rem; color:#c9d1d9;
+    }
+    #search-suggest .sug-item:hover { background:#30363d; }
     #search-results { display:flex; flex-wrap:wrap; gap:.8rem; margin-top:1rem; }
     .img-card {
       background:#21262d; border:1px solid #30363d; border-radius:8px;
@@ -48,11 +59,17 @@
       z-index:100; align-items:center; justify-content:center;
     }
     #modal-overlay.open { display:flex; }
-    #modal-box { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:1.5rem; max-width:90vw; text-align:center; position:relative; }
-    #modal-box img { max-width:70vw; max-height:70vh; border-radius:6px; }
+    #modal-box { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:1.5rem; max-width:95vw; text-align:center; position:relative; }
+    #modal-box img { border-radius:6px; transition:max-width .2s, max-height .2s; }
+    #modal-box img.zoom-0 { max-width:55vw; max-height:55vh; }
+    #modal-box img.zoom-1 { max-width:75vw; max-height:75vh; }
+    #modal-box img.zoom-2 { max-width:90vw; max-height:88vh; }
     #modal-box .modal-info { color:#8b949e; font-size:.85rem; margin-top:.5rem; }
     #modal-close { position:absolute; top:.8rem; right:1rem; font-size:1.5rem; cursor:pointer; color:#8b949e; }
     #modal-close:hover { color:#fff; }
+    .zoom-btns { display:flex; gap:.4rem; justify-content:center; margin-bottom:.6rem; }
+    .zoom-btn { background:#21262d; border:1px solid #30363d; color:#c9d1d9; border-radius:5px; padding:3px 10px; cursor:pointer; font-size:.8rem; }
+    .zoom-btn.active, .zoom-btn:hover { background:#1f6feb; border-color:#1f6feb; color:#fff; }
   </style>
 </head>
 <body>
@@ -122,11 +139,16 @@
         <option value="processed">processed</option>
         <option value="models">models</option>
       </select>
-      <input type="text" id="search-query"
-             placeholder="ex: COVID-1, Normal, Lung_Opacity-42…"
-             onkeydown="if(event.key==='Enter') doSearch()">
+      <div class="search-wrap">
+        <input type="text" id="search-query"
+               placeholder="ex: COVID, Normal, Lung_Opacity-42…"
+               autocomplete="off"
+               oninput="onQueryInput()"
+               onkeydown="onQueryKey(event)">
+        <div id="search-suggest"></div>
+      </div>
       <button class="btn-dvc" onclick="doSearch()">🔍 Chercher</button>
-      <select id="search-limit">
+      <select id="search-limit" onchange="if(document.getElementById('search-query').value.trim().length>=2) doSearch()">
         <option value="12">12 résultats</option>
         <option value="24">24</option>
         <option value="48">48</option>
@@ -156,7 +178,12 @@
   <div id="modal-overlay" onclick="closeModal()">
     <div id="modal-box" onclick="event.stopPropagation()">
       <span id="modal-close" onclick="closeModal()">✕</span>
-      <img id="modal-img" src="" alt="">
+      <div class="zoom-btns">
+        <button class="zoom-btn active" onclick="setZoom(0)">S</button>
+        <button class="zoom-btn" onclick="setZoom(1)">M</button>
+        <button class="zoom-btn" onclick="setZoom(2)">L</button>
+      </div>
+      <img id="modal-img" src="" alt="" class="zoom-0">
       <div class="modal-info" id="modal-info"></div>
     </div>
   </div>
@@ -183,20 +210,53 @@
     }
 
     // ── Image search ─────────────────────────────────────────────────────────
+    let _debounceTimer = null;
+    let _lastQuery = '';
+
     function clearResults() {
       document.getElementById('search-results').innerHTML = '';
       document.getElementById('search-info').textContent = '';
+      hideSuggest();
     }
 
-    async function doSearch() {
+    function onQueryInput() {
+      const q = document.getElementById('search-query').value.trim();
+      clearTimeout(_debounceTimer);
+      if (q.length < 2) { hideSuggest(); return; }
+      _debounceTimer = setTimeout(() => {
+        doSearch(true);   // true = also populate suggestions
+      }, 350);
+    }
+
+    function onQueryKey(e) {
+      if (e.key === 'Enter') { clearTimeout(_debounceTimer); doSearch(false); }
+      if (e.key === 'Escape') { hideSuggest(); }
+      if (e.key === 'ArrowDown') { focusSuggest(); }
+    }
+
+    function hideSuggest() {
+      const s = document.getElementById('search-suggest');
+      s.style.display = 'none';
+      s.innerHTML = '';
+    }
+
+    function focusSuggest() {
+      const first = document.querySelector('#search-suggest .sug-item');
+      if (first) first.focus();
+    }
+
+    async function doSearch(fromInput) {
       const dataset = document.getElementById('search-dataset').value;
       const query   = document.getElementById('search-query').value.trim();
       const limit   = document.getElementById('search-limit').value;
       const info    = document.getElementById('search-info');
       const results = document.getElementById('search-results');
       if (!query) { info.textContent = 'Entrer un terme.'; return; }
+      if (query === _lastQuery && !fromInput) return;
+      _lastQuery = query;
       info.textContent = '⏳ Recherche…';
       results.innerHTML = '';
+      hideSuggest();
       try {
         const r = await fetch(
           `/api/ds/search?dataset=${encodeURIComponent(dataset)}&query=${encodeURIComponent(query)}&limit=${limit}`
@@ -205,6 +265,24 @@
         if (data.error) { info.textContent = '❌ ' + data.error; return; }
         if (!data.results?.length) { info.textContent = 'Aucun résultat pour "' + query + '"'; return; }
         info.textContent = data.total + ' résultat(s)';
+
+        // Suggestions : noms uniques de fichiers sans numéro (ex: "COVID-", "Normal-")
+        if (fromInput) {
+          const stems = [...new Set(data.results.map(i => {
+            const m = i.filename.match(/^([A-Za-z_\- ]+)/);
+            return m ? m[1].replace(/-$/, '').trim() : i.filename;
+          }))].slice(0, 6);
+          if (stems.length > 1) {
+            const sug = document.getElementById('search-suggest');
+            sug.innerHTML = stems.map(s =>
+              `<div class="sug-item" tabindex="0"
+                    onclick="pickSuggest('${s}')"
+                    onkeydown="if(event.key==='Enter') pickSuggest('${s}')">${s}</div>`
+            ).join('');
+            sug.style.display = 'block';
+          }
+        }
+
         data.results.forEach(item => {
           const filename = item.path.split('/').pop();
           const imgUrl = `/api/ds/image?dataset=${encodeURIComponent(dataset)}&path=${encodeURIComponent(item.path)}`;
@@ -221,17 +299,47 @@
       } catch (e) { info.textContent = '❌ ' + e; }
     }
 
-    // ── Modal ────────────────────────────────────────────────────────────────
+    function pickSuggest(val) {
+      document.getElementById('search-query').value = val;
+      hideSuggest();
+      _lastQuery = '';
+      doSearch(false);
+    }
+
+    // Close suggest on outside click
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.search-wrap')) hideSuggest();
+    });
+
+    // ── Modal & zoom ─────────────────────────────────────────────────────────
+    let _zoom = 0;
+
+    function setZoom(level) {
+      _zoom = level;
+      const img = document.getElementById('modal-img');
+      img.className = 'zoom-' + level;
+      document.querySelectorAll('.zoom-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === level);
+      });
+    }
+
     function openModal(src, filename, label) {
       document.getElementById('modal-img').src = src;
+      document.getElementById('modal-img').className = 'zoom-' + _zoom;
       document.getElementById('modal-info').textContent = (label || '') + ' / ' + filename;
       document.getElementById('modal-overlay').classList.add('open');
     }
+
     function closeModal() {
       document.getElementById('modal-overlay').classList.remove('open');
       document.getElementById('modal-img').src = '';
     }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === '+' || e.key === '=') { if (document.getElementById('modal-overlay').classList.contains('open')) setZoom(Math.min(_zoom+1, 2)); }
+      if (e.key === '-') { if (document.getElementById('modal-overlay').classList.contains('open')) setZoom(Math.max(_zoom-1, 0)); }
+    });
   </script>
 </body>
 </html>
