@@ -118,6 +118,8 @@ jobs:
         run: pip install -q -r requirements/local.txt
 
       - name: Run pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest backend/tests/ \
             --cov=backend/app \
@@ -205,7 +207,7 @@ jobs:
       - name: Run pytest (data-service)
         run: |
           cd data-service && \
-          PYTHONPATH=src pytest tests/ \
+          PYTHONPATH=src:$GITHUB_WORKSPACE pytest tests/ \
             --cov=data_service \
             --cov-report=xml:ds-cov.xml \
             --cov-report=term-missing \

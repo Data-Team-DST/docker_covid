@@ -111,12 +111,12 @@ sprints:
         priority: MUST
         done: false
       - id: US-13
-        title: "Logs structurés backend FastAPI + OpenAPI documentation"
-        description: "Logs JSON structurés (logging JSON) sur backend FastAPI. /docs OpenAPI exportable. Tous les endpoints documentés avec exemples. logging_config.py (déjà fait sur data-service)."
+        title: "Log-service centralisé + logs structurés JSON tous services"
+        description: "Microservice log-service (FastAPI :5002) : POST /v1/log reçoit les logs de tous les services, GET /v1/logs?service=X pour requêter. Chaque service garde son propre tmp/logs/{service}.log (local) ET envoie au log-service (central). setup_logging(service_name='backend') suffit — non-bloquant, fallback local si log-service down. OpenAPI /docs backend documenté avec exemples 200/400/401/503."
         branch: us-13-steven
         assignee: Steven
         blocks: ["US-11", "US-14"]
-        points: 3
+        points: 4
         priority: MUST
         done: false
       - id: US-14

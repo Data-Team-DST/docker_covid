@@ -16,16 +16,34 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/predict", response_model=PredictionResponse)
+@router.post(
+    "/predict",
+    response_model=PredictionResponse,
+    summary="Classifier une radiographie pulmonaire",
+    responses={
+        200: {"content": {"application/json": {"example": {
+            "predicted_class": "COVID",
+            "confidence": 0.92,
+            "scores": {"COVID": 0.92, "Lung_Opacity": 0.04,
+                       "Normal": 0.03, "Viral_Pneumonia": 0.01},
+            "latency_ms": 245.3,
+        }}}},
+        400: {"description": "Format image invalide (JPEG/PNG requis)"},
+        401: {"description": "Clé API manquante ou invalide"},
+        503: {"description": "Modèle non chargé"},
+    },
+)
 async def predict(
-    file: UploadFile = File(...),
+    file: UploadFile = File(
+        ..., description="Radiographie thoracique au format JPEG ou PNG"
+    ),
     _: None = Depends(verify_api_key),
 ):
     """
-    Prédit la classe d'une radiographie pulmonaire.
+    Classe une radiographie pulmonaire parmi 4 catégories :
+    **COVID**, **Normal**, **Viral Pneumonia**, **Lung Opacity**.
 
-    - **file**: image JPEG ou PNG (radiographie thoracique)
-    - **Retourne**: classe prédite + scores de confiance pour les 4 classes
+    **Authentification** : header `X-API-Key` obligatoire.
     """
     if not model_loader.is_loaded:
         raise HTTPException(
