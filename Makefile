@@ -15,7 +15,8 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 
 .PHONY: all setup setup-check start start-local start-docker start-all \
-        stop restart logs test lint fix clean build shell help \
+        stop restart logs test lint fix clean build shell help dashboard \
+        data-build data-start data-stop data-logs data-test data-shell \
         dvc-setup dvc-push dvc-pull
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
@@ -28,8 +29,8 @@ NC     := \033[0m
 BACKEND_URL  := http://localhost:8000
 FRONTEND_URL := http://localhost:8501
 PYTHON       := python3
-COMPOSE      := docker compose -f infrastructure/docker-compose.yml --project-directory .
 SCRIPTS      := infrastructure/scripts
+COMPOSE      := docker compose -f infrastructure/docker-compose.yml --project-directory .
 
 # ── Défaut ────────────────────────────────────────────────────────────────────
 all: help
@@ -151,6 +152,41 @@ clean: ## Nettoie __pycache__, .coverage, tmp/quality
 	rm -rf tmp/quality/
 	mkdir -p tmp/quality
 	@echo "$(GREEN)✅ Nettoyage terminé$(NC)"
+
+# ── Data Service ──────────────────────────────────────────────────────────────
+data-build: ## Build l'image data-service
+	$(COMPOSE) build data-service
+
+data-start: ## Lance le data-service (port 5001)
+	@echo "$(YELLOW)Démarrage data-service → http://localhost:5001$(NC)"
+	$(COMPOSE) up -d --build data-service
+	@echo "$(GREEN)✅ data-service : http://localhost:5001/docs$(NC)"
+
+data-stop: ## Arrête le data-service
+	$(COMPOSE) stop data-service
+
+data-logs: ## Logs data-service en direct
+	$(COMPOSE) logs -f data-service
+
+data-test: ## Tests unitaires data-service (local, venv)
+	@echo "$(YELLOW)Tests data-service...$(NC)"
+	@. .venv/bin/activate && cd data-service && pip install -q -r requirements.txt -r dev-requirements.txt && \
+		PYTHONPATH=src python -m pytest tests/ -v --cov=data_service --cov-report=term-missing
+	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
+
+data-shell: ## Shell dans le container data-service
+	$(COMPOSE) exec data-service bash
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+dashboard: ## Lance le dashboard agile + data-service sur :5050/:5001
+	@echo "$(YELLOW)Démarrage MinIO + data-service (DVC)...$(NC)"
+	@$(COMPOSE) up -d minio minio-init 2>/dev/null || true
+	@sleep 6
+	@$(COMPOSE) up -d --build data-service 2>/dev/null || echo "$(YELLOW)⚠ Docker non disponible — boutons DVC désactivés$(NC)"
+	@echo "$(YELLOW)Dashboard DS_COVID → http://localhost:5050$(NC)"
+	@echo "$(YELLOW)(Ctrl+C pour tout arrêter)$(NC)"
+	@trap '$(COMPOSE) stop data-service minio 2>/dev/null; exit 0' INT; \
+	 . .venv/bin/activate && cd dashboard && pip install -q -r requirements.txt && python app.py
 
 clean-docker: ## Supprime les images et volumes Docker du projet
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true

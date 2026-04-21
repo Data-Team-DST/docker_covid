@@ -51,13 +51,23 @@ make build          # rebuilder les images
 make logs           # logs backend en temps réel
 ```
 
-| Service   | URL                          | Description                       |
-|-----------|------------------------------|-----------------------------------|
-| API       | http://localhost:8000        | Backend FastAPI — `/docs` Swagger |
-| Streamlit | http://localhost:8501        | Frontend multi-pages              |
-| Health    | http://localhost:8000/health | Statut API + modèle               |
-| MLflow    | http://localhost:5000        | Tracking (Phase 2)                |
-| MinIO     | http://localhost:9001        | Object storage (Phase 2)          |
+| Service      | URL                          | Description                           |
+|--------------|------------------------------|---------------------------------------|
+| API          | http://localhost:8000        | Backend FastAPI — `/docs` Swagger     |
+| Data Service | http://localhost:5001        | DVC pull/push/status — `/docs`        |
+| Streamlit    | http://localhost:8501        | Frontend multi-pages                  |
+| MLflow       | http://localhost:5000        | Tracking expériences (Phase 2)        |
+| MinIO        | http://localhost:9001        | Object storage DVC + artifacts        |
+| Dashboard    | http://localhost:5050        | Backlog agile + data explorer         |
+
+### Commandes data-service
+
+```bash
+make data-start   # lance le data-service seul (port 5001)
+make data-logs    # logs en direct
+make data-test    # tests unitaires data-service
+make data-shell   # shell dans le container
+```
 
 ---
 
@@ -75,16 +85,26 @@ docker_covid/
 │   │   └── schemas/         # Schémas Pydantic
 │   ├── src/                 # Code ML DS_COVID (training, features, interprétabilité)
 │   └── tests/unit/          # Tests unitaires (pytest)
+├── data-service/            # Microservice DVC : pull/push/status + stats données
+│   ├── src/data_service/    # FastAPI (GET /health, /v1/data/stats, /v1/dvc/*)
+│   ├── tests/
+│   ├── Dockerfile
+│   └── requirements.txt
 ├── frontend/                # Streamlit multi-pages
 │   ├── streamlit_app.py
 │   └── page/                # 01_accueil … 07_conclusion
+├── dashboard/               # Dashboard agile Flask (backlog sprints + data explorer)
+│   ├── app.py               # Flask — http://localhost:5050
+│   ├── backlog.yaml         # Sprints DS_COVID (phases 1→4)
+│   └── templates/
 ├── infrastructure/
 │   ├── docker/              # Dockerfiles par service (backend, streamlit, trainer…)
 │   ├── kubernetes/          # Manifests K8s (Phase 3)
-│   ├── docker-compose.yml   # Stack complète
+│   ├── docker-compose.yml   # Stack complète (8 services)
 │   └── scripts/             # setup.sh, check_quality.sh, fix_style.sh, start_local.sh
-├── docs/                    # Architecture, plan de base
+├── docs/                    # Architecture, SMART, backlogs, plan de base
 ├── data/
+│   ├── raw.dvc              # 42 330 images trackées DVC (806 MB)
 │   └── models/              # ← Placer le fichier .keras ici
 ├── requirements/
 │   ├── local.txt            # Dev local (sans tensorflow)

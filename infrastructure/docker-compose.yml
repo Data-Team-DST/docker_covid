@@ -2,296 +2,187 @@ name: docker_covid
 
 services:
 
-  # ── Phase 1 : API d'inférence ────────────────────────────────────────────
+  # ── Backend FastAPI (inférence ML) ────────────────────────────────────────
   backend:
     build:
       context: .
       dockerfile: infrastructure/docker/backend/Dockerfile
-    container_name: ds_covid_backend
+    image: ${REGISTRY}/${GITHUB_USER}/covid-xray-backend:${IMAGE_TAG:-latest}
+    container_name: covid-xray-backend
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data:ro          # données + modèle en read-only
-      - ./backend/app:/app/app       # hot-reload en dev
-    env_file:
-      - .env
+      - ./data:/app/data:ro
+      - ./backend/app:/app/app
+    env_file: .env
     environment:
-      - API_ENV=development
+      - PYTHONUNBUFFERED=1
+      - API_ENV=${API_ENV:-development}
+      - MODEL_PATH=${MODEL_PATH:-data/models/best_model.keras}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
-      start_period: 15s
     restart: unless-stopped
+    networks:
+      - covid-net
 
-  # ── Phase 2+ : stack MLOps complète ─────────────────────────────────────
-  trainer:
+  # ── Data Service (DVC + stats données) ────────────────────────────────────
+  data-service:
     build:
-      context: .
-      dockerfile: infrastructure/${TRAINER_DOCKERFILE}
-      args:
-        BASE_IMAGE: ${BASE_IMAGE}:${IMAGE_TAG}
-
-    image: ${TRAINER_IMAGE}:${IMAGE_TAG}
-    container_name: ${TRAINER_CONTAINER_NAME}
-    working_dir: ${APP_WORKDIR}
-    tty: true
-    stdin_open: true
-
-    volumes:
-      - ./:${APP_WORKDIR}
-      - ./data:${APP_WORKDIR}/data
-      - ./models:${APP_WORKDIR}/models
-      - ./outputs:${APP_WORKDIR}/outputs
-
-    environment:
-      TZ: ${TZ}
-      PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
-
-      MLFLOW_TRACKING_URI: http://${MLFLOW_CONTAINER_NAME}:${MLFLOW_PORT}
-      MLFLOW_S3_ENDPOINT_URL: http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT}
-
-      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
-
-      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES}
-      NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES}
-
-    depends_on:
-      - mlflow
-      - postgres
-      - minio
-
+      context: ./data-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY}/${GITHUB_USER}/covid-xray-data-service:${IMAGE_TAG:-latest}
+    container_name: covid-xray-data-service
     ports:
-      - "${TRAINER_PORT}:8888"
+      - "5001:5001"
+    volumes:
+      - ./data:/app/data
+      - ./.dvc:/app/.dvc
+      - ./.git:/app/.git:ro
+      - ./tmp/logs:/app/tmp/logs
+      - ./infrastructure/dvc_container_config.local:/app/.dvc/config.local:ro
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATA_SERVICE_PORT=5001
+      - DVC_REMOTE_MINIO_ENDPOINTURL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minio123}
+      - AWS_DEFAULT_REGION=us-east-1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - covid-net
 
-    command: bash -c "python --version && sleep infinity"
-
-
+  # ── Frontend Streamlit ─────────────────────────────────────────────────────
   streamlit:
     build:
       context: .
       dockerfile: infrastructure/${STREAMLIT_DOCKERFILE}
-      args:
-        BASE_IMAGE: ${BASE_IMAGE}:${IMAGE_TAG}
-
-    image: ${STREAMLIT_IMAGE}:${IMAGE_TAG}
-    container_name: ${STREAMLIT_CONTAINER_NAME}
-    working_dir: ${APP_WORKDIR}
-
-    volumes:
-      - ./:${APP_WORKDIR}
-      - ./models:${APP_WORKDIR}/models
-      - ./outputs:${APP_WORKDIR}/outputs
-
-    environment:
-      TZ: ${TZ}
-      PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
-
-      MLFLOW_TRACKING_URI: http://${MLFLOW_CONTAINER_NAME}:${MLFLOW_PORT}
-      MLFLOW_S3_ENDPOINT_URL: http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT}
-
-      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
-
-      BACKEND_URL: http://ds_covid_backend:8000
-
-    depends_on:
-      - mlflow
-      - minio
-      - backend
-
+    image: ${STREAMLIT_IMAGE}:${IMAGE_TAG:-latest}
+    container_name: ${STREAMLIT_CONTAINER_NAME:-covid-xray-streamlit}
     ports:
-      - "${STREAMLIT_PORT}:8501"
+      - "${STREAMLIT_PORT:-8501}:8501"
+    volumes:
+      - ./frontend:/app/frontend
+    env_file: .env
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - DATA_SERVICE_URL=http://data-service:5001
+    depends_on:
+      - backend
+      - data-service
+    restart: unless-stopped
+    networks:
+      - covid-net
 
-    command: >
-      streamlit run frontend/streamlit_app.py
-      --server.address=0.0.0.0
-      --server.port=8501
-
-
-  mlflow:
+  # ── Trainer (entraînement + MLflow logging) ────────────────────────────────
+  trainer:
     build:
       context: .
-      dockerfile: infrastructure/docker/mlflow/Dockerfile
-    container_name: ${MLFLOW_CONTAINER_NAME}
-
-    depends_on:
-      - postgres
-      - minio
-
-    environment:
-      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
-      MLFLOW_S3_ENDPOINT_URL: http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT}
-
+      dockerfile: infrastructure/${TRAINER_DOCKERFILE}
+    image: ${TRAINER_IMAGE}:${IMAGE_TAG:-latest}
+    container_name: ${TRAINER_CONTAINER_NAME:-covid-xray-trainer}
     ports:
-      - "${MLFLOW_PORT}:5000"
+      - "${TRAINER_PORT:-8888}:8888"
+    volumes:
+      - ./data:/app/data
+      - ./backend/src:/app/src
+      - ./models:/app/models
+      - ./outputs:/app/outputs
+    env_file: .env
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - mlflow
+    restart: unless-stopped
+    networks:
+      - covid-net
+    profiles:
+      - training
 
+  # ── MLflow Tracking Server ─────────────────────────────────────────────────
+  mlflow:
+    image: ${MLFLOW_IMAGE:-ghcr.io/mlflow/mlflow:v2.22.1}
+    container_name: ${MLFLOW_CONTAINER_NAME:-mlflow-server}
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    environment:
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minio123}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
     command: >
       mlflow server
       --host 0.0.0.0
       --port 5000
-      --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_CONTAINER_NAME}:5432/${POSTGRES_DB}
-      --artifacts-destination s3://${MLFLOW_BUCKET}
+      --backend-store-uri postgresql://${POSTGRES_USER:-mlflow}:${POSTGRES_PASSWORD:-mlflow123}@postgres:5432/${POSTGRES_DB:-mlflow}
+      --default-artifact-root s3://${MLFLOW_BUCKET:-mlflow}
+    depends_on:
+      - postgres
+      - minio
+    restart: unless-stopped
+    networks:
+      - covid-net
 
-
+  # ── PostgreSQL (MLflow backend) ────────────────────────────────────────────
   postgres:
-    image: ${POSTGRES_IMAGE}
-    container_name: ${POSTGRES_CONTAINER_NAME}
-    restart: unless-stopped
-
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    container_name: ${POSTGRES_CONTAINER_NAME:-mlflow-postgres}
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-
-    ports:
-      - "${POSTGRES_PORT}:5432"
-
+      - POSTGRES_USER=${POSTGRES_USER:-mlflow}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-mlflow123}
+      - POSTGRES_DB=${POSTGRES_DB:-mlflow}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - covid-net
 
-
+  # ── MinIO (DVC remote + MLflow artifacts) ─────────────────────────────────
   minio:
-    image: ${MINIO_IMAGE}
-    container_name: ${MINIO_CONTAINER_NAME}
-    restart: unless-stopped
-
-    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
-
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-
+    image: ${MINIO_IMAGE:-minio/minio:latest}
+    container_name: ${MINIO_CONTAINER_NAME:-minio}
     ports:
-      - "${MINIO_API_PORT}:9000"
-      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
-
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minio123}
     volumes:
-      - minio_data:/data
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    networks:
+      - covid-net
 
-
+  # ── MinIO init (crée les buckets) ──────────────────────────────────────────
   minio-init:
-    image: ${MINIO_CLIENT_IMAGE}
-    container_name: ${MINIO_INIT_CONTAINER_NAME}
-
+    image: ${MINIO_CLIENT_IMAGE:-minio/mc:latest}
+    container_name: ${MINIO_INIT_CONTAINER_NAME:-minio-init}
     depends_on:
       - minio
-
     entrypoint: >
       /bin/sh -c "
-      sleep 8;
-      mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
-      mc mb -p local/${MLFLOW_BUCKET} || true;
-      mc mb -p local/${DVC_BUCKET} || true;
+      sleep 5;
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minio} ${MINIO_ROOT_PASSWORD:-minio123};
+      mc mb --ignore-existing local/${MLFLOW_BUCKET:-mlflow};
+      mc mb --ignore-existing local/${DVC_BUCKET:-dvcstore};
       exit 0;
       "
-
-  dvc-sync-down:
-    image: ${MINIO_CLIENT_IMAGE}
-    container_name: dvc-sync-down
-    restart: unless-stopped
-    entrypoint: ["/bin/sh"]
-
-    depends_on:
-      - minio
-      - minio-init
-
-    environment:
-      SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-300}
-      LOCAL_DVC_BUCKET: ${DVC_BUCKET}
-      LOCAL_DATASETS_PREFIX: ${LOCAL_DATASETS_PREFIX:-datasets}
-
-      REMOTE_S3_ENDPOINT: ${REMOTE_S3_ENDPOINT:-}
-      REMOTE_S3_ACCESS_KEY: ${REMOTE_S3_ACCESS_KEY:-}
-      REMOTE_S3_SECRET_KEY: ${REMOTE_S3_SECRET_KEY:-}
-      REMOTE_DVC_BUCKET: ${REMOTE_DVC_BUCKET:-}
-      REMOTE_DATASETS_PREFIX: ${REMOTE_DATASETS_PREFIX:-datasets}
-
-      AWS_DEFAULT_REGION: ${REMOTE_S3_REGION:-us-east-1}
-
-    command:
-      - -ec
-      - |
-        set -eu
-        if [ -z "$$REMOTE_S3_ENDPOINT" ] || [ -z "$$REMOTE_S3_ACCESS_KEY" ] || [ -z "$$REMOTE_S3_SECRET_KEY" ] || [ -z "$$REMOTE_DVC_BUCKET" ]; then
-          echo '[dvc-sync-down] Remote S3 env vars missing. Service is idle.'
-          while true; do sleep 3600; done
-        fi
-        if ! mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; then
-          echo '[dvc-sync-down] Cannot reach local MinIO. Service is idle.'
-          while true; do sleep 3600; done
-        fi
-        if ! mc alias set remote "$$REMOTE_S3_ENDPOINT" "$$REMOTE_S3_ACCESS_KEY" "$$REMOTE_S3_SECRET_KEY"; then
-          echo '[dvc-sync-down] Remote endpoint is invalid for mc alias. Service is idle.'
-          while true; do sleep 3600; done
-        fi
-        while true; do
-          echo '[dvc-sync-down] Sync remote datasets -> local cache'
-          mc mirror --overwrite \
-            remote/$$REMOTE_DVC_BUCKET/$$REMOTE_DATASETS_PREFIX \
-            local/$$LOCAL_DVC_BUCKET/$$LOCAL_DATASETS_PREFIX || true
-          sleep $$SYNC_INTERVAL_SECONDS
-        done
-
-  dvc-sync-up:
-    image: ${MINIO_CLIENT_IMAGE}
-    container_name: dvc-sync-up
-    restart: unless-stopped
-    entrypoint: ["/bin/sh"]
-
-    depends_on:
-      - minio
-      - minio-init
-
-    environment:
-      SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-300}
-      LOCAL_DVC_BUCKET: ${DVC_BUCKET}
-      LOCAL_MODELS_PREFIX: ${LOCAL_MODELS_PREFIX:-models}
-      LOCAL_OUTPUTS_PREFIX: ${LOCAL_OUTPUTS_PREFIX:-outputs}
-
-      REMOTE_S3_ENDPOINT: ${REMOTE_S3_ENDPOINT:-}
-      REMOTE_S3_ACCESS_KEY: ${REMOTE_S3_ACCESS_KEY:-}
-      REMOTE_S3_SECRET_KEY: ${REMOTE_S3_SECRET_KEY:-}
-      REMOTE_DVC_BUCKET: ${REMOTE_DVC_BUCKET:-}
-      REMOTE_MODELS_PREFIX: ${REMOTE_MODELS_PREFIX:-models}
-      REMOTE_OUTPUTS_PREFIX: ${REMOTE_OUTPUTS_PREFIX:-outputs}
-
-      AWS_DEFAULT_REGION: ${REMOTE_S3_REGION:-us-east-1}
-
-    command:
-      - -ec
-      - |
-        set -eu
-        if [ -z "$$REMOTE_S3_ENDPOINT" ] || [ -z "$$REMOTE_S3_ACCESS_KEY" ] || [ -z "$$REMOTE_S3_SECRET_KEY" ] || [ -z "$$REMOTE_DVC_BUCKET" ]; then
-          echo '[dvc-sync-up] Remote S3 env vars missing. Service is idle.'
-          while true; do sleep 3600; done
-        fi
-        if ! mc alias set local http://${MINIO_CONTAINER_NAME}:${MINIO_API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; then
-          echo '[dvc-sync-up] Cannot reach local MinIO. Service is idle.'
-          while true; do sleep 3600; done
-        fi
-        if ! mc alias set remote "$$REMOTE_S3_ENDPOINT" "$$REMOTE_S3_ACCESS_KEY" "$$REMOTE_S3_SECRET_KEY"; then
-          echo '[dvc-sync-up] Remote endpoint is invalid for mc alias. Service is idle.'
-          while true; do sleep 3600; done
-        fi
-        while true; do
-          echo '[dvc-sync-up] Sync local models -> remote'
-          mc mirror --overwrite \
-            local/$$LOCAL_DVC_BUCKET/$$LOCAL_MODELS_PREFIX \
-            remote/$$REMOTE_DVC_BUCKET/$$REMOTE_MODELS_PREFIX || true
-          echo '[dvc-sync-up] Sync local outputs -> remote'
-          mc mirror --overwrite \
-            local/$$LOCAL_DVC_BUCKET/$$LOCAL_OUTPUTS_PREFIX \
-            remote/$$REMOTE_DVC_BUCKET/$$REMOTE_OUTPUTS_PREFIX || true
-          sleep $$SYNC_INTERVAL_SECONDS
-        done
+    networks:
+      - covid-net
 
 volumes:
-  postgres_data:
-  minio_data:
+  postgres-data:
+  minio-data:
+
+networks:
+  covid-net:
+    driver: bridge

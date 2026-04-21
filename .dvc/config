@@ -3,6 +3,3 @@
 [remote "minio"]
     url = s3://dvcstore
     endpointurl = http://localhost:9000
-[remote "dagshub"]
-    url = s3://dvc
-    endpointurl = https://dagshub.com/DST_Data_Team/docker_covid.s3
