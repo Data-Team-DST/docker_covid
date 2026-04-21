@@ -42,7 +42,7 @@ services:
       - ./.dvc:/app/.dvc
       - ./.git:/app/.git:ro
       - ./tmp/logs:/app/tmp/logs
-      - /app/.dvc/config.local
+      - ./infrastructure/dvc_container_config.local:/app/.dvc/config.local:ro
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1

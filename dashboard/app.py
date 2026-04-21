@@ -156,7 +156,28 @@ def data_explorer():
             "models": models,
         }
     except Exception:
-        stats = load_data_stats()
+        # Fallback 1 : lire le cache JSON écrit par data-service (instantané)
+        cache_file = ROOT / "tmp" / "data_cache.json"
+        if cache_file.exists():
+            try:
+                with open(cache_file, encoding="utf-8") as f:
+                    cached = json.load(f).get("stats", {})
+                raw_dvc = cached.get("raw", {}).get("dvc") or {}
+                data_dirs = {}
+                for key in ("raw", "processed", "models"):
+                    local = cached.get(key, {}).get("local") or {}
+                    if local.get("exists"):
+                        data_dirs[key] = {
+                            "nfiles": local.get("nfiles", 0),
+                            "size_mb": local.get("size_mb", 0),
+                            "types": {},
+                        }
+                stats = {"raw_dvc": raw_dvc or None, "data_dirs": data_dirs, "models": []}
+            except Exception:
+                stats = load_data_stats()
+        else:
+            # Fallback 2 : scan filesystem (lent, dernier recours)
+            stats = load_data_stats()
     return render_template("data_explorer.html", stats=stats)
 
 
