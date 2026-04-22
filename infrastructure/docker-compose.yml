@@ -165,20 +165,20 @@ services:
       --default-artifact-root s3://${MLFLOW_BUCKET:-mlflow}
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_started
       minio:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:5000/ > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 256m
+          memory: 512m
           cpus: "0.5"
     networks:
       - covid-net
@@ -222,7 +222,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mlflow} -d ${POSTGRES_DB:-mlflow}"]
+      test: ["CMD", "pg_isready", "-h", "localhost", "-U", "mlflow"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -250,7 +250,7 @@ services:
       - minio-data:/data
     command: server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/minio/health/live || curl -sf http://localhost:9000/minio/health/live || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
