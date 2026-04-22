@@ -168,24 +168,6 @@ cat .env | grep POSTGRES_PASSWORD   # → valeur réelle dans .env (gitignored)
 
 ---
 
-## Récap rapide
-
-| US   | Titre                             | Statut |
-|------|-----------------------------------|--------|
-| US-01 | Repo Git unifié                  | ✅     |
-| US-02 | API /health + /predict           | ✅     |
-| US-03 | Docker Compose + GHCR            | ✅     |
-| US-04 | Tests ≥ 40% coverage             | ✅     |
-| US-05 | DVC + remote MinIO               | ✅     |
-| US-06 | MLflow containerisé              | ✅     |
-| US-07 | Architecture microservices       | ✅     |
-| US-08 | DVC pipeline reproductible       | ✅     |
-| US-09 | Qualité code                     | ✅     |
-| US-10 | Refactoring scripts              | ✅     |
-| US-11 | CI/CD complet deploy             | ⏳ (bloqué par US-14) |
-| US-12 | Sécurité API                     | ⏳     |
-| US-13 | Log-service centralisé           | ✅     |
-| US-14 | Docker Compose prod-ready        | 🔄 en cours |
-| US-15 | Load test P95 < 500ms            | ⏳     |
-| US-16 | Data augmentation DVC            | ⏳     |
-| US-17 | Dashboard agile                  | ✅     |
+> **Récap en direct** : `make verify` (ou `./verify.sh`) génère le vrai récapitulatif ✅/❌
+> basé sur l'état actuel des services. Ce fichier documente le *quoi* et le *comment* ;
+> `verify.sh` vérifie le *est-ce que ça marche*.

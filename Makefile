@@ -15,7 +15,7 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 
 .PHONY: all setup setup-check setup-be setup-ds start start-local start-docker start-all \
-        stop restart logs logs-all test test-be test-ds lint fix clean build shell help dashboard \
+        stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
         dvc-setup dvc-push dvc-pull
 
@@ -118,7 +118,7 @@ setup-be: ## Crée/met à jour le venv backend (backend/.venv, sans tensorflow)
 		$(PYTHON) -m venv backend/.venv; \
 	fi
 	@echo "$(YELLOW)Installation deps backend...$(NC)"
-	@backend/.venv/bin/pip install -q -r requirements/local.txt
+	@backend/.venv/bin/pip install -q -r backend/requirements-dev.txt
 	@echo "$(GREEN)✅ backend/.venv prêt$(NC)"
 
 setup-ds: ## Crée/met à jour le venv data-service (data-service/.venv)
@@ -155,6 +155,13 @@ test-ds: setup-ds ## Tests data-service dans son venv isolé
 
 test-docker: ## Lance les tests dans le container Docker
 	docker compose exec backend pytest tests/ -v --cov=app
+
+verify: ## Lance start-all puis vérifie toutes les US (démo tuteur)
+	@echo "$(YELLOW)Démarrage de la stack...$(NC)"
+	@$(COMPOSE) up -d --build 2>/dev/null || true
+	@echo "$(YELLOW)Attente que les services soient healthy (30s)...$(NC)"
+	@sleep 30
+	@bash verify.sh
 
 # ── Qualité ───────────────────────────────────────────────────────────────────
 lint: ## Vérifie la qualité du code (ruff + pylint + structure)

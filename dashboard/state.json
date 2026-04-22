@@ -8,5 +8,12 @@
         "done": false
       }
     }
+  },
+  "S2": {
+    "stories": {
+      "US-08": {
+        "done": true
+      }
+    }
   }
 }

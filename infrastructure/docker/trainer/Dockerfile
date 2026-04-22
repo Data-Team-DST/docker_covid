@@ -3,7 +3,7 @@ FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-COPY requirements/trainer.txt /tmp/trainer.txt
+COPY infrastructure/docker/trainer/requirements.txt /tmp/trainer.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install --ignore-installed blinker \
