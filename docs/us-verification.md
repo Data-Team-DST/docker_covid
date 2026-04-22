@@ -24,23 +24,23 @@ ls backend/ frontend/ infrastructure/ shared/
 **Fait :** `/health` retourne `status + model_loaded`, `/predict` accepte une image multipart et retourne `class + confidence + scores`.  
 **Vérifier :**
 ```bash
-# WSL / Linux / macOS
+# WSL / Linux / macOS  (lancer depuis la racine du repo docker_covid)
 make start-docker          # ou ./start_local.sh
 curl http://localhost:8000/health
-curl -X POST http://localhost:8000/predict \
+curl -X POST http://localhost:8000/api/v1/predict \
      -F "file=@data/raw/COVID-19_Radiography_Dataset/COVID/images/COVID-1.png"
 # → {"class":"COVID","confidence":0.97,"scores":{...}}
 ```
 ```powershell
-# PowerShell (Windows)
+# PowerShell (Windows)  (lancer depuis la racine du repo docker_covid)
 curl.exe http://localhost:8000/health
-curl.exe -X POST http://localhost:8000/predict -F "file=@data/raw/COVID-19_Radiography_Dataset/COVID/images/COVID-1.png"
+curl.exe -X POST http://localhost:8000/api/v1/predict -F "file=@data/raw/COVID-19_Radiography_Dataset/COVID/images/COVID-1.png"
 ```
 
 ---
 
 ### US-03 · Docker Compose + images GHCR ✅
-**Fait :** `docker-compose.yml` (7 services). Images publiées sur GHCR via CI. Tags `sha-*`, branche, `latest` sur main.  
+**Fait :** `infrastructure/docker-compose.yml` (7 services). Images publiées sur GHCR via CI. Tags `sha-*`, branche, `latest` sur main.  
 **Vérifier :**
 ```bash
 make start-docker
