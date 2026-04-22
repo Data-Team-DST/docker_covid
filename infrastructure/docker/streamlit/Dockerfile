@@ -3,7 +3,7 @@ FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-COPY requirements/streamlit.txt /tmp/streamlit.txt
+COPY frontend/requirements.txt /tmp/streamlit.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install --ignore-installed blinker \

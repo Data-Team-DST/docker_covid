@@ -411,7 +411,7 @@ fi
 # =========================
 # 4b. Requirements — imports
 # =========================
-_req_key="req_$(cache_key backend/app frontend backend/src)_$(md5sum requirements/*.txt 2>/dev/null | md5sum | cut -c1-8)"
+_req_key="req_$(cache_key backend/app frontend backend/src)_$(md5sum backend/requirements*.txt frontend/requirements.txt data-service/requirements.txt 2>/dev/null | md5sum | cut -c1-8)"
 if _req_cached=$(cache_get "$_req_key"); then
     echo -e "${YELLOW}[Requirements]${NC} (cache) ${_req_cached}"
     echo "Requirements: ${_req_cached}" >> "$SUMMARY"

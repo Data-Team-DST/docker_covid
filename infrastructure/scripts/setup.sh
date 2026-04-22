@@ -21,7 +21,7 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 VENV_DIR="${PROJECT_ROOT}/.venv"
-REQUIREMENTS_FILE="${PROJECT_ROOT}/requirements/local.txt"
+REQUIREMENTS_FILE="${PROJECT_ROOT}/backend/requirements-dev.txt"
 
 log()   { echo -e "${GREEN}[DS_COVID]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[DS_COVID]${NC} $*"; }
