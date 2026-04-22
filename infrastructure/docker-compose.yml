@@ -27,7 +27,13 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 20s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
     networks:
       - covid-net
 
@@ -52,8 +58,8 @@ services:
       - PYTHONUNBUFFERED=1
       - DATA_SERVICE_PORT=5001
       - DVC_REMOTE_MINIO_ENDPOINTURL=http://minio:9000
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minio}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minio123}
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - AWS_DEFAULT_REGION=us-east-1
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
     healthcheck:
@@ -61,7 +67,13 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 15s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
     networks:
       - covid-net
 
@@ -81,9 +93,22 @@ services:
       - BACKEND_URL=http://backend:8000
       - DATA_SERVICE_URL=http://data-service:5001
     depends_on:
-      - backend
-      - data-service
+      backend:
+        condition: service_healthy
+      data-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8501/_stcore/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
     networks:
       - covid-net
 
@@ -105,8 +130,14 @@ services:
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:
-      - mlflow
+      mlflow:
+        condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "2.0"
     networks:
       - covid-net
     profiles:
@@ -120,23 +151,36 @@ services:
       - "${MLFLOW_PORT:-5000}:5000"
     environment:
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minio}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minio123}
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
     command: >
       mlflow server
       --host 0.0.0.0
       --port 5000
-      --backend-store-uri postgresql://${POSTGRES_USER:-mlflow}:${POSTGRES_PASSWORD:-mlflow123}@postgres:5432/${POSTGRES_DB:-mlflow}
+      --backend-store-uri postgresql://${POSTGRES_USER:-mlflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mlflow}
       --default-artifact-root s3://${MLFLOW_BUCKET:-mlflow}
     depends_on:
-      - postgres
-      - minio
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5000/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
     networks:
       - covid-net
 
-  # ── Log Service (agrégateur logs JSON) ───────────────────────────────────────
+  # ── Log Service (agrégateur logs JSON) ────────────────────────────────────
   log-service:
     build:
       context: ./log-service
@@ -154,7 +198,13 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 15s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
     networks:
       - covid-net
 
@@ -164,11 +214,22 @@ services:
     container_name: ${POSTGRES_CONTAINER_NAME:-mlflow-postgres}
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-mlflow}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-mlflow123}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB:-mlflow}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mlflow} -d ${POSTGRES_DB:-mlflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
     networks:
       - covid-net
 
@@ -180,12 +241,23 @@ services:
       - "${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minio123}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - minio-data:/data
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
     networks:
       - covid-net
 
@@ -194,15 +266,20 @@ services:
     image: ${MINIO_CLIENT_IMAGE:-minio/mc:latest}
     container_name: ${MINIO_INIT_CONTAINER_NAME:-minio-init}
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      sleep 5;
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minio} ${MINIO_ROOT_PASSWORD:-minio123};
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
       mc mb --ignore-existing local/${MLFLOW_BUCKET:-mlflow};
       mc mb --ignore-existing local/${DVC_BUCKET:-dvcstore};
       exit 0;
       "
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: "0.25"
     networks:
       - covid-net
 
