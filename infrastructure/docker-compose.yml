@@ -145,7 +145,10 @@ services:
 
   # ── MLflow Tracking Server ─────────────────────────────────────────────────
   mlflow:
-    image: ${MLFLOW_IMAGE:-ghcr.io/mlflow/mlflow:v2.22.1}
+    build:
+      context: .
+      dockerfile: infrastructure/docker/mlflow/Dockerfile
+    image: ${REGISTRY}/${GITHUB_USER}/covid-xray-mlflow:${IMAGE_TAG:-latest}
     container_name: ${MLFLOW_CONTAINER_NAME:-mlflow-server}
     ports:
       - "${MLFLOW_PORT:-5000}:5000"
