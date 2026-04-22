@@ -121,12 +121,14 @@ sprints:
         done: true
       - id: US-14
         title: "Docker Compose production-ready"
-        description: "restart: unless-stopped sur tous les services. Health checks définis. Resource limits (memory, cpu). Variables d'env externalisées dans .env. 0 secret hardcodé (fix Postgres password)."
+        description: "✅ restart:unless-stopped sur 8 services, healthchecks sur 7 services, resource limits sur tous, 0 secret hardcodé. MLflow containerisé avec start.sh (db upgrade automatique). verify.sh : 46 ✅, 0 ❌."
+        branch: us-14-steven
+        assignee: Steven
         depends_on: ["US-13"]
         blocks: ["US-11"]
         points: 3
         priority: MUST
-        done: false
+        done: true
       - id: US-15
         title: "Load test /predict P95 < 500ms"
         description: "Script locust ou k6 : 10 req/s concurrent sur /predict. P95 < 500ms. Rapport HTML dans outputs/load_test/. Intégré dans CI Phase 3."

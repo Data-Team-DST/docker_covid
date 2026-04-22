@@ -152,18 +152,18 @@ cat tmp/logs/all.log       # tous les services confondus
 
 ---
 
-### US-14 · Docker Compose production-ready 🔄 en cours
-**Objectif :** `restart: unless-stopped` sur tous les services, health checks, resource limits, `.env` pour tous les secrets, 0 mot de passe hardcodé.  
-**Vérifier (une fois fait) :**
+### US-14 · Docker Compose production-ready ✅
+**Fait (Steven) :** `restart: unless-stopped` sur 8 services, healthchecks sur 7 services, `deploy.resources.limits` sur tous, 0 secret hardcodé — toutes les variables dans `.env`. MLflow containerisé avec `start.sh` (db upgrade automatique au démarrage).  
+**Vérifier :**
 ```bash
 make start-docker
-docker inspect docker_covid-backend-1 | grep -A5 RestartPolicy
+docker inspect covid-xray-backend | grep -A5 RestartPolicy
 # → "Name": "unless-stopped"
-docker inspect docker_covid-backend-1 | grep -A10 Healthcheck
+docker inspect covid-xray-backend | grep -A10 Healthcheck
 # → Test, Interval, Retries définis
-grep -r "POSTGRES_PASSWORD" infrastructure/docker-compose.yml
-# → doit afficher seulement "${POSTGRES_PASSWORD}" (pas de valeur en dur)
-cat .env | grep POSTGRES_PASSWORD   # → valeur réelle dans .env (gitignored)
+grep "POSTGRES_PASSWORD" infrastructure/docker-compose.yml
+# → affiche uniquement "${POSTGRES_PASSWORD}" — jamais de valeur en dur
+make verify   # → 46 ✅, 0 ❌
 ```
 
 ---
