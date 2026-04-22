@@ -159,7 +159,7 @@ UNUSED_SUMMARY=""   # accumule "fichier:package" pour le récap final
     echo "========================================"
 } >> "$REQ_REPORT"
 
-for req_file in requirements/*.txt; do
+for req_file in backend/requirements.txt backend/requirements-dev.txt frontend/requirements.txt data-service/requirements.txt infrastructure/docker/base/requirements.txt infrastructure/docker/trainer/requirements.txt; do
     [ -f "$req_file" ] || continue
     echo -e "\n${CYAN}📄 $(basename "$req_file")${NC}"
     echo "" >> "$REQ_REPORT"

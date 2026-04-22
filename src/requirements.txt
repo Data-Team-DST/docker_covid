@@ -1,0 +1,30 @@
+# Environnement data science complet (notebooks, exploration, optimisation)
+# Utiliser dans un venv dédié : python -m venv .venv-ds && pip install -r src/requirements.txt
+
+numpy>=2.0.0,<3.0.0
+scipy>=1.14.0,<2.0.0
+pandas>=2.2.0,<3.0.0
+scikit-learn>=1.5.0,<2.0.0
+xgboost>=2.0.0
+lightgbm>=4.0.0
+shap
+lime
+optuna
+imbalanced-learn
+
+matplotlib>=3.9.0,<4.0.0
+seaborn>=0.13.2,<1.0.0
+pillow>=11.0.0,<13.0.0
+plotly>=5.20.0,<6.0.0
+
+opencv-python>=4.9.0,<5.0.0
+opencv-contrib-python>=4.9.0,<5.0.0
+
+tqdm>=4.67.0,<5.0.0
+joblib>=1.5.0,<2.0.0
+
+pytest>=7.0.0
+pytest-cov>=4.0.0
+streamlit>=1.30.0
+streamlit-extras>=0.7.8
+kagglehub>=0.3.13
