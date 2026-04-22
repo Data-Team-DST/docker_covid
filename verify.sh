@@ -7,7 +7,7 @@
 #
 # Sortie : rapport ✅ / ❌ par US, exit 1 si au moins un échec
 
-set -euo pipefail
+set -uo pipefail
 
 # ── Config ────────────────────────────────────────────────────────────────────
 BACKEND_URL="http://localhost:8000"
@@ -25,17 +25,18 @@ PASS=0; FAIL=0
 declare -a RESULTS=()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-ok()   { echo -e "  ${GREEN}✅${NC} $1"; RESULTS+=("✅ $1"); ((PASS++)); }
-fail() { echo -e "  ${RED}❌${NC} $1"; RESULTS+=("❌ $1"); ((FAIL++)); }
+ok()   { echo -e "  ${GREEN}✅${NC} $1"; RESULTS+=("✅ $1"); PASS=$((PASS + 1)); }
+fail() { echo -e "  ${RED}❌${NC} $1"; RESULTS+=("❌ $1"); FAIL=$((FAIL + 1)); }
 skip() { echo -e "  ${YELLOW}⏭ ${NC} $1 (Docker non disponible)"; RESULTS+=("⏭  $1"); }
 
 check_file() { local us="$1" desc="$2" path="$3"
-  [[ -e "$path" ]] && ok "$us — $desc" || fail "$us — $desc ($path absent)"; }
+  if [[ -e "$path" ]]; then ok "$us — $desc"
+  else fail "$us — $desc ($path absent)"; fi; }
 
 check_http() { local us="$1" desc="$2" url="$3"
   if $NO_DOCKER; then skip "$us — $desc"; return; fi
-  curl -sf --max-time 5 "$url" > /dev/null 2>&1 \
-    && ok "$us — $desc" || fail "$us — $desc ($url inaccessible)"; }
+  if curl -sf --max-time 5 "$url" > /dev/null 2>&1; then ok "$us — $desc"
+  else fail "$us — $desc ($url inaccessible)"; fi; }
 
 check_cmd() { local us="$1" desc="$2"; shift 2
   if eval "$@" > /dev/null 2>&1; then ok "$us — $desc"
