@@ -141,10 +141,10 @@ test: test-be test-ds ## Lance les tests de tous les microservices (venvs isolé
 
 test-be: setup-be ## Tests backend dans son venv isolé
 	@echo "$(YELLOW)── Tests backend ──────────────────────────────────────$(NC)"
-	@cd backend && PYTHONPATH=.. .venv/bin/python -m pytest tests/ -v \
-		--cov=app \
+	@PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests/ -v \
+		--cov=backend/app \
 		--cov-report=term-missing \
-		--cov-report=xml:coverage.xml \
+		--cov-report=xml:backend/coverage.xml \
 		--cov-fail-under=40
 	@echo "$(GREEN)✅ Tests backend OK$(NC)"
 
@@ -163,8 +163,18 @@ test-docker: ## Lance les tests dans le container Docker
 verify: ## Lance start-all puis vérifie toutes les US (démo tuteur)
 	@echo "$(YELLOW)Démarrage de la stack...$(NC)"
 	@$(COMPOSE) up -d --build 2>/dev/null || true
-	@echo "$(YELLOW)Attente que les services soient healthy (60s)...$(NC)"
-	@sleep 60
+	@echo "$(YELLOW)Attente que backend soit healthy (max 90s)...$(NC)"
+	@timeout=90; elapsed=0; \
+	 while ! curl -sf http://localhost:8000/health > /dev/null 2>&1; do \
+	   sleep 5; elapsed=$$((elapsed + 5)); \
+	   [ $$elapsed -ge $$timeout ] && echo "$(YELLOW)⚠ Timeout backend$(NC)" && break; \
+	 done
+	@echo "$(YELLOW)Attente que MLflow soit healthy (max 90s supplémentaires)...$(NC)"
+	@timeout=90; elapsed=0; \
+	 while ! curl -sf http://localhost:5000 > /dev/null 2>&1; do \
+	   sleep 5; elapsed=$$((elapsed + 5)); \
+	   [ $$elapsed -ge $$timeout ] && echo "$(YELLOW)⚠ Timeout MLflow$(NC)" && break; \
+	 done
 	@bash verify.sh
 
 # ── Qualité ───────────────────────────────────────────────────────────────────

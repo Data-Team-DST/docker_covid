@@ -97,11 +97,11 @@ section "US-04 · Tests unitaires ≥ 40% coverage"
 check_file "US-04" "backend/tests/"     backend/tests
 check_file "US-04" "data-service/tests" data-service/tests
 if [[ -d "backend/.venv/Scripts" ]] && [[ ! -f "backend/.venv/bin/python" ]]; then
-  skip "US-04 — Tests backend  (venv Windows détecté → rm -rf backend/.venv && make setup-be depuis WSL)"
+  skip "US-04 — Tests backend  (venv Windows → rm -rf backend/.venv && make setup-be depuis WSL)"
 elif [[ -f "backend/.venv/bin/python" ]]; then
   echo -e "  ${YELLOW}⏳${NC} Exécution tests backend (peut prendre ~30s)..."
-  if (cd backend && PYTHONPATH=.. .venv/bin/python -m pytest tests/ -q \
-      --cov=app --cov-fail-under=40 --tb=no > /tmp/be_test.log 2>&1); then
+  if PYTHONPATH=. backend/.venv/bin/python -m pytest backend/tests/ -q \
+      --cov=backend/app --cov-fail-under=40 --tb=no > /tmp/be_test.log 2>&1; then
     ok "US-04 — Tests backend passent (≥40% coverage)"
   else
     fail "US-04 — Tests backend échouent  (détails: cat /tmp/be_test.log)"

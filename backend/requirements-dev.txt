@@ -1,5 +1,5 @@
-# Backend — dépendances dev/CI (sans tensorflow, trop lourd pour le dev quotidien)
-# tensorflow est uniquement dans Docker via backend/requirements.txt
+# Backend — dépendances dev/CI (sans tensorflow)
+# Strictement ce qui est nécessaire pour faire tourner les tests unitaires
 
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
@@ -11,14 +11,7 @@ python-dotenv==1.0.1
 numpy==2.0.2
 pillow==11.0.0
 scikit-learn==1.5.2
-scikit-image
-pandas
 
-# Dev & qualité
+# Tests
 pytest==8.3.4
 pytest-cov==6.0.0
-ruff>=0.1.0
-black>=23.11.0
-isort>=5.12.0
-pylint>=3.0.0
-dvc[s3]
