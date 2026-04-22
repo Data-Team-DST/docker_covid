@@ -161,20 +161,22 @@ test-docker: ## Lance les tests dans le container Docker
 	docker compose exec backend pytest tests/ -v --cov=app
 
 verify: ## Lance start-all puis vérifie toutes les US (démo tuteur)
-	@echo "$(YELLOW)Démarrage de la stack...$(NC)"
+	@echo "$(YELLOW)Démarrage de la stack (premier build peut prendre 3-5 min)...$(NC)"
 	@$(COMPOSE) up -d --build 2>/dev/null || true
-	@echo "$(YELLOW)Attente que backend soit healthy (max 90s)...$(NC)"
-	@timeout=90; elapsed=0; \
+	@echo "$(YELLOW)Attente que backend soit healthy (max 120s)...$(NC)"
+	@timeout=120; elapsed=0; \
 	 while ! curl -sf http://localhost:8000/health > /dev/null 2>&1; do \
 	   sleep 5; elapsed=$$((elapsed + 5)); \
-	   [ $$elapsed -ge $$timeout ] && echo "$(YELLOW)⚠ Timeout backend$(NC)" && break; \
-	 done
-	@echo "$(YELLOW)Attente que MLflow soit healthy (max 90s supplémentaires)...$(NC)"
-	@timeout=90; elapsed=0; \
+	   printf "."; \
+	   [ $$elapsed -ge $$timeout ] && echo " ⚠ Timeout backend" && break; \
+	 done; echo ""
+	@echo "$(YELLOW)Attente que MLflow soit healthy (max 180s — build + db upgrade)...$(NC)"
+	@timeout=180; elapsed=0; \
 	 while ! curl -sf http://localhost:5000 > /dev/null 2>&1; do \
 	   sleep 5; elapsed=$$((elapsed + 5)); \
-	   [ $$elapsed -ge $$timeout ] && echo "$(YELLOW)⚠ Timeout MLflow$(NC)" && break; \
-	 done
+	   printf "."; \
+	   [ $$elapsed -ge $$timeout ] && echo " ⚠ Timeout MLflow" && break; \
+	 done; echo ""
 	@bash verify.sh
 
 # ── Qualité ───────────────────────────────────────────────────────────────────

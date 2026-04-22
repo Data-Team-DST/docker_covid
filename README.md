@@ -44,21 +44,25 @@ bash infrastructure/scripts/start_local.sh    # backend+frontend sans Docker
 make start          # backend FastAPI seul (http://localhost:8000)
 make start-all      # stack complète : backend + frontend + mlflow + minio
 make stop           # arrêter tous les services
-make test           # tests unitaires (dans Docker)
+make verify         # démarrage stack + vérification automatique de toutes les US
+make test           # tests unitaires (backend + data-service)
+make setup-be       # venv dev backend (backend/.venv) — tests locaux sans Docker
+make setup-ds       # venv dev data-service (data-service/.venv)
 make lint           # vérification qualité
 make fix            # auto-correction style (ruff + black + isort)
 make build          # rebuilder les images
 make logs           # logs backend en temps réel
 ```
 
-| Service      | URL                          | Description                           |
-|--------------|------------------------------|---------------------------------------|
-| API          | http://localhost:8000        | Backend FastAPI — `/docs` Swagger     |
-| Data Service | http://localhost:5001        | DVC pull/push/status — `/docs`        |
-| Streamlit    | http://localhost:8501        | Frontend multi-pages                  |
-| MLflow       | http://localhost:5000        | Tracking expériences (Phase 2)        |
-| MinIO        | http://localhost:9001        | Object storage DVC + artifacts        |
-| Dashboard    | http://localhost:5050        | Backlog agile + data explorer         |
+| Service      | URL                          | Description                              |
+|--------------|------------------------------|------------------------------------------|
+| API          | http://localhost:8000        | Backend FastAPI — `/docs` Swagger        |
+| Data Service | http://localhost:5001        | DVC pull/push/status — `/docs`           |
+| Log Service  | http://localhost:5002        | Agrégateur logs JSON centralisé          |
+| Streamlit    | http://localhost:8501        | Frontend multi-pages                     |
+| MLflow       | http://localhost:5000        | Tracking expériences ML                  |
+| MinIO        | http://localhost:9001        | Object storage DVC + MLflow artifacts    |
+| Dashboard    | http://localhost:5050        | Backlog agile + data explorer            |
 
 ### Commandes data-service
 
@@ -83,36 +87,44 @@ docker_covid/
 │   │   ├── models/          # Chargement modèle Keras
 │   │   ├── features/        # Preprocessing image
 │   │   └── schemas/         # Schémas Pydantic
-│   ├── src/                 # Code ML DS_COVID (training, features, interprétabilité)
-│   └── tests/unit/          # Tests unitaires (pytest)
+│   ├── tests/unit/          # Tests unitaires (pytest, ≥40% coverage)
+│   └── requirements-dev.txt # Dépendances dev/test backend
 ├── data-service/            # Microservice DVC : pull/push/status + stats données
 │   ├── src/data_service/    # FastAPI (GET /health, /v1/data/stats, /v1/dvc/*)
 │   ├── tests/
 │   ├── Dockerfile
 │   └── requirements.txt
+├── log-service/             # Agrégateur logs JSON centralisé (port 5002)
+│   ├── app.py               # Flask — /health, /v1/log, /v1/logs
+│   └── Dockerfile
 ├── frontend/                # Streamlit multi-pages
 │   ├── streamlit_app.py
-│   └── page/                # 01_accueil … 07_conclusion
+│   ├── page/                # 01_accueil … 07_conclusion
+│   └── requirements.txt
 ├── dashboard/               # Dashboard agile Flask (backlog sprints + data explorer)
 │   ├── app.py               # Flask — http://localhost:5050
 │   ├── backlog.yaml         # Sprints DS_COVID (phases 1→4)
 │   └── templates/
+├── shared/                  # Code partagé entre services
+│   └── logging_config.py    # Logging JSON structuré (importé par tous les services)
 ├── infrastructure/
-│   ├── docker/              # Dockerfiles par service (backend, streamlit, trainer…)
+│   ├── docker/              # Dockerfiles par service (backend, streamlit, mlflow…)
+│   │   └── mlflow/start.sh  # Lance db upgrade puis mlflow server
 │   ├── kubernetes/          # Manifests K8s (Phase 3)
-│   ├── docker-compose.yml   # Stack complète (8 services)
+│   ├── docker-compose.yml   # Stack complète (9 services)
 │   └── scripts/             # setup.sh, check_quality.sh, fix_style.sh, start_local.sh
-├── docs/                    # Architecture, SMART, backlogs, plan de base
+├── scripts/                 # Pipeline DVC : preprocess.py, train.py, evaluate.py
+├── docs/                    # Architecture, SMART, backlogs, vérification US
 ├── data/
 │   ├── raw.dvc              # 42 330 images trackées DVC (806 MB)
 │   └── models/              # ← Placer le fichier .keras ici
-├── requirements/
-│   ├── local.txt            # Dev local (sans tensorflow)
-│   └── base.txt / streamlit.txt / trainer.txt
+├── dvc.yaml                 # Pipeline DVC (preprocess → train → evaluate)
+├── params.yaml              # Hyperparamètres ML versionnés
+├── verify.sh                # Vérification automatique de toutes les US
 ├── Makefile                 # Toutes les commandes (`make help`)
 ├── .env.example             # Template — copié automatiquement par make setup
 └── .github/workflows/
-    └── cicd.yml             # CI/CD : lint → tests → SonarCloud → build GHCR
+    └── cicd.yml             # CI/CD : lint → tests → build GHCR
 ```
 
 ---
@@ -183,12 +195,18 @@ dvc params diff    # compare les params entre commits
 ## Tests
 
 ```bash
-make test
-# ou directement dans Docker :
-docker compose -f infrastructure/docker-compose.yml run --rm backend pytest tests/ --cov=app -v
+make test        # tous les tests (backend + data-service)
+make test-be     # tests backend uniquement (venv local backend/.venv)
+make test-ds     # tests data-service uniquement (venv local data-service/.venv)
+
+# Premier lancement : créer les venvs de dev locaux
+make setup-be    # crée backend/.venv avec les dépendances de test
+make setup-ds    # crée data-service/.venv
 ```
 
-Coverage cible Phase 1 : >= 40 %
+Coverage cible : ≥ 40 % backend, ≥ 30 % data-service
+
+> **Windows** : si les tests échouent avec `venv Windows détecté`, utiliser `make setup-be` depuis WSL ou Git Bash (bash doit créer le venv, pas VSCode).
 
 ---
 
@@ -222,13 +240,17 @@ Documentation interactive : http://localhost:8000/docs
 
 ## Roadmap MLOps
 
-| Phase | Contenu                       | Deadline   | Status      |
-|-------|-------------------------------|------------|-------------|
-| **1** | Env reproductible, API, CI/CD | 13/03/2026 | ✅ Livré    |
-| **2** | Microservices, MLflow, DVC    | 20/03/2026 | ✅ Livré    |
-| **3** | CI/CD complet, Kubernetes     | 24/04/2026 | A faire     |
-| **4** | Monitoring, Evidently, Drift  | 01/09/2026 | A faire     |
-| **Soutenance** | Présentation finale | 04/09/2026 | A faire |
+| Phase | Contenu                                        | Deadline   | Status         |
+|-------|------------------------------------------------|------------|----------------|
+| **1** | Env reproductible, API, CI/CD                  | 13/03/2026 | ✅ Livré       |
+| **2** | Microservices, MLflow, DVC, log-service        | 20/03/2026 | ✅ Livré       |
+| **3** | CI/CD complet, Kubernetes                      | 24/04/2026 | En cours       |
+| **4** | Monitoring, Evidently, Drift                   | 01/09/2026 | A faire        |
+| **Soutenance** | Présentation finale                   | 04/09/2026 | A faire        |
+
+**US implémentées** : US-01 à US-10, US-13, US-14, US-17 (voir [`verify.sh`](verify.sh) ou `make verify`)
+
+**US en attente** : US-11 (CI/CD deploy GHCR), US-12 (API key sécurité), US-15 (load test), US-16 (data augmentation)
 
 ---
 
