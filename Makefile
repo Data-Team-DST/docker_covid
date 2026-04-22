@@ -113,6 +113,10 @@ dvc-pull: ## Récupère les données depuis MinIO
 
 # ── Venvs par service ─────────────────────────────────────────────────────────
 setup-be: ## Crée/met à jour le venv backend (backend/.venv, sans tensorflow)
+	@if [ -d backend/.venv/Scripts ] && [ ! -f backend/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf backend/.venv; \
+	fi
 	@if [ ! -f backend/.venv/bin/python ]; then \
 		echo "$(YELLOW)Création venv backend...$(NC)"; \
 		$(PYTHON) -m venv backend/.venv; \

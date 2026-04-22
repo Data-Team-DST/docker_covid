@@ -38,10 +38,15 @@ check_file() {
 }
 
 check_http() {
-  local us="$1" desc="$2" url="$3"
+  local us="$1" desc="$2" url="$3" retries="${4:-1}"
   if $NO_DOCKER; then skip "$us — $desc  (--no-docker)"; return; fi
-  if curl -sf --max-time 5 "$url" > /dev/null 2>&1; then ok "$us — $desc"
-  else fail "$us — $desc  ($url inaccessible)"; fi
+  local i=0
+  while [[ $i -lt $retries ]]; do
+    if curl -sf --max-time 5 "$url" > /dev/null 2>&1; then ok "$us — $desc"; return; fi
+    i=$((i + 1))
+    [[ $i -lt $retries ]] && sleep 10
+  done
+  fail "$us — $desc  ($url inaccessible)"
 }
 
 check_grep() {
@@ -91,7 +96,9 @@ fi
 section "US-04 · Tests unitaires ≥ 40% coverage"
 check_file "US-04" "backend/tests/"     backend/tests
 check_file "US-04" "data-service/tests" data-service/tests
-if [[ -f "backend/.venv/bin/python" ]]; then
+if [[ -d "backend/.venv/Scripts" ]] && [[ ! -f "backend/.venv/bin/python" ]]; then
+  skip "US-04 — Tests backend  (venv Windows détecté → rm -rf backend/.venv && make setup-be depuis WSL)"
+elif [[ -f "backend/.venv/bin/python" ]]; then
   echo -e "  ${YELLOW}⏳${NC} Exécution tests backend (peut prendre ~30s)..."
   if (cd backend && PYTHONPATH=.. .venv/bin/python -m pytest tests/ -q \
       --cov=app --cov-fail-under=40 --tb=no > /tmp/be_test.log 2>&1); then
@@ -100,7 +107,7 @@ if [[ -f "backend/.venv/bin/python" ]]; then
     fail "US-04 — Tests backend échouent  (détails: cat /tmp/be_test.log)"
   fi
 else
-  skip "US-04 — Tests backend  (venv absent → lancer: make setup-be)"
+  skip "US-04 — Tests backend  (venv absent → lancer: make setup-be depuis WSL)"
 fi
 
 # ── US-05 ─────────────────────────────────────────────────────────────────────
@@ -112,7 +119,7 @@ check_grep "US-05" "Remote 'minio' dans .dvc/config" "minio" .dvc/config
 
 # ── US-06 ─────────────────────────────────────────────────────────────────────
 section "US-06 · MLflow containerisé"
-check_http "US-06" "MLflow UI → 200" "http://localhost:5000"
+check_http "US-06" "MLflow UI → 200" "http://localhost:5000" 3
 
 # ── US-07 ─────────────────────────────────────────────────────────────────────
 section "US-07 · Architecture microservices"
