@@ -14,8 +14,8 @@
 #   make logs       → affiche les logs en direct
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 
-.PHONY: all setup setup-check start start-local start-docker start-all \
-        stop restart logs test lint fix clean build shell help dashboard \
+.PHONY: all setup setup-check setup-be setup-ds start start-local start-docker start-all \
+        stop restart logs logs-all test test-be test-ds lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
         dvc-setup dvc-push dvc-pull
 
@@ -79,11 +79,13 @@ restart: stop start ## Redémarre le backend
 build: ## Build les images sans lancer
 	$(COMPOSE) build backend
 
-logs: ## Affiche les logs en direct
-	$(COMPOSE) logs -f backend
+logs: ## Affiche les logs en direct (Ctrl+C arrête les services)
+	@trap '$(COMPOSE) down 2>/dev/null; echo "$(GREEN)Services arrêtés$(NC)"; exit 0' INT; \
+	 $(COMPOSE) logs -f backend
 
-logs-all: ## Affiche les logs de tous les services
-	$(COMPOSE) logs -f
+logs-all: ## Affiche les logs de tous les services (Ctrl+C arrête les services)
+	@trap '$(COMPOSE) down 2>/dev/null; echo "$(GREEN)Services arrêtés$(NC)"; exit 0' INT; \
+	 $(COMPOSE) logs -f
 
 shell: ## Ouvre un shell dans le container backend
 	$(COMPOSE) exec backend bash
@@ -109,15 +111,47 @@ dvc-pull: ## Récupère les données depuis MinIO
 	@.venv/bin/dvc pull || dvc pull
 	@echo "$(GREEN)✅ Données récupérées$(NC)"
 
+# ── Venvs par service ─────────────────────────────────────────────────────────
+setup-be: ## Crée/met à jour le venv backend (backend/.venv, sans tensorflow)
+	@if [ ! -f backend/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv backend...$(NC)"; \
+		$(PYTHON) -m venv backend/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps backend...$(NC)"
+	@backend/.venv/bin/pip install -q -r requirements/local.txt
+	@echo "$(GREEN)✅ backend/.venv prêt$(NC)"
+
+setup-ds: ## Crée/met à jour le venv data-service (data-service/.venv)
+	@if [ ! -f data-service/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv data-service...$(NC)"; \
+		$(PYTHON) -m venv data-service/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps data-service...$(NC)"
+	@data-service/.venv/bin/pip install -q \
+		-r data-service/requirements.txt \
+		-r data-service/dev-requirements.txt
+	@echo "$(GREEN)✅ data-service/.venv prêt$(NC)"
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
-test: ## Lance les tests unitaires (local, sans Docker)
-	@echo "$(YELLOW)Tests unitaires backend...$(NC)"
-	cd backend && $(PYTHON) -m pytest tests/ -v \
+test: test-be test-ds ## Lance les tests de tous les microservices (venvs isolés)
+
+test-be: setup-be ## Tests backend dans son venv isolé
+	@echo "$(YELLOW)── Tests backend ──────────────────────────────────────$(NC)"
+	@cd backend && PYTHONPATH=.. .venv/bin/python -m pytest tests/ -v \
 		--cov=app \
 		--cov-report=term-missing \
 		--cov-report=xml:coverage.xml \
 		--cov-fail-under=40
-	@echo "$(GREEN)✅ Tests OK$(NC)"
+	@echo "$(GREEN)✅ Tests backend OK$(NC)"
+
+test-ds: setup-ds ## Tests data-service dans son venv isolé
+	@echo "$(YELLOW)── Tests data-service ─────────────────────────────────$(NC)"
+	@cd data-service && PYTHONPATH=src:.. .venv/bin/python -m pytest tests/ -v \
+		--cov=data_service \
+		--cov-report=term-missing \
+		--cov-report=xml:ds-coverage.xml \
+		--cov-fail-under=30
+	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
 
 test-docker: ## Lance les tests dans le container Docker
 	docker compose exec backend pytest tests/ -v --cov=app
@@ -165,14 +199,11 @@ data-start: ## Lance le data-service (port 5001)
 data-stop: ## Arrête le data-service
 	$(COMPOSE) stop data-service
 
-data-logs: ## Logs data-service en direct
-	$(COMPOSE) logs -f data-service
+data-logs: ## Logs data-service en direct (Ctrl+C arrête le service)
+	@trap '$(COMPOSE) stop data-service 2>/dev/null; echo "$(GREEN)data-service arrêté$(NC)"; exit 0' INT; \
+	 $(COMPOSE) logs -f data-service
 
-data-test: ## Tests unitaires data-service (local, venv)
-	@echo "$(YELLOW)Tests data-service...$(NC)"
-	@. .venv/bin/activate && cd data-service && pip install -q -r requirements.txt -r dev-requirements.txt && \
-		PYTHONPATH=src python -m pytest tests/ -v --cov=data_service --cov-report=term-missing
-	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
+data-test: test-ds ## Tests data-service (alias → make test-ds)
 
 data-shell: ## Shell dans le container data-service
 	$(COMPOSE) exec data-service bash
