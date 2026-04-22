@@ -10,6 +10,7 @@
 set -uo pipefail
 
 # ── Config ────────────────────────────────────────────────────────────────────
+if python3 -c "import sys" > /dev/null 2>&1; then PYTHON=python3; elif python -c "import sys" > /dev/null 2>&1; then PYTHON=python; else PYTHON=python3; fi
 BACKEND_URL="http://localhost:8000"
 DATA_URL="http://localhost:5001"
 LOG_URL="http://localhost:5002"
@@ -73,7 +74,7 @@ check_http "US-02" "GET /health → 200"         "$BACKEND_URL/health"
 check_http "US-02" "GET /docs (OpenAPI) → 200" "$BACKEND_URL/docs"
 if ! $NO_DOCKER; then
   STATUS=$(curl -sf --max-time 5 "$BACKEND_URL/health" 2>/dev/null \
-    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null \
+    | "$PYTHON" -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null \
     || echo "")
   if [[ "$STATUS" == "ok" || "$STATUS" == "healthy" ]]; then
     ok "US-02 — /health retourne status:$STATUS"
@@ -158,7 +159,7 @@ check_file "US-13" "shared/logging_config.py" shared/logging_config.py
 check_http "US-13" "log-service /health → 200" "$LOG_URL/health"
 if ! $NO_DOCKER; then
   ENTRIES=$(curl -sf --max-time 5 "$LOG_URL/v1/logs?limit=1" 2>/dev/null \
-    | python3 -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null \
+    | "$PYTHON" -c "import sys,json; print(json.load(sys.stdin).get('total',0))" 2>/dev/null \
     || echo "?")
   ok "US-13 — /v1/logs répond  (buffer: $ENTRIES entrées)"
 fi
