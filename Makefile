@@ -159,8 +159,8 @@ test-docker: ## Lance les tests dans le container Docker
 verify: ## Lance start-all puis vérifie toutes les US (démo tuteur)
 	@echo "$(YELLOW)Démarrage de la stack...$(NC)"
 	@$(COMPOSE) up -d --build 2>/dev/null || true
-	@echo "$(YELLOW)Attente que les services soient healthy (30s)...$(NC)"
-	@sleep 30
+	@echo "$(YELLOW)Attente que les services soient healthy (60s)...$(NC)"
+	@sleep 60
 	@bash verify.sh
 
 # ── Qualité ───────────────────────────────────────────────────────────────────
