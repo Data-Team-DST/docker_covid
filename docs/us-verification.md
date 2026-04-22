@@ -2,6 +2,10 @@
 
 Pour chaque US terminée : ce qui a été fait + comment vérifier sans ambiguïté.
 
+> **Windows / PowerShell** : `curl` est un alias de `Invoke-WebRequest` en PowerShell.
+> Utiliser soit `curl.exe` (disponible depuis Win10), soit lancer les commandes depuis WSL (`wsl bash`).
+> Les exemples ci-dessous utilisent la syntaxe **bash / WSL**.
+
 ---
 
 ## S1 — Fondations & API d'inférence
@@ -20,11 +24,17 @@ ls backend/ frontend/ infrastructure/ shared/
 **Fait :** `/health` retourne `status + model_loaded`, `/predict` accepte une image multipart et retourne `class + confidence + scores`.  
 **Vérifier :**
 ```bash
+# WSL / Linux / macOS
 make start-docker          # ou ./start_local.sh
 curl http://localhost:8000/health
 curl -X POST http://localhost:8000/predict \
      -F "file=@data/raw/COVID-19_Radiography_Dataset/COVID/images/COVID-1.png"
 # → {"class":"COVID","confidence":0.97,"scores":{...}}
+```
+```powershell
+# PowerShell (Windows)
+curl.exe http://localhost:8000/health
+curl.exe -X POST http://localhost:8000/predict -F "file=@data/raw/COVID-19_Radiography_Dataset/COVID/images/COVID-1.png"
 ```
 
 ---
