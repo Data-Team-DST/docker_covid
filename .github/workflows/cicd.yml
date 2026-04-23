@@ -407,7 +407,7 @@ jobs:
   deploy:
     name: "Deploy smoke-test"
     runs-on: ubuntu-latest
-    needs: build_be
+    needs: [build_be, build_fe, build_ds]
     if: github.event_name == 'push'
     steps:
       - name: Log in to GHCR
@@ -420,41 +420,53 @@ jobs:
       - name: Pull & run backend
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          IMAGE="${{ env.IMAGE_BACKEND }}:sha-${SHORT_SHA}"
-          echo "Image: $IMAGE"
           docker run -d --name smoke-backend \
             -p 8000:8000 \
             -e API_ENV=production \
             -e MODEL_PATH=data/models/best_model.keras \
             -e PYTHONUNBUFFERED=1 \
-            "$IMAGE"
+            "${{ env.IMAGE_BACKEND }}:sha-${SHORT_SHA}"
 
-      - name: Wait for backend to start
+      - name: Pull & run data-service
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          docker run -d --name smoke-data-service \
+            -p 5001:5001 \
+            -e DATA_SERVICE_PORT=5001 \
+            -e PYTHONUNBUFFERED=1 \
+            "${{ env.IMAGE_DATA_SERVICE }}:sha-${SHORT_SHA}"
+
+      - name: Wait for services
         run: |
           for i in $(seq 1 12); do
-            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-              echo "Backend up after ${i}x5s"
-              break
-            fi
-            echo "Waiting... ($i/12)"
+            BE=$(curl -sf http://localhost:8000/health > /dev/null 2>&1 && echo ok || echo wait)
+            DS=$(curl -sf http://localhost:5001/health > /dev/null 2>&1 && echo ok || echo wait)
+            echo "backend=$BE  data-service=$DS  (${i}/12)"
+            [ "$BE" = "ok" ] && [ "$DS" = "ok" ] && break
             sleep 5
           done
 
-      - name: Smoke-test GET /health
+      - name: Smoke-test backend /health
         run: |
           RESPONSE=$(curl -sf http://localhost:8000/health)
-          echo "Response: $RESPONSE"
-          echo "$RESPONSE" | grep -q '"status"' || (echo "❌ /health sans champ status" && exit 1)
-          echo "✅ GET /health OK"
+          echo "$RESPONSE" | grep -q '"status"' || (echo "❌ backend /health KO" && exit 1)
+          echo "✅ backend GET /health OK"
 
-      - name: Smoke-test GET /docs
+      - name: Smoke-test backend /docs
         run: |
           curl -sf http://localhost:8000/docs > /dev/null
-          echo "✅ GET /docs OK"
+          echo "✅ backend GET /docs OK"
+
+      - name: Smoke-test data-service /health
+        run: |
+          curl -sf http://localhost:5001/health > /dev/null
+          echo "✅ data-service GET /health OK"
 
       - name: Cleanup
         if: always()
-        run: docker stop smoke-backend && docker rm smoke-backend || true
+        run: |
+          docker stop smoke-backend smoke-data-service 2>/dev/null || true
+          docker rm   smoke-backend smoke-data-service 2>/dev/null || true
 
   # ── SUMMARY ───────────────────────────────────────────────────────────────
   summary:
