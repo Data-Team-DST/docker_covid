@@ -6,6 +6,9 @@
       },
       "US-12": {
         "done": false
+      },
+      "US-11": {
+        "done": true
       }
     }
   },

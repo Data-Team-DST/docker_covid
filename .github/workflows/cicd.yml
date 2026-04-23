@@ -20,19 +20,18 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_BACKEND: ghcr.io/${{ github.repository }}/backend
-  IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend
-  IMAGE_DATA_SERVICE: ghcr.io/${{ github.repository }}/data-service
+  ORG: data-team-dst   # lowercase obligatoire pour docker pull
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Graphe des jobs :
 #
-#  lint_be ─── test_be ──┐
-#                          ├── sonarcloud ── build_be ──┐
-#  lint_fe ─── test_fe ──┤              build_fe  ──┤── summary
-#                          │              build_ds  ──┘
+#  lint_be ─── test_be ──┐                    ┌── Build (backend)    ──┐
+#                          ├── sonarcloud ─────┼── Build (frontend)   ──┼── deploy ── summary
+#  lint_fe ─── test_fe ──┤   (matrix×3)       └── Build (data-service)──┘
+#                          │
 #  lint_ds ─── test_ds ──┘
 #
+#  deploy : pull images GHCR → docker run BE+DS → curl /health → cleanup
 #  (dashboard → workflow séparé dashboard.yml, outil interne non prod)
 #
 # ─────────────────────────────────────────────────────────────────────────────
@@ -273,12 +272,30 @@ jobs:
             -Dsonar.coverage.exclusions=**/tests/**,backend/src/notebooks/**,backend/src/test/**
             -Dsonar.python.version=3.11
 
-  # ── BUILD & PUSH DOCKER ───────────────────────────────────────────────────
-  build_be:
-    name: "Build BE"
+  # ── BUILD & PUSH DOCKER (matrix) ─────────────────────────────────────────
+  build:
+    name: "Build (${{ matrix.service }})"
     runs-on: ubuntu-latest
     needs: sonarcloud
     if: github.event_name == 'push'
+    strategy:
+      matrix:
+        include:
+          - service: backend
+            image: ghcr.io/data-team-dst/covid-xray-backend
+            context: .
+            dockerfile: infrastructure/docker/backend/Dockerfile
+            build_args: ""
+          - service: frontend
+            image: ghcr.io/data-team-dst/covid-xray-streamlit
+            context: .
+            dockerfile: infrastructure/docker/streamlit/Dockerfile
+            build_args: BASE_IMAGE=ghcr.io/data-team-dst/covid-xray-base:latest
+          - service: data-service
+            image: ghcr.io/data-team-dst/covid-xray-data-service
+            context: data-service
+            dockerfile: data-service/Dockerfile
+            build_args: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -289,47 +306,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_BACKEND }}
-          tags: |
-            type=sha,prefix=sha-,format=short
-            type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Build and push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: infrastructure/docker/backend/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  build_fe:
-    name: "Build FE"
-    runs-on: ubuntu-latest
-    needs: sonarcloud
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GHCR (push images)
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # GHCR_TOKEN = PAT avec read:packages pour puller covid-xray-base (autre repo de l'org)
+      # PAT nécessaire pour puller covid-xray-base (frontend uniquement)
       - name: Log in to GHCR (pull base image)
+        if: matrix.service == 'frontend'
         uses: docker/login-action@v3
         continue-on-error: true
         with:
@@ -344,29 +323,29 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_FRONTEND }}
+          images: ${{ matrix.image }}
           tags: |
             type=sha,prefix=sha-,format=short
             type=ref,event=branch
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push frontend
+      - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: infrastructure/docker/streamlit/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BASE_IMAGE=ghcr.io/data-team-dst/covid-xray-base:latest
+          build-args: ${{ matrix.build_args }}
 
-  build_ds:
-    name: "Build DS"
+  # ── DEPLOY SMOKE-TEST ─────────────────────────────────────────────────────
+  deploy:
+    name: "Deploy smoke-test"
     runs-on: ubuntu-latest
-    needs: sonarcloud
+    needs: build
     if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -378,35 +357,77 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Pull & run backend
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          mkdir -p tmp/logs
+          docker run -d --name smoke-backend \
+            -p 8000:8000 \
+            -e API_ENV=production \
+            -e MODEL_PATH=data/models/best_model.keras \
+            -e PYTHONUNBUFFERED=1 \
+            -e LOG_SERVICE_URL=http://localhost:5002/v1/log \
+            -v "${{ github.workspace }}/shared:/app/shared:ro" \
+            -v "${{ github.workspace }}/tmp/logs:/app/tmp/logs" \
+            "ghcr.io/${{ env.ORG }}/covid-xray-backend:sha-${SHORT_SHA}"
 
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_DATA_SERVICE }}
-          tags: |
-            type=sha,prefix=sha-,format=short
-            type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Pull & run data-service
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          docker run -d --name smoke-data-service \
+            -p 5001:5001 \
+            -e DATA_SERVICE_PORT=5001 \
+            -e PYTHONUNBUFFERED=1 \
+            -e LOG_SERVICE_URL=http://localhost:5002/v1/log \
+            -v "${{ github.workspace }}/shared:/app/shared:ro" \
+            -v "${{ github.workspace }}/tmp/logs:/app/tmp/logs" \
+            "ghcr.io/${{ env.ORG }}/covid-xray-data-service:sha-${SHORT_SHA}"
 
-      - name: Build and push data-service
-        uses: docker/build-push-action@v6
-        with:
-          context: data-service
-          file: data-service/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Wait for services (max 90s)
+        run: |
+          for i in $(seq 1 18); do
+            BE=$(curl -sf http://localhost:8000/health > /dev/null 2>&1 && echo ok || echo wait)
+            DS=$(curl -sf http://localhost:5001/health > /dev/null 2>&1 && echo ok || echo wait)
+            echo "backend=$BE  data-service=$DS  (${i}/18)"
+            [ "$BE" = "ok" ] && [ "$DS" = "ok" ] && echo "✅ Both services up" && exit 0
+            sleep 5
+          done
+          echo "❌ Timeout — services not ready after 90s"
+          exit 1
+
+      - name: Smoke-test backend /health
+        run: |
+          RESPONSE=$(curl -sf http://localhost:8000/health)
+          echo "$RESPONSE" | grep -q '"status"' || (echo "❌ backend /health KO" && exit 1)
+          echo "✅ backend GET /health OK"
+
+      - name: Smoke-test backend /docs
+        run: |
+          curl -sf http://localhost:8000/docs > /dev/null
+          echo "✅ backend GET /docs OK"
+
+      - name: Smoke-test data-service /health
+        run: |
+          curl -sf http://localhost:5001/health > /dev/null
+          echo "✅ data-service GET /health OK"
+
+      - name: Debug — container logs on failure
+        if: failure()
+        run: |
+          echo "=== smoke-backend ===" && docker logs smoke-backend 2>/dev/null || true
+          echo "=== smoke-data-service ===" && docker logs smoke-data-service 2>/dev/null || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop smoke-backend smoke-data-service 2>/dev/null || true
+          docker rm   smoke-backend smoke-data-service 2>/dev/null || true
 
   # ── SUMMARY ───────────────────────────────────────────────────────────────
   summary:
     name: "Summary"
     runs-on: ubuntu-latest
-    needs: [build_be, build_fe, build_ds]
+    needs: deploy
     if: github.event_name == 'push'
     steps:
       - name: Write job summary
