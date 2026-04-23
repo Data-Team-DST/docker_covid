@@ -29,10 +29,11 @@ env:
 #
 #  lint_be ─── test_be ──┐
 #                          ├── sonarcloud ── build_be ──┐
-#  lint_fe ─── test_fe ──┤              build_fe  ──┤── summary
+#  lint_fe ─── test_fe ──┤              build_fe  ──┤── deploy ── summary
 #                          │              build_ds  ──┘
 #  lint_ds ─── test_ds ──┘
 #
+#  deploy : pull image GHCR → docker run → curl /health → stop (smoke-test)
 #  (dashboard → workflow séparé dashboard.yml, outil interne non prod)
 #
 # ─────────────────────────────────────────────────────────────────────────────
@@ -402,11 +403,64 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ── DEPLOY SMOKE-TEST ─────────────────────────────────────────────────────
+  deploy:
+    name: "Deploy smoke-test"
+    runs-on: ubuntu-latest
+    needs: build_be
+    if: github.event_name == 'push'
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull & run backend
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          IMAGE="${{ env.IMAGE_BACKEND }}:sha-${SHORT_SHA}"
+          echo "Image: $IMAGE"
+          docker run -d --name smoke-backend \
+            -p 8000:8000 \
+            -e API_ENV=production \
+            -e MODEL_PATH=data/models/best_model.keras \
+            -e PYTHONUNBUFFERED=1 \
+            "$IMAGE"
+
+      - name: Wait for backend to start
+        run: |
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Backend up after ${i}x5s"
+              break
+            fi
+            echo "Waiting... ($i/12)"
+            sleep 5
+          done
+
+      - name: Smoke-test GET /health
+        run: |
+          RESPONSE=$(curl -sf http://localhost:8000/health)
+          echo "Response: $RESPONSE"
+          echo "$RESPONSE" | grep -q '"status"' || (echo "❌ /health sans champ status" && exit 1)
+          echo "✅ GET /health OK"
+
+      - name: Smoke-test GET /docs
+        run: |
+          curl -sf http://localhost:8000/docs > /dev/null
+          echo "✅ GET /docs OK"
+
+      - name: Cleanup
+        if: always()
+        run: docker stop smoke-backend && docker rm smoke-backend || true
+
   # ── SUMMARY ───────────────────────────────────────────────────────────────
   summary:
     name: "Summary"
     runs-on: ubuntu-latest
-    needs: [build_be, build_fe, build_ds]
+    needs: [deploy, build_fe, build_ds]
     if: github.event_name == 'push'
     steps:
       - name: Write job summary

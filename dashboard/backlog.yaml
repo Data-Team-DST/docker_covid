@@ -162,30 +162,37 @@ sprints:
       - id: US-18
         title: "Prometheus + instrumentation FastAPI"
         description: "prometheus-fastapi-instrumentator sur /predict et /health. Métriques exposées : latence P50/P95, throughput, error rate, confidence distribution, class distribution. Endpoint /metrics."
+        blocks: ["US-19", "US-20"]
         points: 4
         priority: MUST
         done: false
       - id: US-19
         title: "Grafana dashboard (≥5 panels + alertes)"
         description: "Dashboard Grafana : latence P50/P95, error rate, throughput, confidence moyenne, distribution classes. Alertes : latence P95 > 1s, error rate > 5%. Provisioning automatique via docker-compose."
+        depends_on: ["US-18"]
         points: 5
         priority: MUST
         done: false
       - id: US-20
         title: "Evidently : détection dérive données"
         description: "Rapport Evidently : PSI + Jensen-Shannon sur features d'entrée (distribution pixels, classes). Comparaison production vs train. Rapport HTML générable en 1 commande. Alerte si PSI > 0.2."
+        depends_on: ["US-18"]
+        blocks: ["US-21"]
         points: 5
         priority: MUST
         done: false
       - id: US-21
         title: "Pipeline re-entraînement semi-automatique"
         description: "Script trigger_retrain.sh : détecte dérive (PSI > 0.2) → lance training → log MLflow → promeut modèle si accuracy ≥ 85%. Semi-auto : alerte + confirmation manuelle avant promotion."
+        depends_on: ["US-20", "US-08"]
+        blocks: ["US-22"]
         points: 5
         priority: SHOULD
         done: false
       - id: US-22
         title: "Documentation finale : README + ADRs + runbooks"
         description: "README : clone → services up en 3 commandes. ADRs (Architecture Decision Records) pour les choix clés. Runbooks : restart service, rollback modèle, forcer re-entraînement. Peer review équipe."
+        depends_on: ["US-18", "US-19", "US-20", "US-21"]
         points: 3
         priority: MUST
         done: false
