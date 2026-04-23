@@ -188,12 +188,23 @@ check_file "US-17" "dashboard/app.py"       dashboard/app.py
 check_file "US-17" "dashboard/backlog.yaml" dashboard/backlog.yaml
 check_file "US-17" "Page data explorer"     dashboard/templates/data_explorer.html
 
+# ── US-11 ─────────────────────────────────────────────────────────────────────
+section "US-11 · CI/CD pipeline complet"
+check_file "US-11" ".github/workflows/cicd.yml" .github/workflows/cicd.yml
+check_grep "US-11" "Job 'deploy' défini dans cicd.yml"   "deploy:"    .github/workflows/cicd.yml
+check_grep "US-11" "Smoke-test /health dans cicd.yml"    "smoke"      .github/workflows/cicd.yml
+check_grep "US-11" "Build push GHCR dans cicd.yml"       "build-push-action" .github/workflows/cicd.yml
+
 # ── USes en attente (TODO) ────────────────────────────────────────────────────
 section "USes en attente (non implémentées)"
-todo "US-11 · CI/CD deploy  — smoke-test Docker après push GHCR  (bloqué par US-14)"
-todo "US-12 · Sécurité API  — API key + rate limiting sur /predict"
-todo "US-15 · Load test     — Locust/k6 P95 < 500ms sur /predict  (bloqué par US-12)"
-todo "US-16 · Data augment  — Stage DVC augmentation (rotation/flip/zoom)  (bloqué par US-08)"
+todo "US-12 · Sécurité API    — API key + rate limiting sur /predict"
+todo "US-15 · Load test       — Locust/k6 P95 < 500ms sur /predict  (bloqué par US-12)"
+todo "US-16 · Data augment    — Stage DVC augmentation rotation/flip/zoom  (bloqué par US-08)"
+todo "US-18 · Prometheus      — prometheus-fastapi-instrumentator + endpoint /metrics"
+todo "US-19 · Grafana         — dashboard ≥5 panels + alertes  (bloqué par US-18)"
+todo "US-20 · Evidently       — détection dérive PSI + rapport HTML  (bloqué par US-18)"
+todo "US-21 · Re-entraînement — trigger_retrain.sh semi-auto  (bloqué par US-20 + US-08)"
+todo "US-22 · Docs finales    — README + ADRs + runbooks  (bloqué par US-18→21)"
 
 # ── Résumé ────────────────────────────────────────────────────────────────────
 echo ""
