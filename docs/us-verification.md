@@ -202,11 +202,13 @@ curl -X POST http://localhost:8000/api/v1/predict \
 
 ---
 
-### US-15 · Load test P95 < 500ms 🔄 bloqué par US-12
-**Objectif :** Script locust/k6, 10 req/s sur `/predict`, P95 < 500ms, rapport HTML dans `outputs/load_test/`.  
-**Vérifier (une fois fait) :**
+### US-15 · Load test P95 < 500ms 🔄 prêt à tester — bloqué (pas de modèle entraîné)
+**Fait :** `scripts/load_test/locustfile.py` (Locust) — 10 req/s soutenus sur `POST /api/v1/predict` (10 users, throughput constant 1 req/s/user), image réelle du dataset, header `X-API-Key` si `API_KEY` est configurée. `make load-test` relève temporairement `RATE_LIMIT_PER_MINUTE` (US-12 limite `/predict` à 100/min par défaut — sans ça le test mesurerait la vitesse de rejet 429, pas la latence d'inférence), lance le test 1 min, restaure la limite normale ensuite. Rapport HTML + CSV dans `outputs/load_test/`. Vérifié bout-en-bout contre un backend local (harness fonctionnel, mesure bien les percentiles).  
+**🔄 Bloqué :** aucun modèle entraîné dans `data/models/` (seul un `.gitkeep`) — pas du ressort de cette US, dépend de l'exécution de `dvc repro` (US-08) par la personne en charge de l'entraînement. Sans modèle chargé, `/predict` répond 503 immédiatement : le test tourne mais mesure le chemin d'erreur, pas la latence d'inférence réelle. À noter aussi pour quand le modèle sera prêt : `MODEL_PATH` vaut `best_model.keras` par défaut (`.env`/`config.py`) alors que le pipeline DVC produit `covid_model.keras` — à aligner avant le run.  
+**Vérifier :**
 ```bash
-make load-test   # → outputs/load_test/report.html, P95 < 500ms
+make load-test   # → outputs/load_test/report.html + report_stats.csv
+# Colonne "95%" du CSV (ou section "Response Time Percentiles" du HTML) : P95 < 500ms
 ```
 
 ---
