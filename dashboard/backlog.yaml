@@ -98,18 +98,22 @@ sprints:
     stories:
       - id: US-11
         title: "CI/CD pipeline complet (lint → test → build → push → deploy)"
-        description: "GitHub Actions : lint + test → sonarcloud → build/push GHCR → deploy smoke-test (docker run + curl /health). CI < 10 min. 100% vert sur main."
+        description: "✅ GitHub Actions : lint + test → sonarcloud → build/push GHCR (matrix × 3 services) → job deploy smoke-test (docker run backend + data-service, curl /health, cleanup). Mergé sur main via PR #20/#21."
+        branch: US-11
+        assignee: Steven
         depends_on: ["US-13", "US-14"]
         points: 5
         priority: MUST
-        done: false
+        done: true
       - id: US-12
         title: "Sécurité API : authentification + rate limiting"
-        description: "API key obligatoire sur tous les endpoints (401 si absent). Rate limiting (ex: 100 req/min). Validation Pydantic stricte sur /predict (type, taille image). 0 endpoint non authentifié exposé."
+        description: "✅ Clé X-API-Key obligatoire sur POST /api/v1/predict (401 si absente/invalide, libre en dev si API_KEY vide). /health et /metrics restent publics — requis sans clé par le healthcheck Docker et le smoke-test CI. Rate limiting 100 req/min par IP sur /predict via slowapi (429 au-delà). Validation stricte upload : JPEG/PNG uniquement + 10 Mo max (400 sinon)."
+        branch: US-12
+        assignee: Steven
         blocks: ["US-15"]
         points: 5
         priority: MUST
-        done: false
+        done: true
       - id: US-13
         title: "Log-service centralisé + logs structurés JSON tous services"
         description: "✅ Microservice log-service (FastAPI :5002) : POST /v1/log reçoit les logs de tous les services, GET /v1/logs?service=X pour requêter. Chaque service garde son propre tmp/logs/{service}.log (local) ET envoie au log-service (central). setup_logging(service_name='backend') suffit — non-bloquant, fallback local si log-service down. OpenAPI /docs backend documenté avec exemples 200/400/401/503."
@@ -131,7 +135,9 @@ sprints:
         done: true
       - id: US-15
         title: "Load test /predict P95 < 500ms"
-        description: "Script locust ou k6 : 10 req/s concurrent sur /predict. P95 < 500ms. Rapport HTML dans outputs/load_test/. Intégré dans CI Phase 3."
+        description: "🔄 Outillage fait : scripts/load_test/locustfile.py (10 req/s, 10 users), make load-test (relève temporairement le rate limit US-12, restaure ensuite), rapport HTML+CSV dans outputs/load_test/. Vérifié bout-en-bout contre un backend local. Bloqué : aucun modèle entraîné dans data/models/ (dépend de dvc repro / US-08, hors périmètre) — sans modèle /predict répond 503, le P95 mesuré ne serait pas celui de l'inférence réelle."
+        branch: US-15
+        assignee: Steven
         depends_on: ["US-12"]
         points: 4
         priority: SHOULD
