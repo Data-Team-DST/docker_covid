@@ -26,6 +26,8 @@ class Settings(BaseSettings):
 
     # Sécurité (Phase 3) — vide = mode dev sans restriction
     api_key: str = ""
+    rate_limit_per_minute: int = 100
+    max_upload_size_mb: int = 10
 
     # Image preprocessing
     img_size: tuple[int, int] = (224, 224)

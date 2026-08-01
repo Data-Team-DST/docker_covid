@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.health import router as health_router
 from app.api.metrics import router as metrics_router
@@ -13,6 +15,7 @@ from app.api.predict import router as predict_router
 from app.config import settings
 from app.logging_config import setup_logging
 from app.models.loader import model_loader
+from app.rate_limit import limiter
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -48,6 +51,9 @@ app = FastAPI(
         {"name": "Monitoring", "description": "Métriques internes (compteurs)."},
     ],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

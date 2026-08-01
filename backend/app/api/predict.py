@@ -3,13 +3,14 @@
 import logging
 import time
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from app.api.metrics import stats
 from app.api.security import verify_api_key
 from app.config import settings
 from app.features.preprocessing import preprocess_image
 from app.models.loader import model_loader
+from app.rate_limit import limiter, predict_rate_limit
 from app.schemas.response import PredictionResponse
 
 logger = logging.getLogger(__name__)
@@ -28,12 +29,17 @@ router = APIRouter()
                        "Normal": 0.03, "Viral_Pneumonia": 0.01},
             "latency_ms": 245.3,
         }}}},
-        400: {"description": "Format image invalide (JPEG/PNG requis)"},
+        400: {"description": "Format ou taille d'image invalide (JPEG/PNG, "
+                              f"{settings.max_upload_size_mb} Mo max)"},
         401: {"description": "Clé API manquante ou invalide"},
+        429: {"description": "Trop de requêtes — limite de "
+                              f"{settings.rate_limit_per_minute}/min dépassée"},
         503: {"description": "Modèle non chargé"},
     },
 )
+@limiter.limit(predict_rate_limit)
 async def predict(
+    request: Request,
     file: UploadFile = File(
         ..., description="Radiographie thoracique au format JPEG ou PNG"
     ),
@@ -44,7 +50,9 @@ async def predict(
     **COVID**, **Normal**, **Viral Pneumonia**, **Lung Opacity**.
 
     **Authentification** : header `X-API-Key` obligatoire.
+    **Limite** : 100 requêtes/minute par client (configurable via `RATE_LIMIT_PER_MINUTE`).
     """
+    # `request` est inutilisé ici mais requis par le décorateur @limiter.limit
     if not model_loader.is_loaded:
         raise HTTPException(
             status_code=503,
@@ -59,9 +67,16 @@ async def predict(
             status_code=400, detail="Format accepté : JPEG ou PNG uniquement"
         )
 
+    image_bytes = await file.read()
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    if len(image_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Fichier trop volumineux : {settings.max_upload_size_mb} Mo max",
+        )
+
     try:
         t0 = time.time()
-        image_bytes = await file.read()
         img_array = preprocess_image(image_bytes, settings.img_size)
         predictions = model_loader.predict(img_array)
         latency_ms = round((time.time() - t0) * 1000, 1)
