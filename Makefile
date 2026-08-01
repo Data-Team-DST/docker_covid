@@ -17,7 +17,7 @@
 .PHONY: all setup setup-check setup-be setup-ds start start-local start-docker start-all \
         stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
-        dvc-setup dvc-push dvc-pull
+        dvc-setup dvc-push dvc-pull load-test
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 GREEN  := \033[0;32m
@@ -178,6 +178,26 @@ verify: ## Lance start-all puis vérifie toutes les US (démo tuteur)
 	   [ $$elapsed -ge $$timeout ] && echo " ⚠ Timeout MLflow" && break; \
 	 done; echo ""
 	@bash verify.sh
+
+# ── Load test ─────────────────────────────────────────────────────────────────
+load-test: ## Test de charge locust sur /predict — 10 req/s, P95<500ms (nécessite un modèle chargé)
+	@mkdir -p outputs/load_test
+	@echo "$(YELLOW)Redémarrage backend avec rate limit relevé pour le test de charge...$(NC)"
+	@RATE_LIMIT_PER_MINUTE=2000 $(COMPOSE) up -d --force-recreate backend
+	@echo "$(YELLOW)Attente backend healthy (max 60s)...$(NC)"
+	@timeout=60; elapsed=0; \
+	 while ! curl -sf $(BACKEND_URL)/health > /dev/null 2>&1; do \
+	   sleep 3; elapsed=$$((elapsed + 3)); \
+	   printf "."; \
+	   [ $$elapsed -ge $$timeout ] && echo " ⚠ Timeout backend" && break; \
+	 done; echo ""
+	@. .venv/bin/activate && pip install -q -r scripts/load_test/requirements.txt && \
+	 locust -f scripts/load_test/locustfile.py --headless \
+	   -u 10 -r 10 --run-time 1m --host $(BACKEND_URL) \
+	   --html outputs/load_test/report.html --csv outputs/load_test/report
+	@echo "$(GREEN)✅ Rapport : outputs/load_test/report.html$(NC)"
+	@echo "$(YELLOW)Restauration du rate limit normal (RATE_LIMIT_PER_MINUTE de .env)...$(NC)"
+	@$(COMPOSE) up -d --force-recreate backend
 
 # ── Qualité ───────────────────────────────────────────────────────────────────
 lint: ## Vérifie la qualité du code (ruff + pylint + structure)
