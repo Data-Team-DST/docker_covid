@@ -5,6 +5,6 @@ from pathlib import Path
 from shared.logging_config import setup_logging as _setup
 
 
-def setup_logging(log_dir: Path | None = None) -> None:  # noqa: ARG001
+def setup_logging(log_dir: Path | None = None) -> None:
     _setup(service_name="data-service")
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
