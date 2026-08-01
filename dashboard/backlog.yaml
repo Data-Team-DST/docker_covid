@@ -157,6 +157,13 @@ sprints:
         points: 2
         priority: SHOULD
         done: true
+      - id: US-23
+        title: "Déploiement Kubernetes (cluster fonctionnel)"
+        description: "🔄 Manifests déjà écrits dans infrastructure/kubernetes/ (namespace, backend, streamlit, mlflow, storage, ingress, configmap) — backend en 2 replicas, probes /health, PVC models-pvc. Reste à faire : valider le déploiement sur un cluster réel (kind/minikube), vérifier ConfigMap/Secret ds-covid-config et ds-covid-secrets, tester l'ingress. Demandé explicitement en Phase 3 par le roadmap mentor (\"scalabilité avec Docker/Kubernetes\"), mais marqué optionnel dans docs/ARCHITECTURE_MICROSERVICES.md — à clarifier si bloquant pour la soutenance."
+        depends_on: ["US-11"]
+        points: 5
+        priority: MUST
+        done: false
 
   - id: S4
     name: "Monitoring, Drift & Maintenance"
