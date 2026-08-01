@@ -1,0 +1,25 @@
+# Configuration Prometheus — stack DS_COVID.
+
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+  external_labels:
+    project: "ds_covid"
+
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"
+
+scrape_configs:
+  - job_name: "backend"
+    metrics_path: /metrics
+    static_configs:
+      # "backend" = nom du service dans infrastructure/docker-compose.yml,
+      # résolu via le réseau Docker "covid-net".
+      - targets: ["backend:8000"]
+        labels:
+          service: "backend"
+          component: "inference-api"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

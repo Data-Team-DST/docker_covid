@@ -245,6 +245,29 @@ dashboard: ## Lance le dashboard agile + data-service sur :5050/:5001
 clean-docker: ## Supprime les images et volumes Docker du projet
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true
 
+
+# ── Monitoring (Phase 4 — Prometheus / Grafana) ─────────────────────────────
+monitoring-start: ## Lance Prometheus + Grafana (nécessite backend démarré)
+	@echo "$(YELLOW)Démarrage backend (requis pour le scraping)...$(NC)"
+	@$(COMPOSE) up -d --build backend
+	@echo "$(YELLOW)Démarrage Prometheus + Grafana...$(NC)"
+	@$(COMPOSE) --profile monitoring up -d prometheus grafana
+	@echo "$(GREEN)✅ Monitoring disponible :$(NC)"
+	@echo "   Prometheus : http://localhost:9090"
+	@echo "   Grafana    : http://localhost:3000  (admin / admin par défaut)"
+ 
+monitoring-stop: ## Arrête Prometheus + Grafana
+	@echo "$(YELLOW)Arrêt de Prometheus + Grafana...$(NC)"
+	$(COMPOSE) --profile monitoring stop prometheus grafana
+	@echo "$(GREEN)✅ Monitoring arrêté$(NC)"
+ 
+monitoring-logs: ## Logs Prometheus + Grafana en direct (Ctrl+C arrête les services)
+	@trap '$(COMPOSE) --profile monitoring stop prometheus grafana 2>/dev/null; exit 0' INT; \
+	 $(COMPOSE) --profile monitoring logs -f prometheus grafana
+ 
+clean-docker: ## Supprime les images et volumes Docker du projet
+	$(COMPOSE) down -v --rmi local 2>/dev/null || true
+	
 # ── Help ──────────────────────────────────────────────────────────────────────
 help: ## Affiche cette aide
 	@echo ""
