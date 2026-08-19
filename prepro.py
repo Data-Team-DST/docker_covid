@@ -4,10 +4,13 @@ Notes de développement :
 Numpy : Image (H, W) i.e (lignes, colonnes)
 cv2 : Image (W, H) 
 
+Différence entre np.array et np.ndarray : np.array est une fonction pour créer un ndarray, mais le type réel est np.ndarray.
+Donc on peut annoter les fonctions avec np.ndarray pour plus de clarté.
 
 """
 
 import argparse
+from datetime import datetime
 from pathlib import Path
 from PIL import Image
 import numpy as np
@@ -16,43 +19,20 @@ from tqdm import tqdm
 
 # Configuration
 
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent 
 SOURCE_PATH = PROJECT_ROOT / "data" / "raw" / "COVID-19_Radiography_Dataset"
 
-
-def normalize_image(img_array: np.ndarray, method='minmax') -> np.ndarray:
-    """
-    Normalise une image selon la méthode choisie.
-
-    Warning : La normalisation est faite dans le pipeline d'entraînement car impossible de stocker des images normalisées (float32) en PNG.
-    Args:
-        img_array: np.array (H, W) - image grayscale
-        method: str - 'minmax' pour [0,1] ou 'standard' pour z-score
-    
-    Returns:
-        np.array normalisée (float32)
-    """
-    if method == 'minmax':
-        # Normalisation min-max vers [0, 1]
-        img_norm = (img_array - img_array.min()) / (img_array.max() - img_array.min() + 1e-8)
-    elif method == 'standard':
-        # Standardisation (z-score)
-        img_norm = (img_array - img_array.mean()) / (img_array.std() + 1e-8)
-    else:
-        raise ValueError("method doit être 'minmax' ou 'standard'")
-    
-    return img_norm.astype(np.float32)
 
 def squared_crop_to_lungs(masked_img: np.ndarray) -> np.ndarray:
     """
     Rogne l'image masquée pour ne garder que la région contenant les poumons, puis ajoute du padding pour obtenir une image carrée.
-     Cela permet de recentrer les poumons et de réduire le bruit de fond, tout en préservant un format carré pour les étapes suivantes du pipeline.
+    Cela permet de recentrer les poumons et de réduire le bruit de fond, tout en préservant un format carré pour les étapes suivantes du pipeline.
      
     Args:
-         masked_img: np.array (H, W) - image après masquage, avec des pixels de poumon > 0 et le reste à 0
+         masked_img: np.ndarray (H, W) - image après masquage, avec des pixels de poumon > 0 et le reste à 0
          
     Returns:
-         np.array - image rognée et paddée pour être carrée, centrée sur les poumons
+         np.ndarray - image rognée et paddée pour être carrée, centrée sur les poumons
 
     Raises:
          ValueError - si l'image masquée ne contient aucun pixel non nul
@@ -91,7 +71,7 @@ def squared_crop_to_lungs(masked_img: np.ndarray) -> np.ndarray:
 
 def process_single_image(
         img_path: Path,
-        mask_path: Path | None, 
+        mask_path: Path | None, # if None we skip masking
         cropping: bool,
         denoising_method: str | None, # if None we skip denoising
         clahe_processor: cv2.CLAHE | None, # if None we skip CLAHE
@@ -107,7 +87,8 @@ def process_single_image(
 
     1) chargement des raw data : l'image (299x299) et son Mask (256x256)
 
-    1) a) [OPTIONNEL] Denoising avec une méthode comme Gaussian Blur, si jamais la qualité des images est mauvaise (pas notre cas, curated dataset, mais pourrait être le cas d'une image donnée dans predict/)
+    1) a) [OPTIONNEL] Denoising avec une méthode comme Gaussian Blur, si jamais la qualité des images est mauvaise 
+    (pas notre cas, curated dataset, mais pourrait être le cas d'une image donnée dans predict/)
 
     2) Resize du Mask vers (299x299) pour fitter image. On utilise une interpolation de type INTER_NEAREST pour ne pas créer des valeurs autres que 0 ou 1
 
@@ -214,16 +195,22 @@ def preprocess_pipeline(
         clahe: bool - appliquer CLAHE pour améliorer le contraste local si True
         target_size: int - résolution cible (carrée) pour les images finales (ex: 128, 256)
         source_path: Path - chemin vers le dataset raw
+
+    Returns:
+        Path - chemin du dossier de sortie créé (horodaté, nommé selon les options choisies)
     """
 
     # We generate the dataset name based on the options chosen, to keep track of different versions
     dataset_name_parts = [f"{target_size}x{target_size}_L"]
+    if denoising_method:
+        dataset_name_parts.append(f"denoise-{denoising_method}")
     if masking:
         dataset_name_parts.append("masked")
     if cropping:
         dataset_name_parts.append("cropped")
     if clahe:
         dataset_name_parts.append("clahe")
+    dataset_name_parts.append(datetime.now().strftime("%Y%m%d-%H%M%S"))
 
     OUTPUT_PATH = PROJECT_ROOT / "data" / "processed" / "_".join(dataset_name_parts)
 
@@ -322,13 +309,27 @@ def preprocess_pipeline(
 
     print(f"\n✓ Dataset créé avec succès dans: {OUTPUT_PATH}")
 
+    return OUTPUT_PATH
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Créer un dataset d'images radiographiques en grayscale avec options de résolution, masquage et normalisation")
+    parser = argparse.ArgumentParser(description="Créer un dataset d'images radiographiques en grayscale avec options de résolution, masquage et prétraitement")
     parser.add_argument("--resolution", type=int, default=256, help="Résolution cible (carrée)")
-    parser.add_argument("--with_masking", action='store_true', help="Appliquer les masques si activé")
-    parser.add_argument("--normalize", choices=['minmax', 'standard'], help="Normaliser les images: minmax=[0,1] ou standard=z-score")
-  
+    parser.add_argument("--denoising", choices=['gaussian'], default=None, help="Méthode de denoising à appliquer (aucune par défaut)")
+    parser.add_argument("--masking", action='store_true', help="Appliquer les masques si activé")
+    parser.add_argument("--cropping", action='store_true', help="Recadrer + padder sur les poumons si activé (nécessite --masking)")
+    parser.add_argument("--clahe", action='store_true', help="Appliquer CLAHE pour améliorer le contraste local si activé")
+
     args = parser.parse_args()
-    create_dataset(args.resolution, args.with_masking, args.normalize)
+
+    if args.cropping and not args.masking:
+        parser.error("--cropping nécessite --masking (le recadrage se base sur le mask des poumons)")
+
+    preprocess_pipeline(
+        denoising_method=args.denoising,
+        masking=args.masking,
+        cropping=args.cropping,
+        clahe=args.clahe,
+        target_size=args.resolution,
+    )
 
