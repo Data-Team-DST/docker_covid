@@ -1,8 +1,20 @@
+augment:
+  variants_per_image: 3          # + 1 original = x4  (~21k -> ~85k images, ~170k avec les masks)
+  rotation_range: 15             # degrés, +/-
+  zoom_range: [0.9, 1.1]
+  brightness_range: [0.8, 1.2]
+  flip_horizontal: true
+  random_seed: 42
+
 preprocess:
   img_size: [256, 256]
   max_samples_per_class: null   # null = toutes les images
   test_split: 0.2
   random_seed: 42
+  masking: true                 # applique le mask de segmentation des poumons
+  cropping: true                 # recadre + padde sur la région des poumons (nécessite masking)
+  clahe: true                    # améliore le contraste local (CLAHE)
+  denoising_method: null         # "gaussian" ou null pour aucun denoising
   classes:
     COVID: 0
     Normal: 1

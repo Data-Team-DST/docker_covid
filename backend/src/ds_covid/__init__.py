@@ -21,6 +21,7 @@ __license__ = "MIT"
 try:
     from .features import load_images_flat, prepare_covid_data
     from .models import MaskApplicator, build_baseline_cnn
+    from .preprocessing import process_single_image, squared_crop_to_lungs
     from .visualization import compare_methods, visualize_samples
 
     __all__ = [
@@ -28,6 +29,8 @@ try:
         "MaskApplicator",
         "load_images_flat",
         "prepare_covid_data",
+        "process_single_image",
+        "squared_crop_to_lungs",
         "visualize_samples",
         "compare_methods",
     ]

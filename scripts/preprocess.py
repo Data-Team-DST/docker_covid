@@ -1,22 +1,27 @@
-"""Stage DVC 1/3 — Prétraitement des images.
+"""Stage DVC 2/4 — Prétraitement des images.
 
-Lit  : data/raw/COVID-19_Radiography_Dataset/{classe}/images/
+Lit  : data/augmented/{classe}/{images,masks}/  (sortie du stage augment)
 Écrit: data/processed/{X,y}_{train,test}.npy
+
+Pipeline par image (voir ds_covid.preprocessing.process_single_image) :
+  denoising (optionnel) → masking + crop poumons (optionnel) → CLAHE (optionnel) → resize
 """
 import json
 import sys
 from pathlib import Path
 
+import cv2
 import numpy as np
 import yaml
-from PIL import Image
 from sklearn.model_selection import train_test_split
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
 
+from ds_covid.preprocessing import process_single_image  # noqa: E402
+
 PARAMS_FILE = PROJECT_ROOT / "params.yaml"
-RAW_DIR = PROJECT_ROOT / "data" / "raw" / "COVID-19_Radiography_Dataset"
+RAW_DIR = PROJECT_ROOT / "data" / "augmented"
 OUT_DIR = PROJECT_ROOT / "data" / "processed"
 STATS_FILE = PROJECT_ROOT / "outputs" / "preprocess_stats.json"
 
@@ -26,16 +31,21 @@ def load_params() -> dict:
         return yaml.safe_load(f)["preprocess"]
 
 
-def load_images(params: dict) -> tuple[np.ndarray, np.ndarray]:
+def load_images(params: dict) -> tuple[np.ndarray, np.ndarray, dict]:
     img_h, img_w = params["img_size"]
     max_n = params["max_samples_per_class"]
     classes: dict = params["classes"]
+    masking = params.get("masking", False)
+    cropping = params.get("cropping", False) and masking
+    denoising_method = params.get("denoising_method")
+    clahe_processor = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if params.get("clahe") else None
 
     X, y = [], []
     counts = {}
 
     for class_name, label in classes.items():
         images_dir = RAW_DIR / class_name / "images"
+        masks_dir = RAW_DIR / class_name / "masks"
         if not images_dir.exists():
             print(f"[WARN] Dossier absent : {images_dir}", flush=True)
             continue
@@ -48,8 +58,16 @@ def load_images(params: dict) -> tuple[np.ndarray, np.ndarray]:
         loaded = 0
         for f in files:
             try:
-                img = Image.open(f).convert("L").resize((img_w, img_h))
-                arr = np.array(img, dtype="float32")
+                mask_path = masks_dir / f.name if masking else None
+                arr = process_single_image(
+                    img_path=f,
+                    mask_path=mask_path,
+                    cropping=cropping,
+                    denoising_method=denoising_method,
+                    clahe_processor=clahe_processor,
+                    target_size=img_w,
+                )
+                arr = arr.astype("float32")
                 arr = (arr / 127.5) - 1.0          # normalise vers [-1, 1]
                 X.append(arr.reshape(img_h, img_w, 1))
                 y.append(label)

@@ -1,11 +1,27 @@
 stages:
 
+  augment:
+    cmd: python scripts/augment.py
+    deps:
+      - scripts/augment.py
+      - backend/src/ds_covid/augmentation.py
+      - data/raw
+    params:
+      - params.yaml:
+          - augment
+          - preprocess.classes
+    outs:
+      - data/augmented
+    metrics:
+      - outputs/augment_stats.json:
+          cache: false
+
   preprocess:
     cmd: python scripts/preprocess.py
     deps:
       - scripts/preprocess.py
-      - backend/src/ds_covid/features.py
-      - data/raw
+      - backend/src/ds_covid/preprocessing.py
+      - data/augmented
     params:
       - params.yaml:
           - preprocess

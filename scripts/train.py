@@ -1,4 +1,4 @@
-"""Stage DVC 2/3 — Entraînement CNN + tracking MLflow.
+"""Stage DVC 3/4 — Entraînement CNN + tracking MLflow.
 
 Lit  : data/processed/{X,y}_train.npy
 Écrit: data/models/covid_model.keras  +  outputs/metrics.json
