@@ -44,3 +44,58 @@ stages:
       hash: md5
       md5: a32756a7197bd4102ecb6426e3651c04
       size: 172
+  preprocess:
+    cmd: python scripts/preprocess.py
+    deps:
+    - path: backend/src/ds_covid/preprocessing.py
+      hash: md5
+      md5: f47d30feda4821f6a4c7c5c8934355b5
+      size: 6188
+    - path: data/augmented
+      hash: md5
+      md5: 61e801a1986d1c35153998404e7ed3b0.dir
+      size: 3547025921
+      nfiles: 169320
+    - path: scripts/preprocess.py
+      hash: md5
+      md5: 4a3f58dec0b1bc7ad6a54780ec3d0925
+      size: 4878
+    params:
+      params.yaml:
+        preprocess:
+          img_size:
+          - 256
+          - 256
+          max_samples_per_class:
+          test_split: 0.2
+          random_seed: 42
+          masking: true
+          cropping: true
+          clahe: true
+          denoising_method:
+          classes:
+            COVID: 0
+            Normal: 1
+            Viral Pneumonia: 2
+            Lung_Opacity: 3
+    outs:
+    - path: data/processed/X_test.npy
+      hash: md5
+      md5: 4ac8990522f77748f79044dc623067d5
+      size: 4438622336
+    - path: data/processed/X_train.npy
+      hash: md5
+      md5: ca6e31b07da51f8eb5b467dfb50d2e4a
+      size: 17754488960
+    - path: data/processed/y_test.npy
+      hash: md5
+      md5: 6c467c989402fa959077ea5f3b739b6e
+      size: 67856
+    - path: data/processed/y_train.npy
+      hash: md5
+      md5: 8d524c75faffb03a5e045ac9fa7bdc00
+      size: 271040
+    - path: outputs/preprocess_stats.json
+      hash: md5
+      md5: bae359660354b660f6eb647e9a89ef93
+      size: 209

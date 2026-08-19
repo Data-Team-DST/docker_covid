@@ -11,6 +11,7 @@ from pathlib import Path
 import mlflow
 import mlflow.keras
 import numpy as np
+import tensorflow as tf
 import yaml
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -29,6 +30,31 @@ def load_params() -> dict:
         return yaml.safe_load(f)
 
 
+class MemmapSequence(tf.keras.utils.Sequence):
+    """Sert les données par batch depuis un .npy memmap, sans jamais charger
+    l'ensemble du dataset en RAM (indispensable : après augmentation, X_train
+    dépasse largement la RAM disponible sur les petites machines)."""
+
+    def __init__(self, X: np.ndarray, y: np.ndarray, batch_size: int, shuffle: bool):
+        self.X = X
+        self.y = y
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.indices = np.arange(len(X))
+        self.on_epoch_end()
+
+    def __len__(self) -> int:
+        return int(np.ceil(len(self.X) / self.batch_size))
+
+    def __getitem__(self, idx: int):
+        batch_idx = np.sort(self.indices[idx * self.batch_size : (idx + 1) * self.batch_size])
+        return self.X[batch_idx], self.y[batch_idx]
+
+    def on_epoch_end(self) -> None:
+        if self.shuffle:
+            np.random.shuffle(self.indices)
+
+
 def main() -> None:
     p       = load_params()
     tp      = p["train"]
@@ -37,11 +63,14 @@ def main() -> None:
     img_h, img_w = prep["img_size"]
 
     print("[INFO] Chargement données prétraitées…", flush=True)
-    X_train = np.load(PROCESSED / "X_train.npy")
+    X_train = np.load(PROCESSED / "X_train.npy", mmap_mode="r")
     y_train = np.load(PROCESSED / "y_train.npy")
-    X_test  = np.load(PROCESSED / "X_test.npy")
+    X_test  = np.load(PROCESSED / "X_test.npy", mmap_mode="r")
     y_test  = np.load(PROCESSED / "y_test.npy")
     print(f"[INFO] Train={len(X_train)}  Test={len(X_test)}", flush=True)
+
+    train_seq = MemmapSequence(X_train, y_train, batch_size=tp["batch_size"], shuffle=True)
+    val_seq   = MemmapSequence(X_test, y_test, batch_size=tp["batch_size"], shuffle=False)
 
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", mlp["tracking_uri"])
     mlflow.set_tracking_uri(tracking_uri)
@@ -60,10 +89,9 @@ def main() -> None:
         )
 
         history = model.fit(
-            X_train, y_train,
+            train_seq,
             epochs=tp["epochs"],
-            batch_size=tp["batch_size"],
-            validation_data=(X_test, y_test),
+            validation_data=val_seq,
             verbose=1,
         )
 
