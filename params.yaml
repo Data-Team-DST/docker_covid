@@ -22,9 +22,10 @@ preprocess:
     Lung_Opacity: 3
 
 train:
-  epochs: 10
+  epochs: 30              # EarlyStopping arrête avant si val_loss stagne (patience: 5)
   batch_size: 32
   learning_rate: 0.001
+  val_split: 0.15          # part de X_train réservée à la validation (early stopping / LR schedule)
 
 mlflow:
   experiment_name: ds_covid_cnn

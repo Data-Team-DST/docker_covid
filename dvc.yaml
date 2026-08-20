@@ -41,13 +41,12 @@ stages:
       - backend/src/ds_covid/models.py
       - data/processed/X_train.npy
       - data/processed/y_train.npy
-      - data/processed/X_test.npy
-      - data/processed/y_test.npy
     params:
       - params.yaml:
           - train
           - mlflow
           - preprocess.img_size
+          - preprocess.random_seed
     outs:
       - data/models/covid_model.keras
     metrics:
