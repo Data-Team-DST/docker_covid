@@ -17,6 +17,8 @@ preprocess:
   masking: true                 # applique le mask de segmentation des poumons
   cropping: true                 # recadre + padde sur la région des poumons (nécessite masking)
   clahe: true                    # améliore le contraste local (CLAHE)
+  clahe_clip_limit: 2.0           # limite de contraste CLAHE (plus haut = plus de contraste, plus de bruit amplifié)
+  clahe_tile_grid_size: [8, 8]    # taille de la grille CLAHE (nombre de tuiles par axe)
   denoising_method: null         # "gaussian" ou null pour aucun denoising
   classes:
     COVID: 0

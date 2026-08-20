@@ -68,7 +68,14 @@ def write_split(
     masking = params.get("masking", False)
     cropping = params.get("cropping", False) and masking
     denoising_method = params.get("denoising_method")
-    clahe_processor = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)) if params.get("clahe") else None
+    clahe_processor = (
+        cv2.createCLAHE(
+            clipLimit=params.get("clahe_clip_limit", 2.0),
+            tileGridSize=tuple(params.get("clahe_tile_grid_size", [8, 8])),
+        )
+        if params.get("clahe")
+        else None
+    )
 
     X = open_memmap(out_x_path, mode="w+", dtype="float32", shape=(len(paths), img_h, img_w, 1))
     y = np.array(labels, dtype="int32")
