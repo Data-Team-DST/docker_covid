@@ -1,4 +1,4 @@
-"""Stage DVC 3/3 — Évaluation du modèle entraîné.
+"""Stage DVC 4/4 — Évaluation du modèle entraîné.
 
 Lit  : data/models/covid_model.keras + data/processed/{X,y}_test.npy
 Écrit: outputs/evaluation_report.json

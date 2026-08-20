@@ -1,11 +1,30 @@
 stages:
 
+  augment:
+    cmd: python scripts/augment.py
+    deps:
+      - scripts/augment.py
+      - backend/src/ds_covid/augmentation.py
+      - data/raw
+    params:
+      - params.yaml:
+          - augment
+          - preprocess.classes
+          - preprocess.max_samples_per_class
+          - preprocess.test_split
+          - preprocess.random_seed
+    outs:
+      - data/augmented
+    metrics:
+      - outputs/augment_stats.json:
+          cache: false
+
   preprocess:
     cmd: python scripts/preprocess.py
     deps:
       - scripts/preprocess.py
-      - backend/src/ds_covid/features.py
-      - data/raw
+      - backend/src/ds_covid/preprocessing.py
+      - data/augmented
     params:
       - params.yaml:
           - preprocess
@@ -25,13 +44,12 @@ stages:
       - backend/src/ds_covid/models.py
       - data/processed/X_train.npy
       - data/processed/y_train.npy
-      - data/processed/X_test.npy
-      - data/processed/y_test.npy
     params:
       - params.yaml:
           - train
           - mlflow
           - preprocess.img_size
+          - preprocess.random_seed
     outs:
       - data/models/covid_model.keras
     metrics:

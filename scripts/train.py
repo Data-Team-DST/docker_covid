@@ -1,22 +1,33 @@
-"""Stage DVC 2/3 — Entraînement CNN + tracking MLflow.
+"""Stage DVC 3/4 — Entraînement CNN + tracking MLflow.
 
-Lit  : data/processed/{X,y}_train.npy
+Lit  : data/processed/{X,y}_train.npy (re-split en train/val en interne)
 Écrit: data/models/covid_model.keras  +  outputs/metrics.json
 """
 import json
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 import mlflow
 import mlflow.keras
 import numpy as np
+import tensorflow as tf
 import yaml
+from dotenv import load_dotenv
+from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
 
-from ds_covid.models import build_baseline_cnn  # noqa: E402
+# En local (hors Docker), MLFLOW_TRACKING_URI="http://mlflow:5000" (params.yaml)
+# ne se résout pas — .env fournit l'override http://localhost:5000. load_dotenv()
+# ne touche pas les variables déjà définies dans l'environnement (donc sans effet
+# en conteneur, où docker-compose fixe MLFLOW_TRACKING_URI directement).
+load_dotenv(PROJECT_ROOT / ".env")
+
+from ds_covid.models import build_cnn  # noqa: E402
 
 PARAMS_FILE  = PROJECT_ROOT / "params.yaml"
 PROCESSED    = PROJECT_ROOT / "data" / "processed"
@@ -29,6 +40,41 @@ def load_params() -> dict:
         return yaml.safe_load(f)
 
 
+class MemmapSequence(tf.keras.utils.Sequence):
+    """Sert les données par batch depuis un .npy memmap, sans jamais charger
+    l'ensemble du dataset en RAM (indispensable : après augmentation, X_train
+    dépasse largement la RAM disponible sur les petites machines).
+
+    `indices` permet de servir un sous-ensemble (ex: split train/val fait à
+    partir d'un seul X_train.npy) sans dupliquer les données sur disque."""
+
+    def __init__(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        batch_size: int,
+        shuffle: bool,
+        indices: Optional[np.ndarray] = None,
+    ):
+        self.X = X
+        self.y = y
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.indices = np.arange(len(X)) if indices is None else np.asarray(indices)
+        self.on_epoch_end()
+
+    def __len__(self) -> int:
+        return int(np.ceil(len(self.indices) / self.batch_size))
+
+    def __getitem__(self, idx: int):
+        batch_idx = np.sort(self.indices[idx * self.batch_size : (idx + 1) * self.batch_size])
+        return self.X[batch_idx], self.y[batch_idx]
+
+    def on_epoch_end(self) -> None:
+        if self.shuffle:
+            np.random.shuffle(self.indices)
+
+
 def main() -> None:
     p       = load_params()
     tp      = p["train"]
@@ -37,11 +83,28 @@ def main() -> None:
     img_h, img_w = prep["img_size"]
 
     print("[INFO] Chargement données prétraitées…", flush=True)
-    X_train = np.load(PROCESSED / "X_train.npy")
+    # X_test/y_test ne sont pas touchés ici : réservés au stage evaluate, pour un
+    # jeu de test jamais vu ni par l'entraînement ni par l'early stopping.
+    X_train = np.load(PROCESSED / "X_train.npy", mmap_mode="r")
     y_train = np.load(PROCESSED / "y_train.npy")
-    X_test  = np.load(PROCESSED / "X_test.npy")
-    y_test  = np.load(PROCESSED / "y_test.npy")
-    print(f"[INFO] Train={len(X_train)}  Test={len(X_test)}", flush=True)
+    print(f"[INFO] Train (avant split val) = {len(X_train)}", flush=True)
+
+    idx_train, idx_val = train_test_split(
+        np.arange(len(y_train)),
+        test_size=tp["val_split"],
+        stratify=y_train,
+        random_state=prep["random_seed"],
+    )
+    print(f"[INFO] Train={len(idx_train)}  Val={len(idx_val)}", flush=True)
+
+    train_seq = MemmapSequence(X_train, y_train, batch_size=tp["batch_size"], shuffle=True, indices=idx_train)
+    val_seq   = MemmapSequence(X_train, y_train, batch_size=tp["batch_size"], shuffle=False, indices=idx_val)
+
+    class_weights = compute_class_weight(
+        "balanced", classes=np.unique(y_train[idx_train]), y=y_train[idx_train]
+    )
+    class_weight_dict = dict(enumerate(class_weights))
+    print(f"[INFO] Class weights : {class_weight_dict}", flush=True)
 
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", mlp["tracking_uri"])
     mlflow.set_tracking_uri(tracking_uri)
@@ -52,18 +115,25 @@ def main() -> None:
             "epochs":        tp["epochs"],
             "batch_size":    tp["batch_size"],
             "learning_rate": tp["learning_rate"],
+            "val_split":     tp["val_split"],
             "img_size":      prep["img_size"],
         })
 
-        model = build_baseline_cnn(
-            input_shape=(img_h, img_w, 1), num_classes=4
+        model = build_cnn(
+            input_shape=(img_h, img_w, 1), num_classes=4, learning_rate=tp["learning_rate"],
         )
 
+        callbacks = [
+            tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True),
+            tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6),
+        ]
+
         history = model.fit(
-            X_train, y_train,
+            train_seq,
             epochs=tp["epochs"],
-            batch_size=tp["batch_size"],
-            validation_data=(X_test, y_test),
+            validation_data=val_seq,
+            class_weight=class_weight_dict,
+            callbacks=callbacks,
             verbose=1,
         )
 
@@ -80,7 +150,7 @@ def main() -> None:
         metrics = {
             "val_accuracy": val_acc,
             "val_loss":     val_loss,
-            "epochs":       tp["epochs"],
+            "epochs":       len(history.epoch),  # peut être < tp["epochs"] (early stopping)
         }
         METRICS_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(METRICS_FILE, "w", encoding="utf-8") as f:
