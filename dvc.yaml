@@ -10,6 +10,9 @@ stages:
       - params.yaml:
           - augment
           - preprocess.classes
+          - preprocess.max_samples_per_class
+          - preprocess.test_split
+          - preprocess.random_seed
     outs:
       - data/augmented
     metrics:

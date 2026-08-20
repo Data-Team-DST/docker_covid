@@ -1,16 +1,19 @@
 augment:
-  variants_per_image: 3          # + 1 original = x4  (~21k -> ~85k images, ~170k avec les masks)
+  # Split train/test fait ici, sur les images brutes, AVANT augmentation — seul le
+  # train est augmenté (cf. preprocess.test_split/random_seed ci-dessous, utilisés
+  # par augment.py pour ce split). Le test ne contient que des originaux non augmentés.
+  variants_per_image: 3          # + 1 original = x4 sur le TRAIN uniquement (~17k -> ~68k train, ~4k test)
   rotation_range: 15             # degrés, +/-
   zoom_range: [0.9, 1.1]
   brightness_range: [0.8, 1.2]
   flip_horizontal: true
-  random_seed: 42
+  random_seed: 42                # seed des transformations d'augmentation (indépendant du split ci-dessus)
 
 preprocess:
   img_size: [256, 256]
-  max_samples_per_class: null   # null = toutes les images
-  test_split: 0.2
-  random_seed: 42
+  max_samples_per_class: null   # limite par classe sur les images BRUTES (null = toutes) — utilisé par augment.py
+  test_split: 0.2                # part réservée au test, prélevée avant augmentation — utilisé par augment.py
+  random_seed: 42                # seed du split train/test (augment.py) ET du split train/val (train.py)
   masking: true                 # applique le mask de segmentation des poumons
   cropping: true                 # recadre + padde sur la région des poumons (nécessite masking)
   clahe: true                    # améliore le contraste local (CLAHE)

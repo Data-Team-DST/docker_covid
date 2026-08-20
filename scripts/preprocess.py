@@ -1,6 +1,7 @@
 """Stage DVC 2/4 — Prétraitement des images.
 
-Lit  : data/augmented/{classe}/{images,masks}/  (sortie du stage augment)
+Lit  : data/augmented/{train,test}/{classe}/{images,masks}/  (sortie du stage augment,
+       déjà splittée — le split train/test est fait dans augment.py, avant augmentation)
 Écrit: data/processed/{X,y}_{train,test}.npy
 
 Pipeline par image (voir ds_covid.preprocessing.process_single_image) :
@@ -14,7 +15,6 @@ import cv2
 import numpy as np
 import yaml
 from numpy.lib.format import open_memmap
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -23,7 +23,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
 from ds_covid.preprocessing import process_single_image  # noqa: E402
 
 PARAMS_FILE = PROJECT_ROOT / "params.yaml"
-RAW_DIR = PROJECT_ROOT / "data" / "augmented"
+AUGMENTED_DIR = PROJECT_ROOT / "data" / "augmented"
 OUT_DIR = PROJECT_ROOT / "data" / "processed"
 STATS_FILE = PROJECT_ROOT / "outputs" / "preprocess_stats.json"
 
@@ -33,24 +33,18 @@ def load_params() -> dict:
         return yaml.safe_load(f)["preprocess"]
 
 
-def list_files(params: dict) -> tuple[list[Path], list[int], dict]:
-    """Liste les fichiers à traiter (chemins + labels), sans charger d'image en mémoire."""
-    max_n = params["max_samples_per_class"]
-    classes: dict = params["classes"]
-
+def list_files(split_dir: Path, classes: dict) -> tuple[list[Path], list[int], dict]:
+    """Liste les fichiers d'un split (train ou test), sans charger d'image en mémoire."""
     paths, labels = [], []
     counts = {}
 
     for class_name, label in classes.items():
-        images_dir = RAW_DIR / class_name / "images"
+        images_dir = split_dir / class_name / "images"
         if not images_dir.exists():
             print(f"[WARN] Dossier absent : {images_dir}", flush=True)
             continue
 
         files = sorted(images_dir.glob("*.png"))
-        if max_n:
-            files = files[:max_n]
-
         paths.extend(files)
         labels.extend([label] * len(files))
         counts[class_name] = len(files)
@@ -105,31 +99,22 @@ def main() -> None:
     params = load_params()
     print("[INFO] Prétraitement démarré", flush=True)
 
-    paths, labels, counts = list_files(params)
-    print(f"[INFO] Total : {len(paths)} images", flush=True)
-
-    idx_train, idx_test = train_test_split(
-        np.arange(len(paths)),
-        test_size=params["test_split"],
-        stratify=labels,
-        random_state=params["random_seed"],
-    )
-
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    train_paths = [paths[i] for i in idx_train]
-    train_labels = [labels[i] for i in idx_train]
+    train_paths, train_labels, train_counts = list_files(AUGMENTED_DIR / "train", params["classes"])
+    print(f"[INFO] Train : {len(train_paths)} images", flush=True)
     write_split(train_paths, train_labels, params, OUT_DIR / "X_train.npy", OUT_DIR / "y_train.npy", "Train")
 
-    test_paths = [paths[i] for i in idx_test]
-    test_labels = [labels[i] for i in idx_test]
+    test_paths, test_labels, test_counts = list_files(AUGMENTED_DIR / "test", params["classes"])
+    print(f"[INFO] Test : {len(test_paths)} images", flush=True)
     write_split(test_paths, test_labels, params, OUT_DIR / "X_test.npy", OUT_DIR / "y_test.npy", "Test")
 
     stats = {
-        "total": len(paths),
+        "total": len(train_paths) + len(test_paths),
         "train": len(train_paths),
         "test":  len(test_paths),
-        "classes": counts,
+        "train_per_class": train_counts,
+        "test_per_class": test_counts,
         "img_size": params["img_size"],
     }
     STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
