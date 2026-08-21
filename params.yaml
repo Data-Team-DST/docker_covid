@@ -32,7 +32,23 @@ train:
   learning_rate: 0.001
   val_split: 0.15          # part de X_train réservée à la validation (early stopping / LR schedule)
 
+segmentation:
+  # U-Net (encoder MobileNetV2 pré-entraîné) pour la segmentation pulmonaire — génère le
+  # mask des images de predict/ (qui n'en ont pas), pour appliquer à l'inférence le même
+  # masking/crop que celui du pipeline de classification (cf. preprocess.masking/cropping).
+  val_split: 0.15                # part du train (data/augmented/train) réservée à la validation
+  freeze_epochs: 8                # phase 1 : encoder gelé, seul le decoder apprend
+  freeze_lr: 0.001
+  fine_tune_epochs: 25             # phase 2 : encoder dégelé, fine-tuning complet
+  fine_tune_lr: 0.00001            # LR très bas : affiner sans détruire les poids ImageNet
+  batch_size: 32
+  fine_tune_batch_size: 16         # phase 2 plus gourmande en mémoire (gradients sur tout le réseau)
+  clean_mask_components: 2         # post-traitement : nombre de composantes connexes à garder
+  clean_mask_closing_kernel: 15    # taille du noyau de fermeture morphologique
+
 mlflow:
   experiment_name: ds_covid_cnn
   tracking_uri: http://mlflow:5000
   model_name: covid_xray_cnn
+  segmentation_experiment_name: ds_covid_unet_segmentation
+  segmentation_model_name: lung_segmentation_unet

@@ -21,15 +21,19 @@ __license__ = "MIT"
 try:
     from .features import load_images_flat, prepare_covid_data
     from .models import MaskApplicator, build_baseline_cnn, build_cnn
-    from .preprocessing import process_single_image, squared_crop_to_lungs
+    from .preprocessing import apply_pipeline, process_single_image, squared_crop_to_lungs
+    from .segmentation import build_unet, clean_mask
     from .visualization import compare_methods, visualize_samples
 
     __all__ = [
         "build_baseline_cnn",
         "build_cnn",
+        "build_unet",
+        "clean_mask",
         "MaskApplicator",
         "load_images_flat",
         "prepare_covid_data",
+        "apply_pipeline",
         "process_single_image",
         "squared_crop_to_lungs",
         "visualize_samples",

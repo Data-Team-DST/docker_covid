@@ -7,7 +7,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 import mlflow
 import mlflow.keras
@@ -27,6 +26,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
 # en conteneur, où docker-compose fixe MLFLOW_TRACKING_URI directement).
 load_dotenv(PROJECT_ROOT / ".env")
 
+from ds_covid.data import MemmapSequence  # noqa: E402
 from ds_covid.models import build_cnn  # noqa: E402
 
 PARAMS_FILE  = PROJECT_ROOT / "params.yaml"
@@ -38,41 +38,6 @@ METRICS_FILE = PROJECT_ROOT / "outputs" / "metrics.json"
 def load_params() -> dict:
     with open(PARAMS_FILE, encoding="utf-8") as f:
         return yaml.safe_load(f)
-
-
-class MemmapSequence(tf.keras.utils.Sequence):
-    """Sert les données par batch depuis un .npy memmap, sans jamais charger
-    l'ensemble du dataset en RAM (indispensable : après augmentation, X_train
-    dépasse largement la RAM disponible sur les petites machines).
-
-    `indices` permet de servir un sous-ensemble (ex: split train/val fait à
-    partir d'un seul X_train.npy) sans dupliquer les données sur disque."""
-
-    def __init__(
-        self,
-        X: np.ndarray,
-        y: np.ndarray,
-        batch_size: int,
-        shuffle: bool,
-        indices: Optional[np.ndarray] = None,
-    ):
-        self.X = X
-        self.y = y
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self.indices = np.arange(len(X)) if indices is None else np.asarray(indices)
-        self.on_epoch_end()
-
-    def __len__(self) -> int:
-        return int(np.ceil(len(self.indices) / self.batch_size))
-
-    def __getitem__(self, idx: int):
-        batch_idx = np.sort(self.indices[idx * self.batch_size : (idx + 1) * self.batch_size])
-        return self.X[batch_idx], self.y[batch_idx]
-
-    def on_epoch_end(self) -> None:
-        if self.shuffle:
-            np.random.shuffle(self.indices)
 
 
 def main() -> None:
