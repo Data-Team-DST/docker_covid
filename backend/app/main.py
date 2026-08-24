@@ -1,10 +1,8 @@
 """Point d'entrée FastAPI — DS_COVID ML Backend"""
 
 import logging
-import time
-from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -13,28 +11,13 @@ from app.api.health import router as health_router
 from app.api.metrics import router as metrics_router
 from app.api.predict import router as predict_router
 from app.config import settings
+from app.lifespan import lifespan
 from app.logging_config import setup_logging
-from app.models.loader import model_loader
+from app.middleware import log_requests
 from app.rate_limit import limiter
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-
-@asynccontextmanager
-async def lifespan(fastapi_app: FastAPI):
-    """Chargement du modèle au démarrage, nettoyage à l'arrêt."""
-    del fastapi_app
-    logger.info("Démarrage DS_COVID Backend v%s", settings.api_version)
-    logger.info("Chargement modèle depuis : %s", settings.model_path)
-    model_loader.load()
-    if model_loader.is_loaded:
-        logger.info("Modèle chargé avec succès")
-    else:
-        logger.warning("Modèle non chargé — /predict retournera 503")
-    yield
-    logger.info("Arrêt du backend")
-
 
 app = FastAPI(
     title="DS_COVID — API d'inférence",
@@ -61,23 +44,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.middleware("http")
-async def _log_requests(request: Request, call_next):
-    """Log structuré de chaque requête HTTP (méthode, path, status, latence)."""
-    t0 = time.time()
-    response = await call_next(request)
-    latency_ms = round((time.time() - t0) * 1000, 1)
-    logger.info(
-        "%s %s → %s  %.1fms",
-        request.method,
-        request.url.path,
-        response.status_code,
-        latency_ms,
-    )
-    return response
-
+app.middleware("http")(log_requests)
 
 app.include_router(health_router, tags=["Health"])
 app.include_router(predict_router, prefix="/api/v1", tags=["Prediction"])
