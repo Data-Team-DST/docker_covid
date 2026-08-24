@@ -128,7 +128,7 @@ jobs:
             --cov=backend/app \
             --cov-report=xml:backend/be-cov.xml \
             --cov-report=term-missing \
-            --cov-fail-under=40 \
+            --cov-fail-under=80 \
             -v
 
       - name: Normalize coverage paths
@@ -218,7 +218,7 @@ jobs:
             --cov=data_service \
             --cov-report=xml:ds-cov.xml \
             --cov-report=term-missing \
-            --cov-fail-under=30 \
+            --cov-fail-under=80 \
             -v
 
       - name: Normalize coverage paths

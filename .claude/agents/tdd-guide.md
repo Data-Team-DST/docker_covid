@@ -31,7 +31,7 @@ Write a failing test that describes the expected behavior.
 
 ### 2. Run Test -- Verify it FAILS
 ```bash
-npm test
+pytest
 ```
 
 ### 3. Write Minimal Implementation (GREEN)
@@ -44,8 +44,8 @@ Remove duplication, improve names, optimize -- tests must stay green.
 
 ### 6. Verify Coverage
 ```bash
-npm run test:coverage
-# Required: 80%+ branches, functions, lines, statements
+pytest --cov --cov-report=term-missing
+# Required: 80%+ (this project's own gate — see CLAUDE.md § Qualité)
 ```
 
 ## Test Types Required

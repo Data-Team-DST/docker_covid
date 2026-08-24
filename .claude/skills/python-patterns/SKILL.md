@@ -502,14 +502,11 @@ async def fetch_all(urls: list[str]) -> dict[str, str]:
 
 The filename suffix declares the module's responsibility. Never mix roles in one file.
 
-| Suffix | Role | Max lines | Max lines/function |
-|---|---|---|---|
-| `*_router.py` | FastAPI endpoints — handler + schema only, no algo | 300 | 30 |
-| `*_service.py` | Business logic, domain algorithms | 200 | 50 |
-| `*_utils.py` / `*_helpers.py` | Pure utility functions | 200 | 40 |
-| `*_constants.py` / `*_config.py` | Constants and env config | unlimited | — |
-| `test_*.py` | Tests | 500 | 60 |
-| `main.py` | Entry point only (`app = FastAPI()`) | 50 | — |
+> The authoritative limit table lives in the project's own rule file when one exists (e.g.
+> `.claude/rules/common/coding-style.md` § "Python — limites par type de fichier") — this
+> skill duplicated it verbatim until 2026-08-24 (skill-stocktake flagged the drift risk: two
+> independently-editable copies of the same numbers go stale silently). Read that file for
+> the current limits; the commands below are the reusable part of this section.
 
 **Rule**: if a `*_router.py` contains a private function (`def _algo(...)`) that is not a FastAPI dependency or middleware, that function belongs in `*_service.py`.
 

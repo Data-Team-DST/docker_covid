@@ -189,6 +189,12 @@ CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers
 
 ### GitHub Actions (Standard Pipeline)
 
+> Generic example — no per-job `permissions:` block, actions pinned to mutable tags
+> (`@v4`). If this project has its own hardened CI/CD rule (e.g.
+> `.claude/rules/common/github-actions-security.md`: job-level `permissions:`, SHA-pinned
+> actions, `--only-binary`/`--require-hashes` on pip installs), **that rule supersedes this
+> example** — don't copy this YAML verbatim into a project with such a rule already in place.
+
 ```yaml
 name: CI/CD
 

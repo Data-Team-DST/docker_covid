@@ -22,8 +22,8 @@ Toucher uniquement ce qui est directement lié à la demande. Si un nettoyage es
 signaler explicitement, jamais l'appliquer en silence.
 
 **4 — "Done" = critères objectifs.**
-Done = lint (`make lint`) propre + tests verts (`make test`) + coverage ≥ seuils (backend 40%,
-data-service 30%) + aucune quality gate abaissée + `git status` propre.
+Done = lint (`make lint`) propre + tests verts (`make test`) + coverage ≥ seuils (backend 80%,
+data-service 80%) + aucune quality gate abaissée + `git status` propre.
 
 **5 — Lire le code courant, jamais la mémoire.**
 Avant toute affirmation sur un chemin, port, config ou fonction : lire le fichier. Ce CLAUDE.md
@@ -120,7 +120,7 @@ dvc.yaml / params.yaml       Pipeline reproductible (dvc repro)
 - **API** : FastAPI (backend, data-service, log-service) + Pydantic — Flask pour dashboard
   (services simples, pas de couche service/router séparée à ce jour)
 - **ML** : TensorFlow/Keras (CNN, base InceptionV3), preprocessing image 256×256
-- **Tests** : pytest — coverage ≥ 40% backend, ≥ 30% data-service (`make test`, `make test-be`,
+- **Tests** : pytest — coverage ≥ 80% backend, ≥ 80% data-service (`make test`, `make test-be`,
   `make test-ds`)
 - **Lint** : ruff + pylint (`make lint`, `make lint-full`, `make fix` pour auto-correction)
 - **Data versioning** : DVC, remote MinIO (`make dvc-setup`, `make dvc-push`, `make dvc-pull`)
@@ -133,7 +133,7 @@ dvc.yaml / params.yaml       Pipeline reproductible (dvc repro)
 
 ## Qualité — seuils à ne jamais abaisser
 
-- Coverage : backend ≥ 40%, data-service ≥ 30% (`--cov-fail-under`)
+- Coverage : backend ≥ 80%, data-service ≥ 80% (`--cov-fail-under`)
 - `ruff check` + `pylint` sans erreur bloquante (`make lint-full`)
 - `verify=False` dans les appels HTTP : **interdit**
 - `# noqa` / `# type: ignore` en masse : **interdit**

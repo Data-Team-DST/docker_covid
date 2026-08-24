@@ -182,7 +182,7 @@ except Exception:  # noqa: BLE001
 ## Checklist avant commit
 
 - [ ] `ruff check` sans erreur + `mypy` sans erreur (voir CLAUDE.md § Qualité)
-- [ ] `make test` → coverage ≥ 30% (seuil projet), zéro test cassé
+- [ ] `make test` → coverage ≥ 80% (seuil projet), zéro test cassé
 - [ ] Vérifier CC des nouvelles fonctions : pas de boucles imbriquées > 4 niveaux
 - [ ] Docstring sur chaque nouvelle classe/fonction
 - [ ] Pas de chaîne littérale dupliquée ≥ 3× → constante

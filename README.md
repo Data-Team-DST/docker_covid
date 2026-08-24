@@ -87,7 +87,7 @@ docker_covid/
 │   │   ├── models/          # Chargement modèle Keras
 │   │   ├── features/        # Preprocessing image
 │   │   └── schemas/         # Schémas Pydantic
-│   ├── tests/unit/          # Tests unitaires (pytest, ≥40% coverage)
+│   ├── tests/unit/          # Tests unitaires (pytest, ≥80% coverage)
 │   └── requirements-dev.txt # Dépendances dev/test backend
 ├── data-service/            # Microservice DVC : pull/push/status + stats données
 │   ├── src/data_service/    # FastAPI (GET /health, /v1/data/stats, /v1/dvc/*)
@@ -145,13 +145,16 @@ MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
 
 ## Pipeline DVC — `dvc repro`
 
-Le pipeline ML est défini dans [`dvc.yaml`](dvc.yaml) avec 3 stages :
+Le pipeline ML est défini dans [`dvc.yaml`](dvc.yaml) avec 4 stages :
 
 ```
-data/raw  →  preprocess  →  data/processed/  →  train  →  data/models/covid_model.keras
-                                                              ↓
-                                                          evaluate  →  outputs/evaluation_report.json
+data/raw  →  augment  →  data/augmented/  →  preprocess  →  data/processed/  →  train  →  data/models/covid_model.keras
+                                                                                               ↓
+                                                                                           evaluate  →  outputs/evaluation_report.json
 ```
+
+Le split train/test est fait dans le stage `augment`, sur les images brutes, **avant**
+augmentation — seul le train est augmenté (le test ne contient que des originaux).
 
 ### Lancer le pipeline complet
 
@@ -164,15 +167,22 @@ dvc repro --force  # rejoue tout sans vérifier le cache
 ### Paramètres ([`params.yaml`](params.yaml))
 
 ```yaml
+augment:
+  variants_per_image: 3   # +1 original = x4 sur le TRAIN uniquement
+
 preprocess:
   img_size: [256, 256]
   max_samples_per_class: null   # null = toutes les images (42 330)
   test_split: 0.2
+  masking: true            # segmentation des poumons
+  cropping: true            # recadre sur la région des poumons
+  clahe: true               # contraste local (paramétrable depuis 2026-08)
 
 train:
-  epochs: 10
+  epochs: 30            # EarlyStopping (patience: 5) arrête avant si val_loss stagne
   batch_size: 32
   learning_rate: 0.001
+  val_split: 0.15
 ```
 
 Modifier `params.yaml` → `dvc repro` rejoue uniquement les stages impactés.
@@ -204,7 +214,7 @@ make setup-be    # crée backend/.venv avec les dépendances de test
 make setup-ds    # crée data-service/.venv
 ```
 
-Coverage cible : ≥ 40 % backend, ≥ 30 % data-service
+Coverage cible : ≥ 80 % backend, ≥ 80 % data-service
 
 > **Windows** : si les tests échouent avec `venv Windows détecté`, utiliser `make setup-be` depuis WSL ou Git Bash (bash doit créer le venv, pas VSCode).
 

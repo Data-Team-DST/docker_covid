@@ -62,15 +62,19 @@ liste des fichiers touchés, stash oubliés, delta DVC non pushé.
 
 ---
 
-### Phase 2 — Choix repo-scan / production-audit (~5 min)
+### Phase 2 — Choix production-audit (~5 min)
 
 Analyser la liste des fichiers touchés cette semaine (Phase 1) avec la règle :
 
 | Fichiers touchés cette semaine | Action |
 |---|---|
-| Code métier uniquement (`src/`, `tests/`) | `/repo-scan` seulement |
-| Infra touchée (voir liste ci-dessous) | `/repo-scan` **ET** `/production-audit` |
+| Code métier uniquement (`src/`, `tests/`) | Passer directement à Phase 4 (dette technique couvre ce cas) |
+| Infra touchée (voir liste ci-dessous) | `/production-audit` |
 | Semaine légère (<5 fichiers, aucune infra) | Passer directement à Phase 3 |
+
+`repo-scan` a été retiré (2026-08-24, skill-stocktake) — conçu pour du C++/Android/iOS/Web
+avec libs vendorisées, mismatch confirmé avec ce repo Python pur. Les semaines code-only sont
+couvertes par les checks Phase 4 (ruff, tailles de fichier, disables, complexité).
 
 **Fichiers infra qui déclenchent `/production-audit` en plus** :
 - `.github/workflows/` (CI/CD)
@@ -150,7 +154,12 @@ Signaler dans le rapport (section Sécurité) :
 
 ### Phase 4 — Dette & code mort (~10 min)
 
-Lancer `/refactor-clean` ou `/prune` en ciblant les services modifiés cette semaine.
+Lancer `/refactor-clean` en ciblant les services modifiés cette semaine (Steps 1-2 seulement —
+détection/catégorisation ; ne jamais laisser son Step 3 supprimer du code sans confirmation
+explicite, ça contredit CLAUDE.md "Validation humaine obligatoire" et la philosophie même de
+ce rituel). `/prune` a été retiré (2026-08-24, skill-stocktake) — dépendait d'un mécanisme
+`continuous-learning-v2` inexistant dans ce projet, sans rapport avec le code mort malgré ce
+que cette phase laissait penser.
 
 Si aucun service n'a été modifié (semaine de docs/infra), passer cette phase.
 
@@ -190,12 +199,11 @@ P2 "disable non tracé — soit justifier, soit corriger le vrai problème plut�
 que faire taire l'outil". Ne jamais retirer un disable soi-même pendant
 `/friday` — mesurer, signaler, laisser l'utilisateur trancher.
 
-**Check dérive des commentaires** : lancer l'agent `comment-analyzer` sur les
-fichiers modifiés cette semaine (liste de la Phase 1) pour détecter les
-commentaires devenus inexacts ou obsolètes par rapport au code qu'ils
-accompagnent (pas seulement l'absence de docstring, déjà couverte
-ci-dessus — ici on vérifie que ce qui est écrit est encore vrai). Si aucun
-fichier `.py` n'a été modifié cette semaine, passer ce check.
+**Check dérive des commentaires** : désactivé (2026-08-24, skill-stocktake) — référençait un
+agent `comment-analyzer` qui n'existe nulle part dans `.claude/agents/`, cassé à chaque
+exécution. À réactiver si un tel agent est créé un jour ; en attendant, une relecture manuelle
+rapide des commentaires sur les fichiers `.py` modifiés cette semaine (liste de la Phase 1)
+peut remplacer le check automatisé si jugé utile.
 
 **Check nommage — à intégrer systématiquement en Phase 4** :
 
@@ -262,7 +270,7 @@ Structure obligatoire du rapport :
 <!-- "RAS" si rien à signaler -->
 
 ### Architecture & production-readiness
-<!-- Issues /repo-scan + /production-audit si lancé -->
+<!-- Issues /production-audit si lancé -->
 <!-- "RAS" si rien à signaler -->
 
 ### Dette technique
@@ -343,10 +351,8 @@ cherche le vendredi suivant pour savoir si le prochain audit mensuel est dû.
 
 - Skill : `security-scan` — scan config Claude
 - Skill : `security-review` — review code sur endpoints
-- Skill : `repo-scan` — santé architecturale du code source
 - Skill : `production-audit` — readiness infra/déploiement
-- Skill : `refactor-clean` — dette et code mort
-- Agent : `comment-analyzer` — dérive des commentaires (Phase 4)
+- Skill : `refactor-clean` — dette et code mort (Steps 1-2 seulement, jamais Step 3 auto-delete)
 - Skill : `update-codemaps` — codemaps à jour
 - Skill : `update-docs` — documentation à jour
 - Skill : `skill-comply` — respect empirique des règles (Phase 7, mensuel)

@@ -145,7 +145,7 @@ test-be: setup-be ## Tests backend dans son venv isolé
 		--cov=backend/app \
 		--cov-report=term-missing \
 		--cov-report=xml:backend/coverage.xml \
-		--cov-fail-under=40
+		--cov-fail-under=80
 	@echo "$(GREEN)✅ Tests backend OK$(NC)"
 
 test-ds: setup-ds ## Tests data-service dans son venv isolé
@@ -154,7 +154,7 @@ test-ds: setup-ds ## Tests data-service dans son venv isolé
 		--cov=data_service \
 		--cov-report=term-missing \
 		--cov-report=xml:ds-coverage.xml \
-		--cov-fail-under=30
+		--cov-fail-under=80
 	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
 
 test-docker: ## Lance les tests dans le container Docker

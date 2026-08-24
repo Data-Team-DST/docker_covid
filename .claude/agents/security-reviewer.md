@@ -30,14 +30,19 @@ You are an expert security specialist focused on identifying and remediating vul
 ## Analysis Commands
 
 ```bash
-npm audit --audit-level=high
-npx eslint . --plugin security
+pip-audit
+bandit -r .
 ```
+
+(`npm audit`/`eslint-plugin-security` apply only to a Node.js stack — this project is
+Python-only, no `package.json`. Corrected 2026-08-24, skill-stocktake, to match the commands
+already used correctly elsewhere in this project's own tooling — `python-reviewer.md`,
+`python-patterns/SKILL.md`.)
 
 ## Review Workflow
 
 ### 1. Initial Scan
-- Run `npm audit`, `eslint-plugin-security`, search for hardcoded secrets
+- Run `pip-audit`, `bandit -r .`, search for hardcoded secrets
 - Review high-risk areas: auth, API endpoints, DB queries, file uploads, payments, webhooks
 
 ### 2. OWASP Top 10 Check
@@ -49,7 +54,7 @@ npx eslint . --plugin security
 6. **Misconfiguration** — Default creds changed? Debug mode off in prod? Security headers set?
 7. **XSS** — Output escaped? CSP set? Framework auto-escaping?
 8. **Insecure Deserialization** — User input deserialized safely?
-9. **Known Vulnerabilities** — Dependencies up to date? npm audit clean?
+9. **Known Vulnerabilities** — Dependencies up to date? `pip-audit` clean?
 10. **Insufficient Logging** — Security events logged? Alerts configured?
 
 ### 3. Code Pattern Review
