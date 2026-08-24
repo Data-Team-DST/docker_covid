@@ -5,7 +5,7 @@ A comprehensive Python package for analyzing COVID-19 radiography images
 using machine learning and deep learning techniques.
 
 Authors:
-    - Rafael Cepa <rafael.cepa@cnrs-orleans.fr>
+    - Rafael Cepa
     - Cirine Moire
     - Steven Moire
 
@@ -14,7 +14,7 @@ License: MIT
 
 __version__ = "0.1.0"
 __author__ = "Rafael Cepa, Cirine Moire, Steven Moire"
-__email__ = "rafael.cepa@cnrs-orleans.fr"
+__email__ = "rafael.cepa@example.fr"
 __license__ = "MIT"
 
 # Main package imports - will be populated after creating modules

@@ -95,7 +95,7 @@ docker_covid/
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── log-service/             # Agrégateur logs JSON centralisé (port 5002)
-│   ├── app.py               # Flask — /health, /v1/log, /v1/logs
+│   ├── app.py               # FastAPI — /health, /v1/log, /v1/logs
 │   └── Dockerfile
 ├── frontend/                # Streamlit multi-pages
 │   ├── streamlit_app.py
@@ -248,9 +248,9 @@ Documentation interactive : http://localhost:8000/docs
 | **4** | Monitoring, Evidently, Drift                   | 01/09/2026 | A faire        |
 | **Soutenance** | Présentation finale                   | 04/09/2026 | A faire        |
 
-**US implémentées** : US-01 à US-10, US-13, US-14, US-17 (voir [`verify.sh`](verify.sh) ou `make verify`)
+**US implémentées** : US-01 à US-10, US-12, US-13, US-14, US-15, US-17 (voir [`verify.sh`](verify.sh) ou `make verify`)
 
-**US en attente** : US-11 (CI/CD deploy GHCR), US-12 (API key sécurité), US-15 (load test), US-16 (data augmentation)
+**US en attente** : US-11 (CI/CD deploy GHCR), US-16 (data augmentation)
 
 ---
 

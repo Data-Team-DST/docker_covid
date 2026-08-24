@@ -20,7 +20,7 @@ type: Opaque
 stringData:
   API_KEY: ""                    # Définir en prod
   MINIO_ROOT_USER: "minioadmin"
-  MINIO_ROOT_PASSWORD: "minioadmin"
+  MINIO_ROOT_PASSWORD: ""        # Définir en prod
   POSTGRES_USER: "mlflow"
-  POSTGRES_PASSWORD: "mlflow"
+  POSTGRES_PASSWORD: ""          # Définir en prod
   POSTGRES_DB: "mlflow"

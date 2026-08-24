@@ -1,5 +1,5 @@
 #!/bin/bash
-# check_quality.sh - Vérification qualité alignée CI/CD Sanofi
+# check_quality.sh - Vérification qualité alignée CI/CD
 # Usage: ./check_quality.sh [--skip-sonar] [--skip-pylint]
 
 set -e
@@ -97,7 +97,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  Vérification qualité OneAI (CI/CD compliant)${NC}"
+echo -e "${GREEN}  Vérification qualité (CI/CD compliant)${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
