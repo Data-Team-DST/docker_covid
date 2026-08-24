@@ -1,5 +1,5 @@
 # 07_conclusion_critique_perspective.py — Version présentation friendly
-# pylint: disable=line-too-long,invalid-name
+# pylint: disable=invalid-name
 
 import streamlit as st
 
@@ -13,8 +13,8 @@ def run():
         colored_header(
             label="Conclusion critique et perspectives",
             description=(
-                "Synthèse finale : enseignements, limites méthodologiques, perspectives réalistes "
-                "et avertissements éthiques."
+                "Synthèse finale : enseignements, limites méthodologiques,"
+                " perspectives réalistes et avertissements éthiques."
             ),
             color_name="blue-70",
         )
@@ -26,8 +26,8 @@ def run():
     # 1. Positionnement
     st.markdown("## 1. Positionnement du projet")
     st.markdown(
-        "Objectif : évaluer la **faisabilité exploratoire** d’une classification automatique "
-        "de radiographies thoraciques.\n"
+        "Objectif : évaluer la **faisabilité exploratoire** d’une"
+        " classification automatique de radiographies thoraciques.\n"
         "→ **POC analytique**, système d'aide au diagnostic."
     )
     st.divider()
@@ -76,7 +76,8 @@ def run():
         "| Usage clinique | Ne pas utiliser comme outil de diagnostic définitif|"
     )
     st.warning(
-        "→ Ce projet n’est **pas destiné à un usage clinique** en l'état (disclaimer éthique)."
+        "→ Ce projet n’est **pas destiné à un usage clinique** en l'état"
+        " (disclaimer éthique)."
     )
     st.divider()
 
@@ -84,9 +85,11 @@ def run():
     st.markdown("## 6. Perspectives et axes d’amélioration")
     st.markdown(
         "- Court terme : rééquilibrage des classes, tests statistiques simples\n"
-        "- Moyen terme : embeddings profonds hors ligne, analyses de similarité, versionnage des données\n"
+        "- Moyen terme : embeddings profonds hors ligne, analyses de"
+        " similarité, versionnage des données\n"
         "- Long terme : validation multi-sources, explicabilité, pipeline MLOps\n"
-        "- Futur : intégration de métadonnées cliniques et explorations autres modèles"
+        "- Futur : intégration de métadonnées cliniques et explorations"
+        " autres modèles"
     )
     st.divider()
 

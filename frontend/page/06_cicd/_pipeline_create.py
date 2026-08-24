@@ -104,5 +104,5 @@ def _render_preview_and_save(steps: list, name: str, save_dir: str):
                 joblib.dump(pipeline, path)
                 st.success(f"✅ Pipeline créé et sauvegardé: `{name}.pkl`")
                 st.session_state.created_pipeline = pipeline
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 st.error(f"❌ Erreur de création: {e}")

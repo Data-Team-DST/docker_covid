@@ -50,7 +50,7 @@ def run():
             description="",
             color_name="blue-70",
         )
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         st.markdown("### Présentation des données")
     st.divider()
 

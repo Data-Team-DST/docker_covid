@@ -3,7 +3,7 @@
 # - Palette: navy/dark background, high-contrast highlights; sans-serif font.
 # - File status: deep-dive template for best model — interpretability,
 #   error analysis, subgroup performance.
-# pylint: disable=line-too-long,invalid-name,non-ascii-file-name
+# pylint: disable=invalid-name,non-ascii-file-name
 
 import os
 from pathlib import Path
@@ -44,25 +44,26 @@ def run():
     st.image(str(image_path), caption="Matrice de confusion", width=500)
 
     st.info(
-        "**Performance globale** : modèle très performant, bonne identification des classes "
-        "(COVID, pneumonie virale, normal)."
+        "**Performance globale** : modèle très performant, bonne"
+        " identification des classes (COVID, pneumonie virale, normal)."
     )
     st.info(
-        "**Efficacité prouvée** : le transfert d’apprentissage avec InceptionV3 est excellent "
-        "pour la classification d’images médicales."
+        "**Efficacité prouvée** : le transfert d’apprentissage avec"
+        " InceptionV3 est excellent pour la classification d’images médicales."
     )
 
     st.markdown("### **Interprétabilité**")
     st.markdown("**LIME (Local Interpretable Model-Agnostic Explanations)**")
 
     st.markdown(
-        "**Avantages clés** : méthode compréhensible, fiable, universelle et généralisable "
-        "(SP-LIME)."
+        "**Avantages clés** : méthode compréhensible, fiable,"
+        " universelle et généralisable (SP-LIME)."
     )
 
     st.info(
-        "**Entraînement du modèle** : 2 000 images, 20 epochs de feature extraction, suivies "
-        "de 30 epochs de fine-tuning (20 dernières couches dégelées)."
+        "**Entraînement du modèle** : 2 000 images, 20 epochs de"
+        " feature extraction, suivies de 30 epochs de fine-tuning"
+        " (20 dernières couches dégelées)."
     )
 
     chemin_absolu_3 = rf"{chemin_global}/lime.png"
@@ -87,5 +88,5 @@ if __name__ == "__main__":
 
 
 # STATUS: page/06_analyse_du_meilleur_modele.py — version intégrale,
-# Streamlit Extras obligatoire, sections 1 à 10 complètes avec placeholders interactifs,
-# pipelines et checklists.
+# Streamlit Extras obligatoire, sections 1 à 10 complètes avec placeholders
+# interactifs, pipelines et checklists.

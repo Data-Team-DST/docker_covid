@@ -1,11 +1,10 @@
 """Sections de la page 04 — extraction, évaluation et optimisation ML."""
 
-# pylint: disable=missing-function-docstring,implicit-str-concat
-
 import streamlit as st
 
 
 def render_feature_extraction(img_dir: str):
+    """Affiche l'extraction de caractéristiques et un aperçu des résultats ML."""
     with st.container(border=True):
         st.title("Extraction des caractéristiques")
         col1, col2 = st.columns([0.5, 0.5], gap="small")
@@ -26,6 +25,7 @@ def render_feature_extraction(img_dir: str):
 
 
 def render_model_list():
+    """Liste les modèles ML testés et la méthodologie d'évaluation."""
     with st.container(border=True):
         st.title("Évaluation des modèles de machine learning")
         with st.container(border=True):
@@ -44,6 +44,7 @@ def render_model_list():
 
 
 def render_optimization():
+    """Affiche le modèle le plus performant et les objectifs d'optimisation."""
     with st.container(border=True):
         st.title("Optimisation des modèles de machine learning")
         st.success("Random Forest : modèle le plus performant.")
@@ -56,6 +57,7 @@ def render_optimization():
 
 
 def render_grid_search_params(img_dir: str):
+    """Affiche la méthodologie Grid Search et les hyperparamètres testés."""
     with st.container(border=True):
         st.title("Optimisation par Grid Search")
         st.info(

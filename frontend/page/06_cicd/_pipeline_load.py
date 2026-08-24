@@ -70,7 +70,7 @@ def _load_and_display(save_dir: str, selected: str, joblib, pipeline_cls):
         st.markdown("**Étapes du pipeline:**")
         for i, (name, transformer) in enumerate(pipeline.steps, 1):
             st.code(f"{i}. {name}: {transformer.__class__.__name__}")
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         st.error(f"❌ Erreur de chargement: {e}")
         st.session_state.loaded_pipeline = None
 

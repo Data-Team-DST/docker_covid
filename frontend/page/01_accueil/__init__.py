@@ -47,7 +47,7 @@ def run():
             ),
             color_name="blue-70",
         )
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         st.markdown(
             "<h2>Analyse de radiographies pulmonaires</h2>",
             unsafe_allow_html=True,

@@ -88,7 +88,7 @@ def render_quick_sample(dataset_root: Path, classes: list):
             "Couverture masque",
             f"{mask_cov:.1f}%" if mask_cov else "N/A",
         )
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         st.error(f"Erreur : {e}")
 
 

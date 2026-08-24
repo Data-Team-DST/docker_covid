@@ -42,7 +42,7 @@ for idx, tab in enumerate(_tabs):
                 f"Page chargée : `{fname}` — run() OK.</div>",
                 unsafe_allow_html=True,
             )
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             st.error(f"Erreur `run()` dans `{fname}` : {e}")
             st.markdown(
                 "<div style='font-size:12px;color:#d88;'>"

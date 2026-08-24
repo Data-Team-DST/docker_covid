@@ -1,7 +1,5 @@
 """Page 01 — Section contexte COVID et diagnostic visuel."""
 
-# pylint: disable=line-too-long
-
 from pathlib import Path
 
 import streamlit as st
@@ -58,7 +56,8 @@ def _render_image_selector():
         st.markdown(
             "<div class='project-hero'>"
             "<strong>Difficulté du diagnostic visuel</strong><br>"
-            "Les patterns radiologiques du COVID-19 sont proches d'autres pneumonies.<br><br>"
+            "Les patterns radiologiques du COVID-19 sont proches"
+            " d'autres pneumonies.<br><br>"
             "<strong>Problème 2 : surcharge des radiologues</strong><br>"
             "Volume élevé → temps réduit par examen.<br><br>"
             "<strong>Solution : IA</strong><br>"

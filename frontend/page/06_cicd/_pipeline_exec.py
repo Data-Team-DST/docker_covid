@@ -56,7 +56,7 @@ def _run_pipeline():
         _display_result(result)
         st.session_state.pipeline_result = result
 
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         import traceback  # noqa: PLC0415
 
         st.error(f"❌ Erreur d'exécution: {e}")

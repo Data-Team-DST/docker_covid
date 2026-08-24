@@ -41,7 +41,7 @@ def get_kaggle_dataset_path(dataset_slug: str) -> Path | None:
     try:
         p = kagglehub.dataset_download(dataset_slug)
         return Path(p)
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return None
 
 
@@ -73,7 +73,7 @@ def mask_coverage(mask_path: Path) -> float | None:
         covered = np.count_nonzero(arr)
         total = arr.size
         return 100.0 * covered / total if total > 0 else 0.0
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return None
 
 
@@ -147,7 +147,7 @@ def run_full_dataset_scan(
                 if mask_cov is not None:
                     results["by_class"][cls]["mask_coverages"].append(mask_cov)
                 results["by_class"][cls]["files"].append(str(img_path))
-            except Exception:  # pylint: disable=broad-exception-caught
+            except Exception:
                 continue
     for _cls, info in results["by_class"].items():
         ms = info["metrics"]
