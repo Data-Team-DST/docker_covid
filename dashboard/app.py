@@ -187,6 +187,11 @@ def index():
     return render_template("index.html", backlog=backlog, stats=stats)
 
 
+@app.route("/contexte")
+def contexte():
+    return render_template("contexte.html")
+
+
 @app.route("/sprint/<sprint_id>")
 def sprint_detail(sprint_id: str):
     backlog = load_backlog()
