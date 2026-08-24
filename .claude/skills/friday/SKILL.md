@@ -97,6 +97,27 @@ En complément, vérifier rapidement dans le code touché cette semaine :
 - Absence de secrets hardcodés
 - CORS credentials cohérents (règle SonarQube `web:S5122`)
 
+**Angle mort identifié le 2026-08-24** : les greps sécurité ci-dessus ciblent
+`password|api_key|token|secret`, jamais un email ou nom propre — c'est ainsi
+qu'un email personnel réel et un chemin local d'un tiers avaient fui dans
+`test.ipynb` avant d'être détectés par une autre voie (voir `docs/CLEANUP.md`).
+Ajouter, sur les fichiers touchés cette semaine :
+
+```bash
+FILES=$(git log --oneline --since="last friday" --name-only --pretty=format: | sort -u)
+for f in $FILES; do
+  [ -f "$f" ] || continue
+  grep -nE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$f" 2>/dev/null \
+    | grep -viE 'example\.(com|fr|org)|@localhost|noreply@|your-?email|user@'
+done
+```
+
+Repo **public** : tout email réel (hors `@example.*`/`noreply@`/placeholders
+évidents) trouvé dans un fichier tracké → **P1**. Ce grep ne couvre que les
+emails — un nom propre isolé (ex. nom d'une personne dans un commentaire) ou
+un chemin local (`/home/<user>/...`, `C:\Users\<user>\...`) reste à l'œil nu,
+pas de pattern fiable pour ça sans faux positifs excessifs.
+
 **Revue CVE image de base (cadence ~2 semaines, pas chaque vendredi)** —
 `docs/security/base-image-cve-review.md` tient un tableau « Historique des
 revues ». Comparer la date de la dernière ligne à aujourd'hui :
