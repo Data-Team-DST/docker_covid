@@ -19,6 +19,8 @@ DVC_RAW_FILE = ROOT / "data" / "raw.dvc"
 MODELS_DIR = ROOT / "data" / "models"
 
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+API_KEY = os.getenv("API_KEY", "")
 
 
 def load_backlog() -> dict:
@@ -130,6 +132,43 @@ def index():
     backlog = merge_state(backlog, state)
     stats = compute_stats(backlog)
     return render_template("index.html", backlog=backlog, stats=stats)
+
+
+@app.route("/predict", methods=["GET", "POST"])
+def predict():
+    if request.method == "GET":
+        return render_template("predict.html", result=None, error=None)
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return render_template(
+            "predict.html", result=None, error="Aucun fichier sélectionné."
+        )
+
+    try:
+        r = requests.post(
+            f"{BACKEND_URL}/api/v1/predict",
+            files={"file": (file.filename, file.stream, file.mimetype)},
+            headers={"X-API-Key": API_KEY},
+            timeout=30,
+        )
+    except requests.exceptions.ConnectionError:
+        return render_template(
+            "predict.html",
+            result=None,
+            error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
+        )
+
+    if r.status_code != 200:
+        try:
+            detail = r.json().get("detail", r.text)
+        except ValueError:
+            detail = r.text
+        return render_template(
+            "predict.html", result=None, error=f"Erreur {r.status_code} : {detail}"
+        )
+
+    return render_template("predict.html", result=r.json(), error=None)
 
 
 @app.route("/data")
