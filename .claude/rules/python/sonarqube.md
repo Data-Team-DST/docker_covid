@@ -194,12 +194,31 @@ chaque page comme script autonome sans notion de package. Ça déclenche
 est considéré justifié par la présente règle — pas besoin de justification en langage
 naturel ligne par ligne pour ce cas précis.
 
-**Ce que cette exemption NE couvre PAS** : les autres disables trouvés dans le même
-répertoire lors de cet audit (`broad-exception-caught`, `invalid-name`,
-`too-many-locals`, `line-too-long`, `missing-function-docstring`, `unused-import`, `I001`
-— environ la moitié des 71 recensés) restent soumis à la règle générale : soit une
-justification explicite en commentaire, soit une correction, à traiter séparément (pas
-couvert par cette décision, qui porte uniquement sur le pattern d'import Streamlit).
+**Ce que cette exemption couvre, précisément** (`invalid-name` sur les noms de module/dossier
+préfixés par un chiffre — `01_accueil`, `02_donnees`... — imposés par la convention d'ordre
+des pages Streamlit, et `non-ascii-file-name` sur `05_Deep_learning_et_Interprétabilité.py`,
+un nom de page en français accentué) s'ajoute à la même logique que ci-dessus : structurel,
+non corrigible sans casser l'ordre/l'affichage des pages, pas de justification ligne par
+ligne nécessaire.
+
+**Suite donnée aux ~40 autres disables recensés le 2026-08-24, traitée le même jour** :
+- `broad-exception-caught` (12 occurrences) : **retirés** — déjà désactivé globalement via
+  `[tool.pylint.messages_control]` dans `pyproject.toml` (raison : "résilience chargement
+  modèle"), les disables inline ne faisaient rien.
+- `missing-function-docstring` + `implicit-str-concat` (2 fichiers, 8 fonctions) : **corrigés**
+  — docstrings ajoutées, `implicit-str-concat` ne se déclenchait pas réellement.
+- `line-too-long` (3 fichiers) : **corrigé** — lignes reformatées ≤88 caractères.
+- `too-many-locals` (6 occurrences, 17 à 26 locales pour un seuil à 15, dans des fonctions de
+  rendu Streamlit avec beaucoup de widgets UI) : **laissé en l'état** — un refactor
+  d'extraction est possible mais pas fait à 11 jours de la soutenance (risque de régression
+  sur du code fonctionnel non testé automatiquement). Disable conservé sans nouvelle
+  justification ligne par ligne — à traiter après la soutenance si souhaité.
+- `unused-import` (`06_cicd/_pipeline_load.py`, imports de classes pour un unpickling joblib) :
+  **laissé en l'état**, lié à un bug séparé (import cassé `src.features.St_Pipeline.
+  Transformateurs`, le module n'existe plus dans le repo) — pas corrigé, hors périmètre de
+  cette décision.
+- `I001` (ordre d'import Streamlit `06_cicd.py`) : ce fichier est un fallback mort (jamais
+  chargé — `06_cicd/__init__.py` existe et est préféré par `page/_loader.py`), non touché.
 
 ## Checklist avant commit
 
