@@ -48,4 +48,6 @@ def test_predict_internal_error_returns_500(monkeypatch):
     )
 
     assert response.status_code == 500
-    assert "Erreur interne" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert detail == "Erreur interne lors de la prédiction"
+    assert "PNG" not in detail  # le détail de l'exception PIL ne doit pas fuiter au client
