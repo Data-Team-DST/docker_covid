@@ -179,6 +179,28 @@ except Exception:  # noqa: BLE001
     pass
 ```
 
+## Imports après `sys.path.insert()` — exemption documentée (`frontend/page/*.py`)
+
+Décision actée le 2026-08-24 (audit `/friday`, 71 disables lint recensés dans `frontend/`,
+majoritairement dans `frontend/page/`). Les pages Streamlit multi-pages de ce projet font
+`sys.path.insert(0, ...)` avant d'importer des modules frères (`utils`, modules partagés
+hors package installable) — pattern structurellement nécessaire à Streamlit, qui charge
+chaque page comme script autonome sans notion de package. Ça déclenche
+`E402`/`PLC0415`/`wrong-import-position`/`import-error` sur les imports qui suivent.
+
+**Exemption de portée limitée** : dans `frontend/page/*.py` uniquement, un
+`# noqa: E402` / `# noqa: PLC0415` / `# pylint: disable=wrong-import-position` /
+`# pylint: disable=import-error` qui suit un `sys.path.insert(...)` dans le même fichier
+est considéré justifié par la présente règle — pas besoin de justification en langage
+naturel ligne par ligne pour ce cas précis.
+
+**Ce que cette exemption NE couvre PAS** : les autres disables trouvés dans le même
+répertoire lors de cet audit (`broad-exception-caught`, `invalid-name`,
+`too-many-locals`, `line-too-long`, `missing-function-docstring`, `unused-import`, `I001`
+— environ la moitié des 71 recensés) restent soumis à la règle générale : soit une
+justification explicite en commentaire, soit une correction, à traiter séparément (pas
+couvert par cette décision, qui porte uniquement sur le pattern d'import Streamlit).
+
 ## Checklist avant commit
 
 - [ ] `ruff check` sans erreur + `mypy` sans erreur (voir CLAUDE.md § Qualité)
