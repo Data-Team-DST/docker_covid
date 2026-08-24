@@ -1,5 +1,6 @@
 """Configuration centralisée — DS_COVID Backend"""
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -38,6 +39,16 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"
+
+    @model_validator(mode="after")
+    def _require_api_key_in_production(self) -> "Settings":
+        """Fail-fast : refuse de démarrer en prod sans clé API (pas de fail-open silencieux)."""
+        if self.api_env == "production" and not self.api_key:
+            raise ValueError(
+                "API_KEY ne peut pas être vide quand API_ENV=production "
+                "(l'authentification serait désactivée sur /api/v1/predict)."
+            )
+        return self
 
 
 # Instance globale — importée partout
