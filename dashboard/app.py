@@ -24,7 +24,7 @@ DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 API_KEY = os.getenv("API_KEY", "")
 REPO_URL = "https://github.com/Data-Team-DST/docker_covid"
-_STORY_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+_SAFE_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 def find_commits_for_story(story_id: str, limit: int = 5) -> list:
@@ -32,7 +32,7 @@ def find_commits_for_story(story_id: str, limit: int = 5) -> list:
 
     Preuve vérifiable (lien vers un commit réel) plutôt qu'une capture fabriquée.
     """
-    if not _STORY_ID_RE.match(story_id):
+    if not _SAFE_TOKEN_RE.match(story_id):
         return []
     try:
         proc = subprocess.run(
@@ -46,6 +46,33 @@ def find_commits_for_story(story_id: str, limit: int = 5) -> list:
     for line in proc.stdout.splitlines()[:limit]:
         sha, _, message = line.partition(" ")
         commits.append({"sha": sha, "message": message, "url": f"{REPO_URL}/commit/{sha}"})
+    return commits
+
+
+def resolve_commits(shas: list) -> list:
+    """Résout des SHA connus (renseignés à la main dans backlog.yaml) via `git show`.
+
+    Le message de commit n'est jamais dupliqué dans le YAML : source de vérité = git,
+    donc pas de drift possible si un message est reformulé plus tard.
+    """
+    commits = []
+    for sha in shas:
+        if not _SAFE_TOKEN_RE.match(sha):
+            continue
+        try:
+            proc = subprocess.run(
+                ["git", "show", "-s", "--format=%h %s", sha],
+                cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+                timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if proc.returncode != 0 or not proc.stdout.strip():
+            continue
+        short_sha, _, message = proc.stdout.strip().partition(" ")
+        commits.append(
+            {"sha": short_sha, "message": message, "url": f"{REPO_URL}/commit/{short_sha}"}
+        )
     return commits
 
 
@@ -173,7 +200,9 @@ def sprint_detail(sprint_id: str):
         {
             **story,
             "commits": (
-                find_commits_for_story(story["id"]) if story.get("done") else []
+                resolve_commits(story["commits"])
+                if story.get("commits")
+                else find_commits_for_story(story["id"]) if story.get("done") else []
             ),
         }
         for story in sprint["stories"]
