@@ -4,6 +4,7 @@ pydantic==2.10.3
 pydantic-settings==2.7.0
 python-multipart==0.0.20
 httpx==0.28.1
+slowapi==0.1.9
 
 # ML
 tensorflow==2.18.0

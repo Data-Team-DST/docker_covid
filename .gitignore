@@ -34,6 +34,12 @@ data/models/*.pkl
 .dvc/tmp/
 .dvc/config.local
 
+# MLflow (tracking géré par le serveur Docker Postgres+MinIO, pas par git)
+mlruns/
+mlartifacts/
+mlflow.db
+.trash/
+
 # Notebooks
 .ipynb_checkpoints/
 

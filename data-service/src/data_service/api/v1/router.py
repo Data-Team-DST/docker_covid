@@ -4,7 +4,7 @@ import logging
 import mimetypes
 import os
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -46,6 +46,7 @@ def _run_dvc(cmd: list[str]) -> dict:
             ["dvc"] + cmd,
             capture_output=True, text=True,
             cwd=str(PROJECT_ROOT), timeout=300,
+            check=False,
         )
         out = {
             "returncode": result.returncode,
@@ -125,7 +126,7 @@ def _save_cache(stats: dict) -> None:
         with open(CACHE_FILE, "w", encoding="utf-8") as f:
             json.dump({
                 "raw_hash": _current_dvc_hash(),
-                "computed_at": datetime.now(timezone.utc).isoformat(),
+                "computed_at": datetime.now(UTC).isoformat(),
                 "stats": stats,
             }, f, indent=2)
     except OSError:
@@ -198,8 +199,7 @@ def search_images(
         raise HTTPException(status_code=400, detail="dataset invalide")
     if not query:
         raise HTTPException(status_code=400, detail="query requis")
-    if limit > 100:
-        limit = 100
+    limit = min(limit, 100)
 
     base = DATA_DIR / dataset
     if not base.exists():

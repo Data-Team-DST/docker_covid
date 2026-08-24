@@ -170,11 +170,9 @@ make verify   # → 46 ✅, 0 ❌
 
 ## S3 (suite) — US en attente
 
-### US-11 · CI/CD pipeline complet 🔄 en cours
-**Objectif :** lint → test → SonarCloud → build/push GHCR → **smoke-test deploy** (docker run + curl /health). CI < 10 min, 100% vert sur main.  
-**Ce qui existe déjà :** Lint BE/DS/FE + Test BE/DS/FE + SonarCloud + Build BE/FE/DS — tous ✅ dans `cicd.yml`  
-**Ce qui manque :** job `deploy` — pull l'image depuis GHCR, `docker run`, `curl /health`, stop. Tourne dans le runner GitHub Actions (gratuit, zéro VPS).  
-**Vérifier (une fois fait) :**
+### US-11 · CI/CD pipeline complet ✅
+**Fait :** lint → test → SonarCloud → build/push GHCR (matrix × 3 services) → job `deploy` (smoke-test) — tous verts dans `cicd.yml`. Le job `deploy` pull les images GHCR, `docker run` backend + data-service, `curl /health` sur les deux, puis cleanup. Mergé sur `main` via PR #20/#21.  
+**Vérifier :**
 ```bash
 # GitHub Actions → cicd.yml → job "Deploy smoke-test"
 # → "GET /health → 200 ✅" dans les logs du runner
@@ -182,21 +180,35 @@ make verify   # → 46 ✅, 0 ❌
 
 ---
 
-### US-12 · Sécurité API 🔄 à faire
-**Objectif :** API key obligatoire sur tous les endpoints (401 si absent), rate limiting (100 req/min), validation Pydantic stricte sur `/predict`.  
-**Vérifier (une fois fait) :**
+### US-12 · Sécurité API ✅
+**Fait :** Clé API (`X-API-Key`) obligatoire sur `POST /api/v1/predict` (401 si absente/invalide en prod, libre si `API_KEY` vide en dev). `/health` et `/metrics` restent volontairement publics — nécessaires sans clé au healthcheck Docker (`infrastructure/docker-compose.yml`) et au smoke-test CI. Rate limiting 100 req/min par IP sur `/predict` (429 au-delà, via `slowapi`). Validation stricte de l'upload : content-type JPEG/PNG uniquement + taille max 10 Mo (`MAX_UPLOAD_SIZE_MB`), sinon 400.  
+**Vérifier :**
 ```bash
-curl http://localhost:8000/health                          # → 401 Unauthorized
-curl -H "X-API-Key: secret" http://localhost:8000/health  # → 200
+make start-docker
+
+# /health et /metrics : toujours publics
+curl http://localhost:8000/health   # → 200 sans clé
+
+# /predict : clé API requise dès que API_KEY est configurée dans .env
+curl -X POST http://localhost:8000/api/v1/predict -F "file=@image.png"
+# → 401 si API_KEY est configurée côté serveur et absente ici
+curl -X POST http://localhost:8000/api/v1/predict \
+     -H "X-API-Key: <valeur de API_KEY>" -F "file=@image.png"
+# → 200 (ou 503 si modèle non chargé)
+
+# Rate limiting : au-delà de RATE_LIMIT_PER_MINUTE (100 par défaut) requêtes/min → 429
+# Validation stricte : fichier non-image ou > MAX_UPLOAD_SIZE_MB → 400
 ```
 
 ---
 
-### US-15 · Load test P95 < 500ms 🔄 bloqué par US-12
-**Objectif :** Script locust/k6, 10 req/s sur `/predict`, P95 < 500ms, rapport HTML dans `outputs/load_test/`.  
-**Vérifier (une fois fait) :**
+### US-15 · Load test P95 < 500ms 🔄 prêt à tester — bloqué (pas de modèle entraîné)
+**Fait :** `scripts/load_test/locustfile.py` (Locust) — 10 req/s soutenus sur `POST /api/v1/predict` (10 users, throughput constant 1 req/s/user), image réelle du dataset, header `X-API-Key` si `API_KEY` est configurée. `make load-test` relève temporairement `RATE_LIMIT_PER_MINUTE` (US-12 limite `/predict` à 100/min par défaut — sans ça le test mesurerait la vitesse de rejet 429, pas la latence d'inférence), lance le test 1 min, restaure la limite normale ensuite. Rapport HTML + CSV dans `outputs/load_test/`. Vérifié bout-en-bout contre un backend local (harness fonctionnel, mesure bien les percentiles).  
+**🔄 Bloqué :** aucun modèle entraîné dans `data/models/` (seul un `.gitkeep`) — pas du ressort de cette US, dépend de l'exécution de `dvc repro` (US-08) par la personne en charge de l'entraînement. Sans modèle chargé, `/predict` répond 503 immédiatement : le test tourne mais mesure le chemin d'erreur, pas la latence d'inférence réelle. À noter aussi pour quand le modèle sera prêt : `MODEL_PATH` vaut `best_model.keras` par défaut (`.env`/`config.py`) alors que le pipeline DVC produit `covid_model.keras` — à aligner avant le run.  
+**Vérifier :**
 ```bash
-make load-test   # → outputs/load_test/report.html, P95 < 500ms
+make load-test   # → outputs/load_test/report.html + report_stats.csv
+# Colonne "95%" du CSV (ou section "Response Time Percentiles" du HTML) : P95 < 500ms
 ```
 
 ---

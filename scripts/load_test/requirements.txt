@@ -1,0 +1,2 @@
+# Load test — US-15 (make load-test)
+locust==2.32.4

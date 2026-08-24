@@ -22,6 +22,7 @@ services:
       - API_ENV=${API_ENV:-development}
       - MODEL_PATH=${MODEL_PATH:-data/models/best_model.keras}
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-100}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
