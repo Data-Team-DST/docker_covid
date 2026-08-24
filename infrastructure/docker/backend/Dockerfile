@@ -2,7 +2,9 @@ FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --no-create-home --shell /usr/sbin/nologin appuser
 
 RUN pip install --no-cache-dir --upgrade pip wheel
 
@@ -16,7 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 
 # Données/modèles montés en volume, pas copiés dans l'image
-RUN mkdir -p data/models data/raw data/processed
+RUN mkdir -p data/models data/raw data/processed tmp/logs \
+    && chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8000
 
