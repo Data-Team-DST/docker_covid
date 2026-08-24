@@ -144,11 +144,11 @@ sprints:
         done: false
       - id: US-16
         title: "Data augmentation + DVC pipeline augmenté"
-        description: "Ajouter stage augment dans dvc.yaml : rotation, flip, zoom, brightness. raw → augmented → processed → train. 42 330 images → ~170 000 après augmentation."
+        description: "✅ Stage augment ajouté dans dvc.yaml (commit 35ee130, Rafael) : rotation, flip, zoom, brightness. raw → augmented → processed → train. Fusionné avec prepro.py dans le même stage."
         depends_on: ["US-08"]
         points: 4
         priority: SHOULD
-        done: false
+        done: true
       - id: US-17
         title: "Dashboard agile opérationnel"
         description: "✅ Flask dashboard : backlog.yaml DS_COVID, suivi sprints/stories, data explorer DVC + search index, modal zoom, état persisté dans state.json. Lancé via make dashboard."
