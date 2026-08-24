@@ -391,7 +391,6 @@ jobs:
             -e MODEL_PATH=data/models/best_model.keras \
             -e PYTHONUNBUFFERED=1 \
             -e LOG_SERVICE_URL=http://localhost:5002/v1/log \
-            -v "${{ github.workspace }}/shared:/app/shared:ro" \
             -v "${{ github.workspace }}/tmp/logs:/app/tmp/logs" \
             "ghcr.io/${{ env.ORG }}/covid-xray-backend:sha-${SHORT_SHA}"
 
@@ -403,7 +402,6 @@ jobs:
             -e DATA_SERVICE_PORT=5001 \
             -e PYTHONUNBUFFERED=1 \
             -e LOG_SERVICE_URL=http://localhost:5002/v1/log \
-            -v "${{ github.workspace }}/shared:/app/shared:ro" \
             -v "${{ github.workspace }}/tmp/logs:/app/tmp/logs" \
             "ghcr.io/${{ env.ORG }}/covid-xray-data-service:sha-${SHORT_SHA}"
 

@@ -12,6 +12,10 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 COPY backend/src/ /workspace/src/
 COPY frontend/ /workspace/frontend/
 
+RUN chown -R appuser:appuser /workspace
+ENV HOME=/home/appuser
+USER appuser
+
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
