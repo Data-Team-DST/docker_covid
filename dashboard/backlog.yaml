@@ -4,7 +4,7 @@ chef_projet: "Steven"
 stack: "FastAPI + Docker + DVC + MLflow + GitHub Actions + Prometheus/Grafana"
 version: "1.0"
 date_debut: "2026-03"
-total_sprints: 4
+total_sprints: 5
 total_semaines: 26
 soutenance: "2026-09-04"
 
@@ -209,3 +209,47 @@ sprints:
         points: 3
         priority: MUST
         done: false
+
+  - id: HS
+    name: "Durcissement sécurité & qualité (hors-sprint)"
+    duration: "1 jour"
+    deadline: "2026-08-24"
+    points: 22
+    status: completed
+    stories:
+      - id: HS-1
+        title: "Sécurisation production backend"
+        description: "✅ Fail-fast si API_KEY vide et API_ENV=production (model_validator Pydantic, backend/app/config.py). Ne renvoie plus le détail brut d'exception sur les 500 de /api/v1/predict (fuite interne). USER non-root dans les Dockerfiles backend + data-service. K8s backend.yaml : securityContext non-root, tag :latest remplacé par un placeholder immuable, Secret retiré du repo (secrets.yaml.example)."
+        points: 5
+        priority: MUST
+        done: true
+      - id: HS-2
+        title: "Fiabilisation CI/CD"
+        description: "✅ 4 actions GitHub (checkout/setup-python/upload-artifact/download-artifact) épinglées sur SHA complet. permissions: {} deny-all au niveau workflow. --only-binary=\":all:\" sur les installs ruff/pylint. Corrigé un build data-service cassé en CI/Docker : pywin32==312 (paquet Windows-only) figé par erreur dans requirements.txt lors d'un pip-compile lancé sous Windows au lieu de Linux."
+        points: 4
+        priority: MUST
+        done: true
+      - id: HS-3
+        title: "Qualité code & lint"
+        description: "✅ ruff check --fix repo-wide (37 fixes auto) + corrections manuelles B017/B905. radon ajouté aux dev-requirements (backend + data-service) pour le check de complexité cyclomatique du rituel /friday. Frontend : disables lint redondants retirés (broad-exception-caught déjà désactivé globalement, docstrings manquantes ajoutées, lignes >88 caractères reformatées) — validé sans régression (pylint 9.62/10 inchangé, 7 pages testées en live)."
+        points: 4
+        priority: SHOULD
+        done: true
+      - id: HS-4
+        title: "Coverage backend 77.5% → 95%"
+        description: "✅ Tests ajoutés pour predict.py (chemin succès + erreur 500) et loader.py (ModelLoader.load/predict, tous les cas), auparavant non couverts. 67/67 tests backend verts."
+        points: 3
+        priority: SHOULD
+        done: true
+      - id: HS-5
+        title: "Gouvernance Claude Code"
+        description: "✅ Clarifié la contradiction entre la règle #7 de CLAUDE.md et l'état réel du .gitignore (.claude/rules|skills|agents volontairement publics). Grep email ajouté aux checks sécurité du rituel /friday (angle mort identifié). Rédigé 4 documents de cadrage (CHANTIER_*.md) pour les chantiers plus lourds mis de côté : migration Flask, refactor too-many-locals, décision sur le pipeline builder cassé (06_cicd), déploiement Kubernetes réel."
+        points: 3
+        priority: SHOULD
+        done: true
+      - id: HS-6
+        title: "Bugs découverts et traités en cours d'audit"
+        description: "✅ scikit-learn manquant dans frontend/requirements.txt (utilisé par la page 06_cicd, jamais déclaré) — ajouté. frontend/page/06_cicd.py (711 lignes) supprimé : fallback mort, jamais chargé (page/_loader.py préfère systématiquement le package 06_cicd/). Import cassé src.features.St_Pipeline.Transformateurs documenté en détail (cause racine à deux couches) plutôt que corrigé à la hâte — voir CHANTIER_ST_PIPELINE.md."
+        points: 3
+        priority: SHOULD
+        done: true
