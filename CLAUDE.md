@@ -38,8 +38,12 @@ explicitement écartée par l'utilisateur.
 Avant tout commit ou push, grep les fichiers stagés pour toute référence interne, secret,
 donnée personnelle ou identifiant réel (retour d'expérience : un résidu de projet précédent a
 déjà fui dans des fichiers de règles avant d'être détecté ailleurs — même risque ici si un
-fichier de config ou de notes est copié sans relecture). `.env` et `.claude/` doivent rester
-gitignorés en permanence — vérifier `git status` avant chaque push.
+fichier de config ou de notes est copié sans relecture). `.env` reste gitignoré en
+permanence. `.claude/rules/`, `.claude/skills/`, `.claude/agents/` et `.claude/CLAUDE_AUDIT.md`
+sont **volontairement publics** (transparence sur la configuration Claude Code de ce projet,
+contenu relu avant chaque ajout) — le reste de `.claude/` (`settings.local.json`, `memory/`,
+tout ce qui n'est pas explicitement exempté dans `.gitignore`) reste gitignoré en permanence.
+Vérifier `git status` avant chaque push.
 
 **8 — Toute réponse à l'utilisateur est en français.**
 
