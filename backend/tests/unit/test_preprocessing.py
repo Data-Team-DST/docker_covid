@@ -4,7 +4,7 @@ import io
 
 import numpy as np
 import pytest
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from app.features.preprocessing import preprocess_image
 
@@ -95,5 +95,5 @@ def test_preprocess_non_square_image():
 
 def test_preprocess_invalid_bytes_raises():
     """Des bytes invalides doivent lever une exception."""
-    with pytest.raises(Exception):
+    with pytest.raises(UnidentifiedImageError):
         preprocess_image(b"not_an_image")

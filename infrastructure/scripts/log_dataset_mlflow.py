@@ -11,11 +11,11 @@ Crée un run MLflow dans l'expérience "dataset-ingestion" avec :
 - Tags sprint/US pour traçabilité
 """
 import os
-import yaml
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 import mlflow
+import yaml
 
 ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data-service" / "data"
@@ -73,4 +73,4 @@ with mlflow.start_run(run_name="dataset-v1"):
     print(f"\n✅ Run MLflow créé : {run_id}")
     print(f"   Fichiers : {len(files)} ({round(total_size_mb, 1)} MB)")
     print(f"   Hash DVC : {dvc_out['md5']}")
-    print(f"   → Visible dans MLflow UI > Experiments > dataset-ingestion")
+    print("   → Visible dans MLflow UI > Experiments > dataset-ingestion")

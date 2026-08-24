@@ -16,7 +16,7 @@ import logging
 import logging.handlers
 import os
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 LOG_LEVEL       = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -33,7 +33,7 @@ class _JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         payload = {
-            "ts":      datetime.now(timezone.utc).isoformat(),
+            "ts":      datetime.now(UTC).isoformat(),
             "service": self._service,
             "level":   record.levelname,
             "logger":  record.name,
@@ -60,7 +60,7 @@ class _AsyncHTTPHandler(logging.Handler):
             "level":   record.levelname,
             "logger":  record.name,
             "msg":     record.getMessage(),
-            "ts":      datetime.now(timezone.utc).isoformat(),
+            "ts":      datetime.now(UTC).isoformat(),
         }
         threading.Thread(target=self._post, args=(payload,), daemon=True).start()
 

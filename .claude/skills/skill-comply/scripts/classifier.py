@@ -7,9 +7,9 @@ import logging
 import subprocess
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
 from scripts.parser import ComplianceSpec, ObservationEvent
+
+logger = logging.getLogger(__name__)
 
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 

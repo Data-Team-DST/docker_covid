@@ -7,7 +7,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 import mlflow
 import mlflow.keras
@@ -54,7 +53,7 @@ class MemmapSequence(tf.keras.utils.Sequence):
         y: np.ndarray,
         batch_size: int,
         shuffle: bool,
-        indices: Optional[np.ndarray] = None,
+        indices: np.ndarray | None = None,
     ):
         self.X = X
         self.y = y
