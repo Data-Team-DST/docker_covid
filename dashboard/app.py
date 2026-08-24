@@ -1,6 +1,8 @@
 """Dashboard Flask — DS_COVID MLOps — suivi backlog agile."""
 import json
 import os
+import re
+import subprocess
 from collections import Counter
 from pathlib import Path
 
@@ -21,6 +23,30 @@ MODELS_DIR = ROOT / "data" / "models"
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 API_KEY = os.getenv("API_KEY", "")
+REPO_URL = "https://github.com/Data-Team-DST/docker_covid"
+_STORY_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def find_commits_for_story(story_id: str, limit: int = 5) -> list:
+    """Cherche dans tout l'historique git les commits référençant cette story.
+
+    Preuve vérifiable (lien vers un commit réel) plutôt qu'une capture fabriquée.
+    """
+    if not _STORY_ID_RE.match(story_id):
+        return []
+    try:
+        proc = subprocess.run(
+            ["git", "log", "--all", "--oneline", "-i", f"--grep={story_id}"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+            timeout=10, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    commits = []
+    for line in proc.stdout.splitlines()[:limit]:
+        sha, _, message = line.partition(" ")
+        commits.append({"sha": sha, "message": message, "url": f"{REPO_URL}/commit/{sha}"})
+    return commits
 
 
 def load_backlog() -> dict:
@@ -132,6 +158,27 @@ def index():
     backlog = merge_state(backlog, state)
     stats = compute_stats(backlog)
     return render_template("index.html", backlog=backlog, stats=stats)
+
+
+@app.route("/sprint/<sprint_id>")
+def sprint_detail(sprint_id: str):
+    backlog = load_backlog()
+    state = load_state()
+    backlog = merge_state(backlog, state)
+    sprint = next((s for s in backlog["sprints"] if s["id"] == sprint_id), None)
+    if sprint is None:
+        return jsonify({"error": f"Sprint inconnu : {sprint_id}"}), 404
+
+    stories = [
+        {
+            **story,
+            "commits": (
+                find_commits_for_story(story["id"]) if story.get("done") else []
+            ),
+        }
+        for story in sprint["stories"]
+    ]
+    return render_template("sprint_detail.html", sprint=sprint, stories=stories)
 
 
 @app.route("/predict", methods=["GET", "POST"])
