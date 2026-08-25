@@ -209,10 +209,18 @@ ligne nécessaire.
   — docstrings ajoutées, `implicit-str-concat` ne se déclenchait pas réellement.
 - `line-too-long` (3 fichiers) : **corrigé** — lignes reformatées ≤88 caractères.
 - `too-many-locals` (6 occurrences, 17 à 26 locales pour un seuil à 15, dans des fonctions de
-  rendu Streamlit avec beaucoup de widgets UI) : **laissé en l'état** — un refactor
-  d'extraction est possible mais pas fait à 11 jours de la soutenance (risque de régression
-  sur du code fonctionnel non testé automatiquement). Disable conservé sans nouvelle
-  justification ligne par ligne — à traiter après la soutenance si souhaité.
+  rendu Streamlit avec beaucoup de widgets UI) : **laissé en l'état le 2026-08-24** (11 jours
+  avant la soutenance, risque de régression sur du code fonctionnel non testé automatiquement),
+  **traité le 2026-08-25** (voir `CHANTIER_REFACTOR_TOO_MANY_LOCALS.md`) — 3 des 6 occurrences
+  avaient disparu entre-temps avec la suppression du pipeline builder cassé de `06_cicd`
+  (`_pipeline_create.py`/`_pipeline_load.py`/`_pipeline_steps.py`). Les 3 restantes
+  (`_data_utils.py::run_full_dataset_scan`, `_ui.py::render_quick_sample`,
+  `_confusion_matrices.py::render_grid_search_matrices`) ont été résolues par extraction de
+  sous-fonctions `_render_xxx`/`_scan_xxx`, disables retirés. Vérification statique uniquement
+  (pylint + ruff + py_compile) — pas de vérification visuelle Streamlit réelle, `streamlit`
+  n'étant pas installé sur la machine où le refactor a été fait ; à confirmer visuellement par
+  Steven sur les pages `02_données` et `04_Machine_learning_et_optimisation` avant la
+  soutenance.
 - `unused-import` (`06_cicd/_pipeline_load.py`, imports de classes pour un unpickling joblib) :
   **laissé en l'état**, lié à un bug séparé (import cassé `src.features.St_Pipeline.
   Transformateurs`, le module n'existe plus dans le repo) — pas corrigé, hors périmètre de

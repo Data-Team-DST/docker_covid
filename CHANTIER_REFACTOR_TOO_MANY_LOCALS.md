@@ -1,9 +1,11 @@
 # Chantier — Réduire les fonctions `too-many-locals` du frontend
 
-> Document de cadrage, pas un plan d'exécution. Destiné à être repris par une autre conversation
-> Claude Code. Rien n'a été commencé côté code — volontairement laissé de côté le 2026-08-24 à
-> 11 jours de la soutenance (2026-09-04), pour ne pas risquer une régression sur du code
-> Streamlit fonctionnel et non couvert par des tests automatisés.
+> **Traité le 2026-08-25.** Repris à 10 jours de la soutenance (2026-09-04), sur confirmation
+> explicite de Steven malgré le risque signalé ci-dessous. Voir § Résultat en bas de document.
+>
+> Document de cadrage initial, pas un plan d'exécution — laissé de côté le 2026-08-24 à 11 jours
+> de la soutenance, pour ne pas risquer une régression sur du code Streamlit fonctionnel et non
+> couvert par des tests automatisés.
 
 ## Contexte
 
@@ -62,8 +64,43 @@ dans `cicd.yml`, `continue-on-error: true`, "FE tests pas encore implementes").
    `.claude/rules/python/sonarqube.md` (section sur l'exemption `frontend/page/*.py`) pour
    retirer la mention de ces occurrences.
 
-## Ce que ce document ne fait pas
+## Ce que ce document ne fait pas (état au 2026-08-24, avant traitement)
 
 - Il ne propose pas de découpage précis fonction par fonction — à faire au moment de la reprise,
   en lisant le code courant (peut avoir changé depuis le 2026-08-24).
 - Il ne touche à aucun fichier de code.
+
+## Résultat (2026-08-25)
+
+Périmètre réduit avant traitement : le commit `fc4e279` (2026-08-24, suite à
+`CHANTIER_ST_PIPELINE.md`) avait déjà supprimé `_pipeline_create.py`, `_pipeline_load.py` et
+`_pipeline_steps.py` (pipeline builder cassé de `06_cicd`) — 3 des 6 occurrences listées plus
+haut n'existaient donc plus.
+
+Les 3 occurrences restantes ont été refactorées, une fonction/un commit :
+
+| Fichier | Fonction | Extraction |
+|---|---|---|
+| `_data_utils.py` | `run_full_dataset_scan` | `_scan_image_entry`, `_scan_class`, `_with_class_averages` |
+| `_ui.py` | `render_quick_sample` | `_pick_sample_class_and_count`, `_get_sample_paths`, `_render_sample_image_and_metrics` |
+| `_confusion_matrices.py` | `render_grid_search_matrices` | `_render_grid_search_selection`, `_render_grid_search_model_matrices`, `_render_grid_search_matrices_body` |
+
+Chaque `# pylint: disable=too-many-locals` correspondant a été retiré. Une erreur de périmètre
+a été corrigée en cours de route : `render_initial_confusion_matrices` avait été refactorée par
+erreur (elle n'était pas au-dessus du seuil — seule `render_grid_search_matrices`, à la ligne
+~70 du fichier original, l'était) puis annulée via `git checkout`.
+
+**Vérification effectuée** : pylint (confirmation que `too-many-locals` ne se déclenche plus,
+sans le disable), ruff (`All checks passed!`), `py_compile`, et relecture d'équivalence
+comportementale ligne à ligne entre l'original et la version extraite. Le gate
+`check_code_smell_parser.py` (tolérance 10% sur les annotations `max-lines`) a aussi été revérifié
+sur les 3 fichiers — `_ui.py` dépassait la tolérance après un premier découpage (169L pour un
+seuil annoté 150, tolérance 165) et a été corrigé en fusionnant deux helpers systématiquement
+appelés ensemble (`_render_sample_image_and_metrics`), repassant à 163L.
+
+**Non effectué** : la vérification visuelle manuelle dans l'app Streamlit recommandée par ce
+chantier (§ Approche recommandée, points 2-3) — `streamlit` n'est pas installé sur la machine où
+ce refactor a été fait (pas de venv `frontend/`). **À faire par Steven avant la soutenance** :
+lancer `streamlit run frontend/streamlit_app.py` et vérifier visuellement les pages
+`02_données` (échantillonnage rapide + scan complet) et `04_Machine_learning_et_optimisation`
+(matrices de confusion Grid Search).

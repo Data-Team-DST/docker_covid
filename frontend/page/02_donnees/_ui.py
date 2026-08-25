@@ -2,7 +2,7 @@
 anomalies."""
 
 # code-smell: max-lines=150 reason="3 sections UI cohésives de la page données"
-# pylint: disable=wrong-import-position,import-error,too-many-locals
+# pylint: disable=wrong-import-position,import-error
 
 import sys
 from pathlib import Path
@@ -30,13 +30,8 @@ from _visualizations import (  # noqa: E402
 )
 
 
-def render_quick_sample(dataset_root: Path, classes: list):
-    """Sélection et affichage d'un échantillon d'images."""
-    colored_header(
-        "Échantillonnage rapide",
-        "Visualisation d'un petit échantillon",
-        color_name="violet-70",
-    )
+def _pick_sample_class_and_count(classes: list) -> tuple[str, int]:
+    """Render the class/count/refresh controls and return the current choice."""
     col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
         choice = st.selectbox("Choisir une classe :", options=classes)
@@ -45,7 +40,11 @@ def render_quick_sample(dataset_root: Path, classes: list):
     with col3:
         if st.button("Nouvel échantillon"):
             st.session_state.pop("viz_sample", None)
+    return choice, n
 
+
+def _get_sample_paths(dataset_root: Path, choice: str, n: int) -> list[Path]:
+    """Return the cached (or freshly drawn) sample of image paths for choice/n."""
     sample_key = f"{choice}__{n}"
     cached = st.session_state.get("viz_sample", {})
     if cached.get("key") != sample_key:
@@ -54,8 +53,46 @@ def render_quick_sample(dataset_root: Path, classes: list):
             "key": sample_key,
             "images": [str(p) for p in imgs],
         }
+    return [Path(p) for p in st.session_state["viz_sample"]["images"]]
 
-    img_paths = [Path(p) for p in st.session_state["viz_sample"]["images"]]
+
+def _render_sample_image_and_metrics(img_path: Path, mask_path: Path) -> None:
+    """Render the image/mask columns and the luminosity/contraste/entropie row."""
+    img = Image.open(img_path).convert("RGB")
+    img.thumbnail(THUMBNAIL_MAX)
+    col_img, col_mask = st.columns(2)
+    with col_img:
+        st.markdown("**Image**")
+        st.image(img, caption=img_path.name)
+    with col_mask:
+        st.markdown("**Masque**")
+        if mask_path.exists():
+            m = Image.open(mask_path).convert("L")
+            m.thumbnail(THUMBNAIL_MAX)
+            st.image(m, caption=mask_path.name)
+        else:
+            st.info("Aucun masque pour cette image.")
+    metrics = compute_image_metrics(img)
+    mask_cov = mask_coverage(mask_path) if mask_path.exists() else None
+    ca, cb, cc, cd = st.columns(4)
+    ca.metric("Luminosité", f"{metrics['luminosity_mean']:.1f}")
+    cb.metric("Contraste", f"{metrics['contrast_std']:.1f}")
+    cc.metric("Entropie", f"{metrics['entropy']:.2f}")
+    cd.metric(
+        "Couverture masque",
+        f"{mask_cov:.1f}%" if mask_cov else "N/A",
+    )
+
+
+def render_quick_sample(dataset_root: Path, classes: list):
+    """Sélection et affichage d'un échantillon d'images."""
+    colored_header(
+        "Échantillonnage rapide",
+        "Visualisation d'un petit échantillon",
+        color_name="violet-70",
+    )
+    choice, n = _pick_sample_class_and_count(classes)
+    img_paths = _get_sample_paths(dataset_root, choice, n)
     if not img_paths:
         st.info("Aucune image disponible.")
         return
@@ -64,30 +101,7 @@ def render_quick_sample(dataset_root: Path, classes: list):
     img_path = img_paths[img_names.index(selected)]
     mask_path = dataset_root / choice / "masks" / img_path.name
     try:
-        img = Image.open(img_path).convert("RGB")
-        img.thumbnail(THUMBNAIL_MAX)
-        col_img, col_mask = st.columns(2)
-        with col_img:
-            st.markdown("**Image**")
-            st.image(img, caption=img_path.name)
-        with col_mask:
-            st.markdown("**Masque**")
-            if mask_path.exists():
-                m = Image.open(mask_path).convert("L")
-                m.thumbnail(THUMBNAIL_MAX)
-                st.image(m, caption=mask_path.name)
-            else:
-                st.info("Aucun masque pour cette image.")
-        metrics = compute_image_metrics(img)
-        mask_cov = mask_coverage(mask_path) if mask_path.exists() else None
-        ca, cb, cc, cd = st.columns(4)
-        ca.metric("Luminosité", f"{metrics['luminosity_mean']:.1f}")
-        cb.metric("Contraste", f"{metrics['contrast_std']:.1f}")
-        cc.metric("Entropie", f"{metrics['entropy']:.2f}")
-        cd.metric(
-            "Couverture masque",
-            f"{mask_cov:.1f}%" if mask_cov else "N/A",
-        )
+        _render_sample_image_and_metrics(img_path, mask_path)
     except Exception as e:
         st.error(f"Erreur : {e}")
 
