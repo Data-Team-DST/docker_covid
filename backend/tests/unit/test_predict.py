@@ -25,6 +25,9 @@ def test_predict_success_returns_scores(monkeypatch):
     monkeypatch.setattr(
         model_loader, "predict", lambda img_array: np.array([0.7, 0.1, 0.1, 0.1])
     )
+    # Masking appelle le segmentation-service en HTTP : hors scope de ce test
+    # (couvert par test_preprocessing.py), on le désactive ici.
+    monkeypatch.setattr(settings, "masking", False)
 
     response = client.post(
         "/api/v1/predict",

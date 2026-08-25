@@ -19,9 +19,11 @@ class Settings(BaseSettings):
     model_path: str = "data/models/best_model.keras"
     model_version: str = "1.0.0"
 
-    # Modèle de segmentation pulmonaire (U-Net) — génère le mask des images de predict/,
-    # qui n'en ont pas contrairement au dataset d'entraînement. cf. ds_covid.segmentation.
-    segmentation_model_path: str = "data/models/lung_unet.keras"
+    # Segmentation Service — génère le mask des images de predict/, qui n'en ont pas
+    # contrairement au dataset d'entraînement. Service séparé (U-Net + TensorFlow),
+    # appelé en HTTP plutôt qu'embarqué dans le backend (cf. app/features/preprocessing.py).
+    segmentation_service_url: str = "http://segmentation-service:8001"
+    segmentation_service_timeout_s: float = 10.0
 
     # Classes (ordre doit correspondre à l'entraînement)
     class_names: list[str] = [
@@ -45,8 +47,6 @@ class Settings(BaseSettings):
     clahe_clip_limit: float = 2.0
     clahe_tile_grid_size: tuple[int, int] = (8, 8)
     denoising_method: Optional[str] = None
-    clean_mask_components: int = 2
-    clean_mask_closing_kernel: int = 15
 
     class Config:
         """Configuration Pydantic : source du fichier .env."""

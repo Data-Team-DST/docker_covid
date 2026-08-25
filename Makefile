@@ -15,8 +15,8 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 #   make dvc-repro  → lance `dvc repro` dans le container trainer (GPU, sans dvc local)
 
-.PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard start start-local start-docker start-all \
-        stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
+.PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard setup-segmentation start start-local start-docker start-all \
+        stop restart logs logs-all test test-be test-ds test-segmentation verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
         dvc-setup dvc-push dvc-pull dvc-repro load-test setup-load-test
 
@@ -157,6 +157,17 @@ setup-fe: ## Crée/met à jour le venv frontend (frontend/.venv)
 	@frontend/.venv/bin/pip install -q --require-hashes -r frontend/requirements-dev.txt
 	@echo "$(GREEN)✅ frontend/.venv prêt$(NC)"
 
+setup-segmentation: ## Crée/met à jour le venv segmentation-service (segmentation-service/.venv)
+	@if [ ! -f segmentation-service/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv segmentation-service...$(NC)"; \
+		$(PYTHON) -m venv segmentation-service/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps segmentation-service...$(NC)"
+	@segmentation-service/.venv/bin/pip install -q --require-hashes \
+		-r segmentation-service/requirements.txt \
+		-r segmentation-service/dev-requirements.txt
+	@echo "$(GREEN)✅ segmentation-service/.venv prêt$(NC)"
+
 setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
 	@if [ -d dashboard/.venv/Scripts ] && [ ! -f dashboard/.venv/bin/python ]; then \
 		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
@@ -171,7 +182,7 @@ setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
 	@echo "$(GREEN)✅ dashboard/.venv prêt$(NC)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
-test: test-be test-ds ## Lance les tests de tous les microservices (venvs isolés)
+test: test-be test-ds test-segmentation ## Lance les tests de tous les microservices (venvs isolés)
 
 test-be: setup-be ## Tests backend dans son venv isolé
 	@echo "$(YELLOW)── Tests backend ──────────────────────────────────────$(NC)"
@@ -190,6 +201,15 @@ test-ds: setup-ds ## Tests data-service dans son venv isolé
 		--cov-report=xml:ds-coverage.xml \
 		--cov-fail-under=80
 	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
+
+test-segmentation: setup-segmentation ## Tests segmentation-service dans son venv isolé
+	@echo "$(YELLOW)── Tests segmentation-service ─────────────────────────$(NC)"
+	@cd segmentation-service && PYTHONPATH=src:.. .venv/bin/python -m pytest tests/ -v \
+		--cov=segmentation_service \
+		--cov-report=term-missing \
+		--cov-report=xml:coverage.xml \
+		--cov-fail-under=80
+	@echo "$(GREEN)✅ Tests segmentation-service OK$(NC)"
 
 test-docker: ## Lance les tests dans le container Docker
 	docker compose exec backend pytest tests/ -v --cov=app
