@@ -47,6 +47,23 @@ Vérifier `git status` avant chaque push.
 
 **8 — Toute réponse à l'utilisateur est en français.**
 
+**9 — Valider en bac à sable, jamais en écrivant dans le repo réel.**
+Toute vérification qui crée un venv, installe des dépendances ou exécute du code à titre de
+test doit passer par une copie jetable (conteneur avec le repo monté en lecture seule + copie
+dans l'espace du conteneur, ou tout sandbox équivalent), jamais en écrivant directement dans
+les répertoires réels du repo. Retour d'expérience : une validation a partiellement écrasé un
+`backend/.venv` réel préexistant en montant le repo en écriture directe dans un conteneur
+Docker.
+
+**10 — Une erreur qui révèle un risque récurrent appelle une proposition de règle.**
+Quand une erreur commise en session coûte du temps, risque une régression ou trompe
+l'utilisateur (hypothèse fausse, vérification qui ne vérifie rien, effet de bord non anticipé)
+— et que la cause n'est pas un simple faux pas ponctuel mais un risque qui peut se reproduire —
+ne pas se contenter de corriger l'incident : proposer explicitement d'ajouter, modifier ou
+supprimer une règle (CLAUDE.md ou `.claude/rules/`) pour empêcher la récidive. Proposition
+seulement, jamais appliquée sans validation explicite de l'utilisateur — et pas systématique
+pour chaque erreur mineure, sous peine de gonfler ce fichier de cas hyper-spécifiques.
+
 ---
 
 ## Validation humaine obligatoire
