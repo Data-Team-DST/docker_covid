@@ -67,3 +67,4 @@ _zip_extracted/
 # Fichiers de travail locaux
 plan_de_base.txt
 *.docx
+infrastructure/kubernetes/secrets.yaml
