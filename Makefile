@@ -14,7 +14,7 @@
 #   make logs       → affiche les logs en direct
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 
-.PHONY: all setup setup-check setup-be setup-ds start start-local start-docker start-all \
+.PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard start start-local start-docker start-all \
         stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
         dvc-setup dvc-push dvc-pull load-test
@@ -122,7 +122,7 @@ setup-be: ## Crée/met à jour le venv backend (backend/.venv, sans tensorflow)
 		$(PYTHON) -m venv backend/.venv; \
 	fi
 	@echo "$(YELLOW)Installation deps backend...$(NC)"
-	@backend/.venv/bin/pip install -q -r backend/requirements-dev.txt
+	@backend/.venv/bin/pip install -q --require-hashes -r backend/requirements-dev.txt
 	@echo "$(GREEN)✅ backend/.venv prêt$(NC)"
 
 setup-ds: ## Crée/met à jour le venv data-service (data-service/.venv)
@@ -131,10 +131,36 @@ setup-ds: ## Crée/met à jour le venv data-service (data-service/.venv)
 		$(PYTHON) -m venv data-service/.venv; \
 	fi
 	@echo "$(YELLOW)Installation deps data-service...$(NC)"
-	@data-service/.venv/bin/pip install -q \
+	@data-service/.venv/bin/pip install -q --require-hashes \
 		-r data-service/requirements.txt \
 		-r data-service/dev-requirements.txt
 	@echo "$(GREEN)✅ data-service/.venv prêt$(NC)"
+
+setup-fe: ## Crée/met à jour le venv frontend (frontend/.venv)
+	@if [ -d frontend/.venv/Scripts ] && [ ! -f frontend/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf frontend/.venv; \
+	fi
+	@if [ ! -f frontend/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv frontend...$(NC)"; \
+		$(PYTHON) -m venv frontend/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps frontend...$(NC)"
+	@frontend/.venv/bin/pip install -q --require-hashes -r frontend/requirements.txt
+	@echo "$(GREEN)✅ frontend/.venv prêt$(NC)"
+
+setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
+	@if [ -d dashboard/.venv/Scripts ] && [ ! -f dashboard/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf dashboard/.venv; \
+	fi
+	@if [ ! -f dashboard/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv dashboard...$(NC)"; \
+		$(PYTHON) -m venv dashboard/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps dashboard...$(NC)"
+	@dashboard/.venv/bin/pip install -q --require-hashes -r dashboard/requirements.txt
+	@echo "$(GREEN)✅ dashboard/.venv prêt$(NC)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test: test-be test-ds ## Lance les tests de tous les microservices (venvs isolés)
@@ -252,7 +278,7 @@ data-shell: ## Shell dans le container data-service
 	$(COMPOSE) exec data-service bash
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
-dashboard: ## Lance le dashboard agile + data-service sur :5050/:5001
+dashboard: setup-dashboard ## Lance le dashboard agile + data-service sur :5050/:5001
 	@echo "$(YELLOW)Démarrage MinIO + data-service (DVC)...$(NC)"
 	@$(COMPOSE) up -d minio minio-init 2>/dev/null || true
 	@sleep 6
@@ -260,7 +286,7 @@ dashboard: ## Lance le dashboard agile + data-service sur :5050/:5001
 	@echo "$(YELLOW)Dashboard DS_COVID → http://localhost:5050$(NC)"
 	@echo "$(YELLOW)(Ctrl+C pour tout arrêter)$(NC)"
 	@trap '$(COMPOSE) stop data-service minio 2>/dev/null; exit 0' INT; \
-	 . .venv/bin/activate && cd dashboard && pip install -q -r requirements.txt && python app.py
+	 cd dashboard && .venv/bin/python app.py
 
 clean-docker: ## Supprime les images et volumes Docker du projet
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true
