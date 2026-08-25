@@ -1,0 +1,4 @@
+-r requirements.in
+
+# Lint (make lint-full / check_quality.sh)
+pylint==3.3.9

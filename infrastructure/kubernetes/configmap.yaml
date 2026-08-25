@@ -1,3 +1,5 @@
+# Le Secret ds-covid-secrets vit dans secrets.yaml (gitignoré, jamais commité) —
+# voir secrets.yaml.example pour le gabarit à copier avant tout déploiement.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,17 +12,3 @@ data:
   MLFLOW_TRACKING_URI: "http://mlflow-service:5000"
   MLFLOW_S3_ENDPOINT_URL: "http://minio-service:9000"
   AWS_DEFAULT_REGION: "us-east-1"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ds-covid-secrets
-  namespace: ds-covid
-type: Opaque
-stringData:
-  API_KEY: ""                    # Définir en prod
-  MINIO_ROOT_USER: "minioadmin"
-  MINIO_ROOT_PASSWORD: "minioadmin"
-  POSTGRES_USER: "mlflow"
-  POSTGRES_PASSWORD: "mlflow"
-  POSTGRES_DB: "mlflow"

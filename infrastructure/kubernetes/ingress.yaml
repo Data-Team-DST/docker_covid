@@ -1,10 +1,18 @@
+# 3 Ingress séparées (pas une seule avec 3 `path:`) : l'annotation
+# rewrite-target s'applique à toute l'Ingress, pas path par path. streamlit est
+# servi tel quel depuis /, alors que /api et /mlflow ont besoin d'une réécriture
+# par groupe de capture pour transmettre le sous-chemin (/api/health → /health)
+# — les deux styles de réécriture ne peuvent pas cohabiter sous une seule
+# annotation. Bug découvert le 2026-08-24 en testant réellement les 3 routes
+# (US-23) : l'ancienne règle unique avec `rewrite-target: /` (sans groupe de
+# capture) collapsait tout sous-chemin de /api et /mlflow vers la racine du
+# service backend (/api/health renvoyait la racine de l'API, jamais /health).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ds-covid-ingress
+  name: ds-covid-ingress-streamlit
   namespace: ds-covid
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
 spec:
@@ -20,15 +28,52 @@ spec:
                 name: streamlit-service
                 port:
                   number: 8501
-          - path: /api
-            pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ds-covid-ingress-api
+  namespace: ds-covid
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ds-covid.local
+      http:
+        paths:
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: backend-service
                 port:
                   number: 8000
-          - path: /mlflow
-            pathType: Prefix
+---
+# MLflow sert des assets (JS/CSS) en chemins absolus depuis /, non préfixés par
+# /mlflow — cette Ingress route correctement /mlflow/... vers mlflow-service,
+# mais les liens internes de l'UI MLflow risquent de casser une fois chargée
+# dans un navigateur (limitation connue non résolue ici — mlflow supporte un
+# préfixe statique via config serveur, hors périmètre de ce chantier K8s).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ds-covid-ingress-mlflow
+  namespace: ds-covid
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ds-covid.local
+      http:
+        paths:
+          - path: /mlflow(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: mlflow-service

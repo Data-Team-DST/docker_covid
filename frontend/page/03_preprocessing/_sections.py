@@ -2,12 +2,12 @@
 déséquilibre, augmentation."""
 
 # code-smell: max-lines=140 reason="4 sections UI de preprocessing cohésives"
-# pylint: disable=missing-function-docstring
 
 import streamlit as st
 
 
 def render_environments(img_dir: str):
+    """Affiche la comparaison des environnements de travail (Windows/WSL/Colab)."""
     container = st.container(border=True)
     with container:
         st.title("Environnements de travail")
@@ -59,6 +59,7 @@ def render_environments(img_dir: str):
 
 
 def render_masking(img_dir: str):
+    """Affiche l'effet du masking sur les images (avant/après)."""
     with st.container(border=True):
         st.title("Masking des images")
         col_1, col_2 = st.columns([0.2, 0.2], gap="small")
@@ -87,6 +88,7 @@ def render_masking(img_dir: str):
 
 
 def render_class_balance(img_dir: str):
+    """Affiche la stratégie de rééquilibrage des classes et le split stratifié."""
     with st.container(border=True):
         st.title("Gestion du déséquilibre de classes")
         col_1, col_2 = st.columns([0.3, 0.3], gap="small")
@@ -113,6 +115,7 @@ def render_class_balance(img_dir: str):
 
 
 def render_augmentation(img_dir: str):
+    """Affiche la configuration et un aperçu visuel de la data augmentation."""
     with st.container(border=True):
         st.title("Data Augmentation")
         col_1, col_2 = st.columns([0.5, 0.5], gap="small")

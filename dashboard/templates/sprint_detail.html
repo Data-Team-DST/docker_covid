@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS_COVID — {{ sprint.id }} {{ sprint.name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+    h1 { color: #58a6ff; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .story-card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      padding: 1rem 1.2rem; margin: 1rem 0;
+    }
+    .story-card.done { border-left: 4px solid #3fb950; }
+    .story-card.pending { border-left: 4px solid #6c757d; }
+    .story-title { font-size: 1.05rem; font-weight: bold; color: #e6edf3; }
+    .story-desc { color: #8b949e; font-size: .88rem; margin: .4rem 0 .6rem; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: .75rem; margin: 0 4px 4px 0; }
+    .badge-done { background: #13351f; color: #3fb950; }
+    .badge-pending { background: #30363d; color: #cdd5e0; }
+    .badge-must { background: #3a1114; color: #ff7b72; }
+    .badge-should { background: #3a2f0e; color: #d4a72c; }
+    .badge-points { background: #21262d; color: #8b949e; }
+    .evidence { margin-top: .6rem; }
+    .commit-link {
+      display: block; font-size: .82rem; padding: 4px 0;
+      border-top: 1px dashed #21262d;
+    }
+    .commit-sha { color: #79c0ff; }
+    .no-evidence {
+      font-size: .82rem; color: #6e7681; font-style: italic;
+      border: 1px dashed #30363d; border-radius: 6px; padding: .5rem .8rem; margin-top: .4rem;
+    }
+  </style>
+</head>
+<body>
+
+  <p><a href="/">← Retour au backlog</a></p>
+  <h1>{{ sprint.id }} — {{ sprint.name }}</h1>
+  <p style="color:#8b949e">
+    Preuve de travail par story : commits réels (recherchés dans tout l'historique git par
+    identifiant de story) et, quand disponible, capture d'écran ajoutée manuellement.
+  </p>
+
+  {% for story in stories %}
+  <div class="story-card {{ 'done' if story.done else 'pending' }}">
+    <div class="story-title">{{ story.id }} — {{ story.title }}</div>
+    <div class="story-desc">{{ story.description }}</div>
+    <div>
+      <span class="badge {{ 'badge-done' if story.done else 'badge-pending' }}">
+        {{ 'Terminé' if story.done else 'À faire' }}
+      </span>
+      <span class="badge {{ 'badge-must' if story.priority == 'MUST' else 'badge-should' }}">
+        {{ story.priority }}
+      </span>
+      <span class="badge badge-points">{{ story.points }} pts</span>
+    </div>
+
+    <div class="evidence">
+      {% if story.commits %}
+        {% for commit in story.commits %}
+        <a class="commit-link" href="{{ commit.url }}" target="_blank" rel="noopener">
+          <span class="commit-sha">{{ commit.sha }}</span> — {{ commit.message }}
+        </a>
+        {% endfor %}
+      {% elif story.get('screenshot') %}
+        <img src="{{ url_for('static', filename=story.screenshot) }}" alt="Capture {{ story.id }}" style="max-width:100%;border-radius:6px;margin-top:.4rem">
+      {% elif not story.done %}
+        <div class="no-evidence">Pas encore terminée — pas de preuve à ce stade.</div>
+      {% else %}
+        <div class="no-evidence">
+          Terminée, mais aucun commit trouvé automatiquement pour {{ story.id }} — le
+          message de commit ne référence peut-être pas cet identifiant. Ajouter un lien ou
+          une capture manuellement dans <code>dashboard/backlog.yaml</code> (champ
+          <code>screenshot</code>).
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+</body>
+</html>

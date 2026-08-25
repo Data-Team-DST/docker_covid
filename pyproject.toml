@@ -84,6 +84,9 @@ markers = [
 # ── pylint ────────────────────────────────────────────────────────────────────
 [tool.pylint.main]
 ignored-modules = ["tensorflow", "tensorflow.keras", "tensorflow.keras.models"]
+# .venv est désormais imbriqué dans chaque service (frontend/.venv, backend/.venv...) —
+# sans ça, `pylint frontend/` scanne aussi le code source des paquets installés dedans.
+ignore-paths = [".*/\\.venv/.*", ".*/venv/.*"]
 
 [tool.pylint.messages_control]
 disable = [

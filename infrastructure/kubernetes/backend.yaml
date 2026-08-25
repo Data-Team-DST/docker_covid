@@ -15,10 +15,22 @@ spec:
       labels:
         app: ds-covid-backend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: backend
-          image: ds-covid-backend:latest
+          # :latest est mutable — substituer par le tag sha-<court> publié en CI
+          # (cf. .github/workflows/cicd.yml job build) une fois le déploiement K8s
+          # automatisé (Phase 3, US-23, pas encore câblé à ce jour).
+          image: ds-covid-backend:sha-CHANGEME
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8000
           envFrom:

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS_COVID — Contexte & origine Data Science</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+    h1 { color: #58a6ff; }
+    h2 { color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: .4rem; margin-top: 2rem; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.2rem; margin: 1rem 0; max-width: 720px; }
+    .stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: .6rem 0; }
+    .stat { text-align: center; min-width: 120px; }
+    .stat .value { font-size: 1.6rem; font-weight: bold; color: #58a6ff; }
+    .stat .label { color: #8b949e; font-size: .8rem; }
+    .smart-grid { display: grid; grid-template-columns: auto 1fr; gap: .3rem 1rem; font-size: .88rem; }
+    .smart-grid b { color: #79c0ff; }
+    .result-good { color: #3fb950; }
+    .result-bad { color: #f85149; }
+    .transition {
+      border-left: 3px solid #58a6ff; padding: .8rem 1rem; margin-top: 2rem;
+      background: #0f1520; max-width: 720px; font-size: .9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <p><a href="/">← Retour au backlog</a></p>
+  <h1>🫁 D'où part le projet — contexte Data Science</h1>
+  <p style="color:#8b949e; max-width:720px">
+    Ce projet MLOps industrialise un pipeline construit lors d'une phase Data Science
+    antérieure (repo <a href="https://github.com/Data-Team-DST/DS_COVID" target="_blank" rel="noopener">DS_COVID</a>,
+    équipe Cirine B., Lena B., Steven M., Rafael C.). Page condensée à titre de contexte —
+    le travail jugé à cette soutenance est l'industrialisation (voir le backlog), pas cette
+    phase exploratoire.
+  </p>
+
+  <h2>Pourquoi ce projet</h2>
+  <div class="card">
+    <div class="stat-row">
+      <div class="stat"><div class="value">700M+</div><div class="label">cas COVID-19 dans le monde</div></div>
+      <div class="stat"><div class="value">7M+</div><div class="label">décès</div></div>
+    </div>
+    <p>
+      Les tests RT-PCR sont lents et de sensibilité variable. L'imagerie médicale (radiographie
+      thoracique) permet un triage plus rapide — mais les patterns radiologiques du COVID-19
+      sont proches d'autres pneumonies, et les radiologues sont en surcharge. D'où l'objectif :
+      une classification automatique interprétable, en appui au diagnostic.
+    </p>
+  </div>
+
+  <h2>Objectif SMART initial</h2>
+  <div class="card">
+    <div class="smart-grid">
+      <b>S</b><span>Classification COVID vs non-COVID</span>
+      <b>M</b><span>F1 ≥ 0,80 sur validation indépendante</span>
+      <b>A</b><span>Fine-tuning d'InceptionV3 (transfer learning)</span>
+      <b>R</b><span>Réduire les faux négatifs</span>
+      <b>T</b><span>Démonstration au 12/01/2024</span>
+    </div>
+  </div>
+
+  <h2>Résultat baseline — Machine Learning classique</h2>
+  <div class="card">
+    <p>Modèles testés sur un échantillon équilibré (200 images/classe), évalués par matrice de confusion :</p>
+    <ul>
+      <li>Support Vector Machine (SVM)</li>
+      <li>k-Nearest Neighbors (k-NN)</li>
+      <li>Random Forest</li>
+    </ul>
+    <p><span class="result-good">✅ Random Forest</span> : modèle le plus performant.
+       <span class="result-bad">❌ SVM</span> : le moins performant.
+       Optimisation par Grid Search (validation croisée) sur les deux.</p>
+  </div>
+
+  <h2>Résultat baseline — Deep Learning (modèle retenu)</h2>
+  <div class="card">
+    <p>
+      <b>InceptionV3</b> (transfer learning), entraîné sur 2 000 images : 20 epochs de feature
+      extraction puis 30 epochs de fine-tuning (20 dernières couches dégelées).
+    </p>
+    <p class="result-good">
+      Performance globale jugée très bonne, bonne identification des 3 classes
+      (COVID, pneumonie virale, normal). Le transfert d'apprentissage InceptionV3 est
+      efficace sur ce type d'images médicales.
+    </p>
+    <p>
+      <b>Interprétabilité</b> : LIME (Local Interpretable Model-Agnostic Explanations) —
+      méthode compréhensible, fiable et généralisable, utilisée pour visualiser les zones de
+      l'image ayant motivé chaque prédiction.
+    </p>
+  </div>
+
+  <div class="transition">
+    À partir de ce modèle exploratoire, l'industrialisation MLOps (Phases 1→4) a mis en place :
+    une API de service, des microservices, du versioning de données/modèles (DVC, MLflow), du
+    CI/CD, un déploiement Kubernetes, et du monitoring. Voir le
+    <a href="/">détail par sprint</a> et le <a href="/predict">prédicteur live</a>.
+  </div>
+
+</body>
+</html>

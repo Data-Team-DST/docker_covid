@@ -22,6 +22,9 @@ data/
 __pycache__/
 *.pyc
 
+# Secrets K8s réels (le gabarit secrets.yaml.example reste tracké)
+infrastructure/kubernetes/secrets.yaml
+
 # Data & modèles (versionnés via DVC en Phase 2)
 data/raw/
 data/processed/
@@ -61,8 +64,12 @@ _zip_extracted/
 /outputs/
 /tmp/
 
-# Claude Code (mémoire IA locale)
-.claude/
+# Claude Code (mémoire IA + config locale non partagée)
+.claude/*
+!.claude/rules/
+!.claude/skills/
+!.claude/agents/
+!.claude/CLAUDE_AUDIT.md
 
 # Fichiers de travail locaux
 plan_de_base.txt

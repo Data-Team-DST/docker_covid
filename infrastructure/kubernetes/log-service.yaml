@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-covid-log-service
+  namespace: ds-covid
+  labels:
+    app: ds-covid-log-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ds-covid-log-service
+  template:
+    metadata:
+      labels:
+        app: ds-covid-log-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: log-service
+          # :latest est mutable — substituer par le tag sha-<court> publié en CI
+          # (cf. .github/workflows/cicd.yml job build) une fois le déploiement K8s
+          # automatisé (Phase 3, US-23, pas encore câblé à ce jour).
+          image: ds-covid-log-service:sha-CHANGEME
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 5002
+          env:
+            - name: LOG_SERVICE_PORT
+              value: "5002"
+            - name: LOG_DIR
+              value: "/app/tmp/logs"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: log-service-service
+  namespace: ds-covid
+spec:
+  selector:
+    app: ds-covid-log-service
+  ports:
+    - protocol: TCP
+      port: 5002
+      targetPort: 5002
+  type: ClusterIP

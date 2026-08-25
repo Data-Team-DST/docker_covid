@@ -137,6 +137,13 @@ spec:
     requests:
       storage: 20Gi
 ---
+# ReadWriteOnce (pas ReadOnlyMany) : le provisioner par défaut de kind/minikube
+# (local-path) ne supporte pas ReadOnlyMany — vérifié en déployant réellement
+# (US-23), le PVC restait Pending sinon. RWO fonctionne ici car le cluster kind
+# de démo est mono-nœud (les 2 replicas backend cohabitent sur le même nœud).
+# Sur un vrai cluster multi-nœuds, un provisioner ReadOnlyMany (NFS, EFS...)
+# serait nécessaire si les replicas backend peuvent être schedulés sur des
+# nœuds différents — hors périmètre de ce chantier local.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -144,7 +151,7 @@ metadata:
   namespace: ds-covid
 spec:
   accessModes:
-    - ReadOnlyMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 2Gi

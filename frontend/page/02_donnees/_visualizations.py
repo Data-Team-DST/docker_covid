@@ -78,5 +78,5 @@ def show_mask_overlays(per_image: list[dict], max_examples: int = 3):
                 cov = entry.get("mask_coverage")
                 if cov is not None:
                     st.metric("Couverture", f"{cov:.1f}%")
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 st.error(f"Erreur : {e}")

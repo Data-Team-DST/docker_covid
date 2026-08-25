@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-covid-data-service
+  namespace: ds-covid
+  labels:
+    app: ds-covid-data-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ds-covid-data-service
+  template:
+    metadata:
+      labels:
+        app: ds-covid-data-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: data-service
+          # :latest est mutable — substituer par le tag sha-<court> publié en CI
+          # (cf. .github/workflows/cicd.yml job build) une fois le déploiement K8s
+          # automatisé (Phase 3, US-23, pas encore câblé à ce jour).
+          image: ds-covid-data-service:sha-CHANGEME
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 5001
+          envFrom:
+            - configMapRef:
+                name: ds-covid-config
+            - secretRef:
+                name: ds-covid-secrets
+          env:
+            - name: DATA_SERVICE_PORT
+              value: "5001"
+            - name: DVC_REMOTE_MINIO_ENDPOINTURL
+              value: "http://minio-service:9000"
+            - name: LOG_SERVICE_URL
+              value: "http://log-service-service:5002/v1/log"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ds-covid-secrets
+                  key: MINIO_ROOT_USER
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ds-covid-secrets
+                  key: MINIO_ROOT_PASSWORD
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: dvc-data
+              mountPath: /app/data
+            - name: dvc-dot
+              mountPath: /app/.dvc
+            - name: dvc-git
+              mountPath: /app/.git
+              readOnly: true
+      # hostPath : réplique en local (kind) le bind-mount Docker Compose
+      # ./data, ./.dvc, ./.git — nécessite les extraMounts déclarés dans la
+      # config du cluster kind (voir CHANTIER_KUBERNETES_DEPLOIEMENT.md).
+      # Ne fonctionne que sur un cluster mono-nœud avec ces extraMounts ;
+      # hors périmètre local, un vrai cluster utiliserait `dvc pull` depuis le
+      # remote MinIO plutôt qu'un accès direct au clone git de l'hôte.
+      volumes:
+        - name: dvc-data
+          hostPath:
+            path: /host-mounts/data
+            type: Directory
+        - name: dvc-dot
+          hostPath:
+            path: /host-mounts/dvc
+            type: Directory
+        - name: dvc-git
+          hostPath:
+            path: /host-mounts/git
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-service-service
+  namespace: ds-covid
+spec:
+  selector:
+    app: ds-covid-data-service
+  ports:
+    - protocol: TCP
+      port: 5001
+      targetPort: 5001
+  type: ClusterIP

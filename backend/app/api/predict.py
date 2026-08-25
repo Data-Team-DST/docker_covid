@@ -131,4 +131,6 @@ async def predict(
 
     except Exception as e:
         logger.error("Erreur prédiction : %s", e)
-        raise HTTPException(status_code=500, detail=f"Erreur interne : {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail="Erreur interne lors de la prédiction"
+        ) from e

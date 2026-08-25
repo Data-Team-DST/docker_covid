@@ -7,7 +7,6 @@
 #   ./setup.sh --dev        -> mode developpeur (venv + deps)
 #   ./setup.sh --user       -> mode utilisateur (Docker uniquement)
 #   ./setup.sh --check      -> verifie l'etat sans installer
-#   ./setup.sh --ci         -> mode CI (sans prompts interactifs)
 
 set -e
 
@@ -20,8 +19,6 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-VENV_DIR="${PROJECT_ROOT}/.venv"
-REQUIREMENTS_FILE="${PROJECT_ROOT}/backend/requirements-dev.txt"
 
 log()   { echo -e "${GREEN}[DS_COVID]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[DS_COVID]${NC} $*"; }
@@ -74,27 +71,6 @@ find_python() {
         fi
     done
     return 1
-}
-
-# -- Verification / installation python3-venv (Ubuntu/WSL) --------------------
-ensure_venv_module() {
-    # Teste si le module venv est disponible
-    if "${PYTHON_BIN}" -m venv --help &>/dev/null 2>&1; then
-        return 0
-    fi
-    # Sur Ubuntu/WSL : python3-venv est un package apt séparé
-    if [ "$OS" = "wsl" ] || [ "$OS" = "linux" ]; then
-        local minor
-        minor="$("${PYTHON_BIN}" -c 'import sys; print(sys.version_info[1])' 2>/dev/null)"
-        local pkg="python3.${minor}-venv"
-        warn "Module venv absent -- installation de ${pkg}..."
-        if sudo apt-get install -y "${pkg}" &>/dev/null; then
-            log "${pkg} installe"
-        else
-            # Fallback générique
-            sudo apt-get install -y python3-venv &>/dev/null && log "python3-venv installe"
-        fi
-    fi
 }
 
 # -- Installation Python (WSL/Linux seulement) --------------------------------
@@ -369,27 +345,11 @@ setup_dev() {
         warn "Backend seul disponible. Relancez apres : docker login ghcr.io"
     fi
 
-    # Venv leger optionnel (ruff + pylint + pytest pour IDE/autocomplete)
-    title "Venv leger pour IDE (optionnel)"
-    echo -e "Voulez-vous un venv minimal pour l'autocomplete IDE (ruff, pylint) ?"
-    echo -e "Non requis pour faire tourner le projet. [o/N]"
-    read -r answer
-    if [[ "$answer" =~ ^[oOyY]$ ]]; then
-        if find_python; then
-            ensure_venv_module
-            if [ ! -d "${VENV_DIR}" ]; then
-                "${PYTHON_BIN}" -m venv "${VENV_DIR}"
-            fi
-            "${VENV_DIR}/bin/pip" install -q --upgrade pip
-            "${VENV_DIR}/bin/pip" install -q ruff pylint pytest pytest-cov
-            log "Venv IDE installe : ruff, pylint, pytest"
-            log "Pointez votre IDE vers : ${VENV_DIR}/bin/python"
-        else
-            warn "Python non trouve sur le host -- venv IDE ignore"
-        fi
-    else
-        log "Venv IDE ignore"
-    fi
+    # Venv IDE : chaque service a son propre venv isolé (voir make setup-be / setup-fe)
+    title "Venv pour IDE"
+    log "Pas de venv racine : pointez votre IDE vers le venv du service édité"
+    log "  make setup-be -> backend/.venv/bin/python  (backend/)"
+    log "  make setup-fe -> frontend/.venv/bin/python (frontend/)"
 
     echo ""
     echo -e "${BOLD}${GREEN}============================="
@@ -425,12 +385,12 @@ setup_check() {
         ok=false
     fi
 
-    # Venv
-    title "Environnement virtuel"
-    if [ -d "${VENV_DIR}" ]; then
-        log "Venv (.venv) : OK"
-        for pkg in fastapi uvicorn streamlit pytest ruff; do
-            if "${VENV_DIR}/bin/pip" show "$pkg" &>/dev/null 2>&1; then
+    # Venvs par service
+    title "Environnements virtuels par service"
+    if [ -f "${PROJECT_ROOT}/backend/.venv/bin/python" ]; then
+        log "Venv backend (backend/.venv) : OK"
+        for pkg in fastapi uvicorn pytest pylint; do
+            if "${PROJECT_ROOT}/backend/.venv/bin/pip" show "$pkg" &>/dev/null 2>&1; then
                 log "  $pkg : OK"
             else
                 warn "  $pkg : ABSENT"
@@ -438,7 +398,22 @@ setup_check() {
             fi
         done
     else
-        warn "Venv (.venv) : ABSENT -> lancez ./setup.sh --dev"
+        warn "Venv backend (backend/.venv) : ABSENT -> lancez make setup-be"
+        ok=false
+    fi
+
+    if [ -f "${PROJECT_ROOT}/frontend/.venv/bin/python" ]; then
+        log "Venv frontend (frontend/.venv) : OK"
+        for pkg in streamlit pylint; do
+            if "${PROJECT_ROOT}/frontend/.venv/bin/pip" show "$pkg" &>/dev/null 2>&1; then
+                log "  $pkg : OK"
+            else
+                warn "  $pkg : ABSENT"
+                ok=false
+            fi
+        done
+    else
+        warn "Venv frontend (frontend/.venv) : ABSENT -> lancez make setup-fe"
         ok=false
     fi
 
@@ -502,21 +477,6 @@ case "$MODE" in
         ;;
     --check)
         setup_check
-        ;;
-    --ci)
-        # Mode CI : comme --dev mais sans prompts interactifs
-        find_python || err "Python >= 3.10 requis en CI"
-        ensure_venv_module
-        if [ ! -d "${VENV_DIR}" ]; then
-            "${PYTHON_BIN}" -m venv "${VENV_DIR}"
-        fi
-        "${VENV_DIR}/bin/pip" install -q --upgrade pip wheel setuptools
-        "${VENV_DIR}/bin/pip" install -q -r "${REQUIREMENTS_FILE}"
-        setup_dirs
-        if [ ! -f "${PROJECT_ROOT}/.env" ] && [ -f "${PROJECT_ROOT}/.env.example" ]; then
-            cp "${PROJECT_ROOT}/.env.example" "${PROJECT_ROOT}/.env"
-        fi
-        log "Setup CI termine"
         ;;
     ask|*)
         echo -e "${BLUE}Quel mode souhaitez-vous ?${NC}"

@@ -14,7 +14,6 @@ services:
     volumes:
       - ./data:/app/data:ro
       - ./backend/app:/app/app
-      - ./shared:/app/shared:ro
       - ./tmp/logs:/app/tmp/logs
     env_file: .env
     environment:
@@ -53,7 +52,6 @@ services:
       - ./.git:/app/.git:ro
       - ./tmp/logs:/app/tmp/logs
       - ./infrastructure/dvc_container_config.local:/app/.dvc/config.local:ro
-      - ./shared:/app/shared:ro
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
@@ -139,6 +137,11 @@ services:
         limits:
           memory: 2g
           cpus: "2.0"
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     networks:
       - covid-net
     profiles:

@@ -14,10 +14,10 @@
 #   make logs       → affiche les logs en direct
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 
-.PHONY: all setup setup-check setup-be setup-ds start start-local start-docker start-all \
+.PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard start start-local start-docker start-all \
         stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
-        dvc-setup dvc-push dvc-pull load-test
+        dvc-setup dvc-push dvc-pull load-test setup-load-test
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 GREEN  := \033[0;32m
@@ -101,14 +101,14 @@ dvc-setup: ## Configure DVC remote MinIO (credentials locaux, gitignorés)
 	@echo "    secret_access_key = minioadmin" >> .dvc/config.local
 	@echo "$(GREEN)✅ .dvc/config.local créé$(NC)"
 
-dvc-push: ## Pousse les données vers MinIO (make start-all requis)
+dvc-push: setup-ds ## Pousse les données vers MinIO (make start-all requis)
 	@echo "$(YELLOW)Push DVC → MinIO...$(NC)"
-	@.venv/bin/dvc push || dvc push
+	@data-service/.venv/bin/dvc push
 	@echo "$(GREEN)✅ Données pushées$(NC)"
 
-dvc-pull: ## Récupère les données depuis MinIO
+dvc-pull: setup-ds ## Récupère les données depuis MinIO
 	@echo "$(YELLOW)Pull DVC ← MinIO...$(NC)"
-	@.venv/bin/dvc pull || dvc pull
+	@data-service/.venv/bin/dvc pull
 	@echo "$(GREEN)✅ Données récupérées$(NC)"
 
 # ── Venvs par service ─────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ setup-be: ## Crée/met à jour le venv backend (backend/.venv, sans tensorflow)
 		$(PYTHON) -m venv backend/.venv; \
 	fi
 	@echo "$(YELLOW)Installation deps backend...$(NC)"
-	@backend/.venv/bin/pip install -q -r backend/requirements-dev.txt
+	@backend/.venv/bin/pip install -q --require-hashes -r backend/requirements-dev.txt
 	@echo "$(GREEN)✅ backend/.venv prêt$(NC)"
 
 setup-ds: ## Crée/met à jour le venv data-service (data-service/.venv)
@@ -131,10 +131,36 @@ setup-ds: ## Crée/met à jour le venv data-service (data-service/.venv)
 		$(PYTHON) -m venv data-service/.venv; \
 	fi
 	@echo "$(YELLOW)Installation deps data-service...$(NC)"
-	@data-service/.venv/bin/pip install -q \
+	@data-service/.venv/bin/pip install -q --require-hashes \
 		-r data-service/requirements.txt \
 		-r data-service/dev-requirements.txt
 	@echo "$(GREEN)✅ data-service/.venv prêt$(NC)"
+
+setup-fe: ## Crée/met à jour le venv frontend (frontend/.venv)
+	@if [ -d frontend/.venv/Scripts ] && [ ! -f frontend/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf frontend/.venv; \
+	fi
+	@if [ ! -f frontend/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv frontend...$(NC)"; \
+		$(PYTHON) -m venv frontend/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps frontend...$(NC)"
+	@frontend/.venv/bin/pip install -q --require-hashes -r frontend/requirements-dev.txt
+	@echo "$(GREEN)✅ frontend/.venv prêt$(NC)"
+
+setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
+	@if [ -d dashboard/.venv/Scripts ] && [ ! -f dashboard/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf dashboard/.venv; \
+	fi
+	@if [ ! -f dashboard/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv dashboard...$(NC)"; \
+		$(PYTHON) -m venv dashboard/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps dashboard...$(NC)"
+	@dashboard/.venv/bin/pip install -q --require-hashes -r dashboard/requirements.txt
+	@echo "$(GREEN)✅ dashboard/.venv prêt$(NC)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test: test-be test-ds ## Lance les tests de tous les microservices (venvs isolés)
@@ -145,7 +171,7 @@ test-be: setup-be ## Tests backend dans son venv isolé
 		--cov=backend/app \
 		--cov-report=term-missing \
 		--cov-report=xml:backend/coverage.xml \
-		--cov-fail-under=40
+		--cov-fail-under=80
 	@echo "$(GREEN)✅ Tests backend OK$(NC)"
 
 test-ds: setup-ds ## Tests data-service dans son venv isolé
@@ -154,7 +180,7 @@ test-ds: setup-ds ## Tests data-service dans son venv isolé
 		--cov=data_service \
 		--cov-report=term-missing \
 		--cov-report=xml:ds-coverage.xml \
-		--cov-fail-under=30
+		--cov-fail-under=80
 	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
 
 test-docker: ## Lance les tests dans le container Docker
@@ -180,7 +206,20 @@ verify: ## Lance start-all puis vérifie toutes les US (démo tuteur)
 	@bash verify.sh
 
 # ── Load test ─────────────────────────────────────────────────────────────────
-load-test: ## Test de charge locust sur /predict — 10 req/s, P95<500ms (nécessite un modèle chargé)
+setup-load-test: ## Crée/met à jour le venv load-test (scripts/load_test/.venv)
+	@if [ -d scripts/load_test/.venv/Scripts ] && [ ! -f scripts/load_test/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf scripts/load_test/.venv; \
+	fi
+	@if [ ! -f scripts/load_test/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv load-test...$(NC)"; \
+		$(PYTHON) -m venv scripts/load_test/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps load-test...$(NC)"
+	@scripts/load_test/.venv/bin/pip install -q --require-hashes -r scripts/load_test/requirements.txt
+	@echo "$(GREEN)✅ scripts/load_test/.venv prêt$(NC)"
+
+load-test: setup-load-test ## Test de charge locust sur /predict — 10 req/s, P95<500ms (nécessite un modèle chargé)
 	@mkdir -p outputs/load_test
 	@echo "$(YELLOW)Redémarrage backend avec rate limit relevé pour le test de charge...$(NC)"
 	@RATE_LIMIT_PER_MINUTE=2000 $(COMPOSE) up -d --force-recreate backend
@@ -191,8 +230,7 @@ load-test: ## Test de charge locust sur /predict — 10 req/s, P95<500ms (néces
 	   printf "."; \
 	   [ $$elapsed -ge $$timeout ] && echo " ⚠ Timeout backend" && break; \
 	 done; echo ""
-	@. .venv/bin/activate && pip install -q -r scripts/load_test/requirements.txt && \
-	 locust -f scripts/load_test/locustfile.py --headless \
+	@scripts/load_test/.venv/bin/locust -f scripts/load_test/locustfile.py --headless \
 	   -u 10 -r 10 --run-time 1m --host $(BACKEND_URL) \
 	   --html outputs/load_test/report.html --csv outputs/load_test/report
 	@echo "$(GREEN)✅ Rapport : outputs/load_test/report.html$(NC)"
@@ -200,11 +238,11 @@ load-test: ## Test de charge locust sur /predict — 10 req/s, P95<500ms (néces
 	@$(COMPOSE) up -d --force-recreate backend
 
 # ── Qualité ───────────────────────────────────────────────────────────────────
-lint: ## Vérifie la qualité du code (ruff + pylint + structure)
+lint: setup-be ## Vérifie la qualité du code (ruff + pylint + structure)
 	@echo "$(YELLOW)Vérification qualité...$(NC)"
 	@bash $(SCRIPTS)/check_quality.sh --skip-pylint
 
-lint-full: ## Vérification qualité complète (avec pylint)
+lint-full: setup-be setup-fe ## Vérification qualité complète (avec pylint)
 	@bash $(SCRIPTS)/check_quality.sh
 
 fix: ## Auto-corrige le style (black + isort + ruff)
@@ -252,7 +290,7 @@ data-shell: ## Shell dans le container data-service
 	$(COMPOSE) exec data-service bash
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
-dashboard: ## Lance le dashboard agile + data-service sur :5050/:5001
+dashboard: setup-dashboard ## Lance le dashboard agile + data-service sur :5050/:5001
 	@echo "$(YELLOW)Démarrage MinIO + data-service (DVC)...$(NC)"
 	@$(COMPOSE) up -d minio minio-init 2>/dev/null || true
 	@sleep 6
@@ -260,7 +298,7 @@ dashboard: ## Lance le dashboard agile + data-service sur :5050/:5001
 	@echo "$(YELLOW)Dashboard DS_COVID → http://localhost:5050$(NC)"
 	@echo "$(YELLOW)(Ctrl+C pour tout arrêter)$(NC)"
 	@trap '$(COMPOSE) stop data-service minio 2>/dev/null; exit 0' INT; \
-	 . .venv/bin/activate && cd dashboard && pip install -q -r requirements.txt && python app.py
+	 cd dashboard && .venv/bin/python app.py
 
 clean-docker: ## Supprime les images et volumes Docker du projet
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true

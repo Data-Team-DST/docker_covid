@@ -4,7 +4,6 @@ Lit  : data/models/covid_model.keras + data/processed/{X,y}_test.npy
 Écrit: outputs/evaluation_report.json
 """
 import json
-import sys
 from pathlib import Path
 
 import numpy as np

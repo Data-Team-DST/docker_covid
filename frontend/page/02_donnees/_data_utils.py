@@ -1,7 +1,7 @@
 """Utilitaires de chargement et de traitement du dataset COVID."""
 
 # code-smell: max-lines=165 reason="Module de données cohésif — scan+metrics"
-# pylint: disable=import-error,too-many-locals
+# pylint: disable=import-error
 
 import random
 from pathlib import Path
@@ -41,7 +41,7 @@ def get_kaggle_dataset_path(dataset_slug: str) -> Path | None:
     try:
         p = kagglehub.dataset_download(dataset_slug)
         return Path(p)
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return None
 
 
@@ -73,7 +73,7 @@ def mask_coverage(mask_path: Path) -> float | None:
         covered = np.count_nonzero(arr)
         total = arr.size
         return 100.0 * covered / total if total > 0 else 0.0
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return None
 
 
@@ -104,6 +104,65 @@ def overlay_mask_on_image(
     return Image.alpha_composite(img, red)
 
 
+def _scan_image_entry(
+    root: Path,
+    cls: str,
+    img_path: Path,
+    include_masks: bool,
+) -> dict:
+    """Compute the metrics/mask entry for a single image of a given class."""
+    img = Image.open(img_path).convert("RGB")
+    metrics = compute_image_metrics(img)
+    mask_path = None
+    mask_cov = None
+    if include_masks:
+        candidate = root / cls / "masks" / img_path.name
+        if candidate.exists():
+            mask_path = candidate
+            mask_cov = mask_coverage(mask_path)
+    return {
+        "path": str(img_path),
+        "class": cls,
+        "metrics": metrics,
+        "mask": str(mask_path) if mask_path else None,
+        "mask_coverage": mask_cov,
+    }
+
+
+def _scan_class(root: Path, cls: str, include_masks: bool) -> tuple[dict, list[dict]]:
+    """Scan every image of one class and return its aggregated info and entries."""
+    info: dict = {"count": 0, "metrics": [], "mask_coverages": [], "files": []}
+    entries: list[dict] = []
+    images_dir = root / cls / "images"
+    if not images_dir.exists():
+        return info, entries
+    files = sorted([p for p in images_dir.iterdir() if _is_image_file(p)])
+    info["count"] = len(files)
+    for img_path in files:
+        try:
+            entry = _scan_image_entry(root, cls, img_path, include_masks)
+        except Exception:
+            continue
+        entries.append(entry)
+        info["metrics"].append(entry["metrics"])
+        if entry["mask_coverage"] is not None:
+            info["mask_coverages"].append(entry["mask_coverage"])
+        info["files"].append(entry["path"])
+    return info, entries
+
+
+def _with_class_averages(info: dict) -> dict:
+    """Return info augmented with avg_lum/avg_std/avg_entropy over its metrics."""
+    ms = info["metrics"]
+    if ms:
+        avg_lum = float(np.mean([m["luminosity_mean"] for m in ms]))
+        avg_std = float(np.mean([m["contrast_std"] for m in ms]))
+        avg_entropy = float(np.mean([m["entropy"] for m in ms]))
+    else:
+        avg_lum = avg_std = avg_entropy = 0.0
+    return {**info, "avg_lum": avg_lum, "avg_std": avg_std, "avg_entropy": avg_entropy}
+
+
 @st.cache_data(show_spinner=False)
 def run_full_dataset_scan(
     root: Path,
@@ -113,48 +172,7 @@ def run_full_dataset_scan(
     """Scan all images in the dataset and return metrics aggregated per class."""
     results: dict = {"per_image": [], "by_class": {}}
     for cls in classes:
-        results["by_class"][cls] = {
-            "count": 0,
-            "metrics": [],
-            "mask_coverages": [],
-            "files": [],
-        }
-        images_dir = root / cls / "images"
-        if not images_dir.exists():
-            continue
-        files = sorted([p for p in images_dir.iterdir() if _is_image_file(p)])
-        results["by_class"][cls]["count"] = len(files)
-        for img_path in files:
-            try:
-                img = Image.open(img_path).convert("RGB")
-                metrics = compute_image_metrics(img)
-                mask_path = None
-                mask_cov = None
-                if include_masks:
-                    candidate = root / cls / "masks" / img_path.name
-                    if candidate.exists():
-                        mask_path = candidate
-                        mask_cov = mask_coverage(mask_path)
-                entry = {
-                    "path": str(img_path),
-                    "class": cls,
-                    "metrics": metrics,
-                    "mask": str(mask_path) if mask_path else None,
-                    "mask_coverage": mask_cov,
-                }
-                results["per_image"].append(entry)
-                results["by_class"][cls]["metrics"].append(metrics)
-                if mask_cov is not None:
-                    results["by_class"][cls]["mask_coverages"].append(mask_cov)
-                results["by_class"][cls]["files"].append(str(img_path))
-            except Exception:  # pylint: disable=broad-exception-caught
-                continue
-    for _cls, info in results["by_class"].items():
-        ms = info["metrics"]
-        if ms:
-            info["avg_lum"] = float(np.mean([m["luminosity_mean"] for m in ms]))
-            info["avg_std"] = float(np.mean([m["contrast_std"] for m in ms]))
-            info["avg_entropy"] = float(np.mean([m["entropy"] for m in ms]))
-        else:
-            info["avg_lum"] = info["avg_std"] = info["avg_entropy"] = 0.0
+        info, entries = _scan_class(root, cls, include_masks)
+        results["per_image"].extend(entries)
+        results["by_class"][cls] = _with_class_averages(info)
     return results

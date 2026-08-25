@@ -17,7 +17,12 @@ spec:
     spec:
       containers:
         - name: mlflow
-          image: python:3.11-slim
+          # python:3.11-slim nu ne contient pas mlflow — utiliser l'image buildée
+          # depuis infrastructure/docker/mlflow/Dockerfile (mlflow+boto3+psycopg2).
+          # :latest est mutable — substituer par le tag sha-<court> publié en CI
+          # une fois le déploiement K8s automatisé (Phase 3, US-23).
+          image: ds-covid-mlflow:sha-CHANGEME
+          imagePullPolicy: IfNotPresent
           command:
             - mlflow
             - server
@@ -32,12 +37,18 @@ spec:
                 name: ds-covid-config
             - secretRef:
                 name: ds-covid-secrets
+          # Limite relevée 512Mi → 1Gi (2026-08-24, US-23) : mlflow server démarre
+          # 4 workers gunicorn (dimensionnés sur le nb de cœurs), chacun avec
+          # mlflow+boto3+psycopg2 chargés — dépassait 512Mi et se faisait
+          # OOM-kill (exit 137) une fois déployé sur un vrai cluster K8s, où
+          # les limits sont réellement appliquées (contrairement à Compose
+          # classique, qui ignore deploy.resources hors mode Swarm).
           resources:
             requests:
-              memory: "256Mi"
+              memory: "512Mi"
               cpu: "250m"
             limits:
-              memory: "512Mi"
+              memory: "1Gi"
               cpu: "500m"
 ---
 apiVersion: v1
