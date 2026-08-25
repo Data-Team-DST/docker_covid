@@ -16,6 +16,7 @@ import yaml
 from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
+from tqdm.keras import TqdmCallback
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
@@ -62,14 +63,22 @@ def main() -> None:
     )
     print(f"[INFO] Train={len(idx_train)}  Val={len(idx_val)}", flush=True)
 
-    train_seq = MemmapSequence(X_train, y_train, batch_size=tp["batch_size"], shuffle=True, indices=idx_train)
-    val_seq   = MemmapSequence(X_train, y_train, batch_size=tp["batch_size"], shuffle=False, indices=idx_val)
-
     class_weights = compute_class_weight(
         "balanced", classes=np.unique(y_train[idx_train]), y=y_train[idx_train]
     )
     class_weight_dict = dict(enumerate(class_weights))
     print(f"[INFO] Class weights : {class_weight_dict}", flush=True)
+
+    # class_weight appliqué via sample_weight dans MemmapSequence (pas via l'argument
+    # class_weight de model.fit(), incompatible avec un Sequence custom sous Keras 3 —
+    # voir ds_covid.data.MemmapSequence). Le split val ne doit pas être pondéré : la
+    # pondération ne doit affecter que la loss d'entraînement, pas val_loss (monitorée
+    # par EarlyStopping/ReduceLROnPlateau).
+    train_seq = MemmapSequence(
+        X_train, y_train, batch_size=tp["batch_size"], shuffle=True,
+        indices=idx_train, class_weight=class_weight_dict,
+    )
+    val_seq = MemmapSequence(X_train, y_train, batch_size=tp["batch_size"], shuffle=False, indices=idx_val)
 
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", mlp["tracking_uri"])
     mlflow.set_tracking_uri(tracking_uri)
@@ -91,15 +100,15 @@ def main() -> None:
         callbacks = [
             tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True),
             tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6),
+            TqdmCallback(verbose=2),  # 1 barre epoch/epoch (temps écoulé/restant), pas de reset par batch
         ]
 
         history = model.fit(
             train_seq,
             epochs=tp["epochs"],
             validation_data=val_seq,
-            class_weight=class_weight_dict,
             callbacks=callbacks,
-            verbose=1,
+            verbose=0,
         )
 
         val_acc  = float(history.history["val_accuracy"][-1])

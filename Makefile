@@ -13,11 +13,12 @@
 #   make fix        → auto-corrige le style (black/ruff/isort)
 #   make logs       → affiche les logs en direct
 #   make clean      → nettoie __pycache__, .coverage, tmp/
+#   make dvc-repro  → lance `dvc repro` dans le container trainer (GPU, sans dvc local)
 
 .PHONY: all setup setup-check setup-be setup-ds start start-local start-docker start-all \
         stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
-        dvc-setup dvc-push dvc-pull load-test
+        dvc-setup dvc-push dvc-pull dvc-repro load-test
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 GREEN  := \033[0;32m
@@ -110,6 +111,13 @@ dvc-pull: ## Récupère les données depuis MinIO
 	@echo "$(YELLOW)Pull DVC ← MinIO...$(NC)"
 	@.venv/bin/dvc pull || dvc pull
 	@echo "$(GREEN)✅ Données récupérées$(NC)"
+
+dvc-repro: ## Lance dvc repro dans le container trainer (GPU + dvc préinstallés, pas besoin de dvc en local)
+	@echo "$(YELLOW)dvc repro dans le container trainer (GPU)...$(NC)"
+	$(COMPOSE) --profile training run --rm --build \
+		-v "$$(pwd):/app" -w /app \
+		trainer dvc repro
+	@echo "$(GREEN)✅ Pipeline DVC rejoué$(NC)"
 
 # ── Venvs par service ─────────────────────────────────────────────────────────
 setup-be: ## Crée/met à jour le venv backend (backend/.venv, sans tensorflow)

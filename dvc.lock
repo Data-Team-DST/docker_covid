@@ -7,6 +7,7 @@ stages:
       hash: md5
       md5: 4cd9fd0af80f904bf9ddb20f30f09228
       size: 3558
+      isexec: true
     - path: data/raw
       hash: md5
       md5: 050075f53f06fe4b334237960dfd898d.dir
@@ -14,8 +15,9 @@ stages:
       nfiles: 42335
     - path: scripts/augment.py
       hash: md5
-      md5: 0f5a8a7ef395701cb44abbaca078ee9e
-      size: 4079
+      md5: b81e127a937612665b73e42988233930
+      size: 5874
+      isexec: true
     params:
       params.yaml:
         augment:
@@ -34,44 +36,54 @@ stages:
           Normal: 1
           Viral Pneumonia: 2
           Lung_Opacity: 3
+        preprocess.max_samples_per_class: 500
+        preprocess.random_seed: 42
+        preprocess.test_split: 0.2
     outs:
     - path: data/augmented
       hash: md5
-      md5: 61e801a1986d1c35153998404e7ed3b0.dir
-      size: 3547025921
-      nfiles: 169320
+      md5: 1b3ee1d97f3341966b7dab80d259f8e0.dir
+      size: 292417156
+      nfiles: 13600
     - path: outputs/augment_stats.json
       hash: md5
-      md5: a32756a7197bd4102ecb6426e3651c04
-      size: 172
+      md5: eee7e8997ace464a790f4d583bf4def8
+      size: 310
+      isexec: true
   preprocess:
     cmd: python scripts/preprocess.py
     deps:
     - path: backend/src/ds_covid/preprocessing.py
       hash: md5
-      md5: f47d30feda4821f6a4c7c5c8934355b5
-      size: 6188
+      md5: a015351845c3a355abdd124dbe9f8247
+      size: 7611
+      isexec: true
     - path: data/augmented
       hash: md5
-      md5: 61e801a1986d1c35153998404e7ed3b0.dir
-      size: 3547025921
-      nfiles: 169320
+      md5: 1b3ee1d97f3341966b7dab80d259f8e0.dir
+      size: 292417156
+      nfiles: 13600
     - path: scripts/preprocess.py
       hash: md5
-      md5: 4a3f58dec0b1bc7ad6a54780ec3d0925
-      size: 4878
+      md5: 7fc2becdc84ac3bfcfe6cb8fc7271683
+      size: 4876
+      isexec: true
     params:
       params.yaml:
         preprocess:
           img_size:
           - 256
           - 256
-          max_samples_per_class:
+          max_samples_per_class: 500
           test_split: 0.2
           random_seed: 42
           masking: true
           cropping: true
           clahe: true
+          clahe_clip_limit: 2.0
+          clahe_tile_grid_size:
+          - 8
+          - 8
           denoising_method:
           classes:
             COVID: 0
@@ -81,21 +93,26 @@ stages:
     outs:
     - path: data/processed/X_test.npy
       hash: md5
-      md5: 4ac8990522f77748f79044dc623067d5
-      size: 4438622336
+      md5: 2beae962d1042e6a02dde0d521fa7157
+      size: 104857728
+      isexec: true
     - path: data/processed/X_train.npy
       hash: md5
-      md5: ca6e31b07da51f8eb5b467dfb50d2e4a
-      size: 17754488960
+      md5: c7e66eca0b60e13525ebba2787d38841
+      size: 1677721728
+      isexec: true
     - path: data/processed/y_test.npy
       hash: md5
-      md5: 6c467c989402fa959077ea5f3b739b6e
-      size: 67856
+      md5: 7636093299bf07bb8453c8183128d379
+      size: 1728
+      isexec: true
     - path: data/processed/y_train.npy
       hash: md5
-      md5: 8d524c75faffb03a5e045ac9fa7bdc00
-      size: 271040
+      md5: 1c9a6e07410cdf448ce27ed3177f1af1
+      size: 25728
+      isexec: true
     - path: outputs/preprocess_stats.json
       hash: md5
-      md5: bae359660354b660f6eb647e9a89ef93
-      size: 209
+      md5: 816bc2e73564cb32b60bb3538884adf8
+      size: 326
+      isexec: true

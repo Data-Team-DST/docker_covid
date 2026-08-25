@@ -19,6 +19,7 @@ import tensorflow as tf
 import yaml
 from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
+from tqdm.keras import TqdmCallback
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
@@ -100,8 +101,9 @@ def main() -> None:
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True),
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=1, min_lr=1e-5),
                 tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
+                TqdmCallback(desc="Phase 1/2 (decoder)", verbose=2),
             ],
-            verbose=1,
+            verbose=0,
         )
 
         # --- Phase 2 : encoder dégelé, fine-tuning complet avec un LR beaucoup plus bas ---
@@ -127,8 +129,9 @@ def main() -> None:
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=4, restore_best_weights=True),
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2, min_lr=1e-7),
                 tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
+                TqdmCallback(desc="Phase 2/2 (fine-tune)", verbose=2),
             ],
-            verbose=1,
+            verbose=0,
         )
 
         val_dice = float(history_finetune.history["val_dice_coef"][-1])

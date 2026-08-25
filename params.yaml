@@ -11,7 +11,7 @@ augment:
 
 preprocess:
   img_size: [256, 256]
-  max_samples_per_class: null   # limite par classe sur les images BRUTES (null = toutes) — utilisé par augment.py
+  max_samples_per_class: 500   # limite par classe sur les images BRUTES (null = toutes) — utilisé par augment.py
   test_split: 0.2                # part réservée au test, prélevée avant augmentation — utilisé par augment.py
   random_seed: 42                # seed du split train/test (augment.py) ET du split train/val (train.py)
   masking: true                 # applique le mask de segmentation des poumons
