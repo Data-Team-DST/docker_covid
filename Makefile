@@ -17,7 +17,7 @@
 .PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard start start-local start-docker start-all \
         stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
-        dvc-setup dvc-push dvc-pull load-test
+        dvc-setup dvc-push dvc-pull load-test setup-load-test
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 GREEN  := \033[0;32m
@@ -101,14 +101,14 @@ dvc-setup: ## Configure DVC remote MinIO (credentials locaux, gitignorés)
 	@echo "    secret_access_key = minioadmin" >> .dvc/config.local
 	@echo "$(GREEN)✅ .dvc/config.local créé$(NC)"
 
-dvc-push: ## Pousse les données vers MinIO (make start-all requis)
+dvc-push: setup-ds ## Pousse les données vers MinIO (make start-all requis)
 	@echo "$(YELLOW)Push DVC → MinIO...$(NC)"
-	@.venv/bin/dvc push || dvc push
+	@data-service/.venv/bin/dvc push
 	@echo "$(GREEN)✅ Données pushées$(NC)"
 
-dvc-pull: ## Récupère les données depuis MinIO
+dvc-pull: setup-ds ## Récupère les données depuis MinIO
 	@echo "$(YELLOW)Pull DVC ← MinIO...$(NC)"
-	@.venv/bin/dvc pull || dvc pull
+	@data-service/.venv/bin/dvc pull
 	@echo "$(GREEN)✅ Données récupérées$(NC)"
 
 # ── Venvs par service ─────────────────────────────────────────────────────────
@@ -206,7 +206,20 @@ verify: ## Lance start-all puis vérifie toutes les US (démo tuteur)
 	@bash verify.sh
 
 # ── Load test ─────────────────────────────────────────────────────────────────
-load-test: ## Test de charge locust sur /predict — 10 req/s, P95<500ms (nécessite un modèle chargé)
+setup-load-test: ## Crée/met à jour le venv load-test (scripts/load_test/.venv)
+	@if [ -d scripts/load_test/.venv/Scripts ] && [ ! -f scripts/load_test/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf scripts/load_test/.venv; \
+	fi
+	@if [ ! -f scripts/load_test/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv load-test...$(NC)"; \
+		$(PYTHON) -m venv scripts/load_test/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps load-test...$(NC)"
+	@scripts/load_test/.venv/bin/pip install -q --require-hashes -r scripts/load_test/requirements.txt
+	@echo "$(GREEN)✅ scripts/load_test/.venv prêt$(NC)"
+
+load-test: setup-load-test ## Test de charge locust sur /predict — 10 req/s, P95<500ms (nécessite un modèle chargé)
 	@mkdir -p outputs/load_test
 	@echo "$(YELLOW)Redémarrage backend avec rate limit relevé pour le test de charge...$(NC)"
 	@RATE_LIMIT_PER_MINUTE=2000 $(COMPOSE) up -d --force-recreate backend
@@ -217,8 +230,7 @@ load-test: ## Test de charge locust sur /predict — 10 req/s, P95<500ms (néces
 	   printf "."; \
 	   [ $$elapsed -ge $$timeout ] && echo " ⚠ Timeout backend" && break; \
 	 done; echo ""
-	@. .venv/bin/activate && pip install -q -r scripts/load_test/requirements.txt && \
-	 locust -f scripts/load_test/locustfile.py --headless \
+	@scripts/load_test/.venv/bin/locust -f scripts/load_test/locustfile.py --headless \
 	   -u 10 -r 10 --run-time 1m --host $(BACKEND_URL) \
 	   --html outputs/load_test/report.html --csv outputs/load_test/report
 	@echo "$(GREEN)✅ Rapport : outputs/load_test/report.html$(NC)"
