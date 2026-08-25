@@ -1,17 +1,22 @@
 # Incident — `dvc repro` GPU cassé sur driver CUDA 13.1 (2026-08-25)
 
 Session d'une après-midi, branche `raf5`. Point de départ : « je vais lancer `dvc repro`
-sans GPU ça va être la guerre ». Six problèmes indépendants, empilés les uns sur les
-autres, avant d'obtenir un entraînement GPU réellement fonctionnel.
+sans GPU ça va être la guerre ». Huit problèmes indépendants, empilés les uns sur les
+autres, avant d'obtenir un pipeline d'entraînement GPU réellement fonctionnel de bout
+en bout (training + tracking MLflow inclus).
 
 ## Résumé pour qui n'a pas le temps de tout lire
 
-- `make dvc-repro` fonctionne maintenant en GPU réel sur la RTX 3060 (validé par un
-  entraînement de bout en bout, pas juste `tf.config.list_physical_devices`).
+- `make dvc-repro` fonctionne maintenant en GPU réel sur la RTX 3060, training **et**
+  tracking MLflow inclus (validé par un smoke test complet : `log_model` +
+  `log_metrics` jusqu'au bout, modèle réellement uploadé sur MinIO).
 - Ça a nécessité de monter TensorFlow **2.18 → 2.21** dans l'image de base partagée
   (`infrastructure/docker/base/Dockerfile`), ce qui **casse `streamlit`**
   (`protobuf` incompatible — voir § Dette ci-dessous). Accepté explicitement : cette
   branche n'est pas la branche de démo.
+- Ça a aussi nécessité de monter le serveur MLflow **2.19.0 → 3.15.1** (§ 5), avec sa
+  propre cascade de 4 sous-problèmes (API manquante, crash-loop mémoire, sécurité
+  DNS-rebinding, credentials S3 côté client).
 - Aucune image n'a été poussée sur GHCR — le fix ne vit que dans les Dockerfiles/commits,
   pas encore rebuild côté CI/registre.
 
@@ -104,9 +109,69 @@ utilisé (`StreamExecutor ... NVIDIA GeForce RTX 3060 ... compute capability 8.6
 **Décision assumée** : ne pas toucher à `frontend/requirements.txt`. `streamlit` reste
 cassé sur `raf5` tant que cette branche n'est pas celle utilisée pour la démo.
 
+### 5. Corruption silencieuse de `train.py` par un merge Git
+
+Entre deux relances, un `git pull` (VS Code) a fusionné 47 commits d'`origin/raf5`.
+Le merge de `scripts/train.py` n'a montré **aucun conflit textuel** — mais a réintroduit
+une ancienne définition locale de `class MemmapSequence` (sans `class_weight`, héritée
+d'une version d'`origin` antérieure au refactor vers `ds_covid/data.py`) **en plus** de
+`from ds_covid.data import MemmapSequence`. Comme la classe locale est définie *après*
+l'import, elle écrase silencieusement le nom importé au chargement du module — Git n'a
+rien à signaler puisque les deux blocs ne se chevauchent pas ligne à ligne, mais le
+résultat est sémantiquement cassé (`TypeError: unexpected keyword argument
+'class_weight'` au premier `dvc repro` réel post-merge).
+
+**Fix** : suppression de la classe locale dupliquée, l'import `ds_covid.data` reste seul
+en vigueur. Aucun autre fichier touché par ce merge (`data.py`, `models.py`,
+`segmentation.py`, `train_segmentation.py`) n'avait ce problème — vérifié un par un.
+
+**Leçon** : après tout merge Git qui touche un fichier qu'on vient de corriger, relire
+le fichier (pas juste vérifier l'absence de marqueurs de conflit) avant de relancer.
+
+### 6. Serveur MLflow 2.19.0 incompatible avec le client 3.15.1
+
+Une fois `train` fonctionnel en GPU, il plante à l'étape `mlflow.keras.log_model()` :
+404 sur `/api/2.0/mlflow/logged-models`, une API introduite par MLflow 3.x et absente
+du serveur (`infrastructure/docker/mlflow/Dockerfile`, resté épinglé `mlflow==2.19.0`).
+Le client (dans `trainer/requirements.txt`, `mlflow` non pinné) avait résolu en
+`3.15.1` — un vrai décalage client/serveur, pas juste un manque de pin.
+
+Repin le client à `2.19.0` pour matcher le serveur ? Non viable : `mlflow-skinny==2.19.0`
+exige `protobuf<6`, en conflit direct avec TF 2.21 (`>=6.31.1`, § 3) — ça rouvrirait la
+guerre protobuf déjà réglée. Il fallait donc monter le **serveur**, pas redescendre le
+client. `mlflow-server` n'a aucun autre consommateur dans le repo (rien dans `backend/`
+ni `dashboard/`), et `start.sh` fait déjà un `mlflow db upgrade` automatique — risque
+contenu, contrairement au cas streamlit.
+
+**Fix** : `infrastructure/docker/mlflow/Dockerfile` — `mlflow==2.19.0` → `3.15.1`. Puis
+trois sous-problèmes trouvés en cascade, chacun diagnostiqué et corrigé avant que le
+smoke test (`log_model` + `log_metrics` réels) passe :
+
+- **Crash-loop mémoire silencieux** — aucune erreur dans les logs, juste des processus
+  enfants qui meurent en boucle (`docker stats` a montré 511.8/512 Mo, 99.97%). Le
+  nouveau serveur FastAPI/Uvicorn de MLflow 3 lance un `job_runner` + plusieurs
+  consommateurs `huey` (nouvelle file de tâches interne asynchrone), dépassant la limite
+  mémoire taillée pour l'ancien serveur Flask. Fix : `deploy.resources.limits.memory`
+  512m → 2g dans `docker-compose.yml`, + `--workers 1` dans `start.sh` (le service n'a
+  que `cpus: "0.5"`, plusieurs workers web n'apportent rien).
+- **403 "Invalid Host header — possible DNS rebinding attack detected"** — nouvelle
+  protection de sécurité MLflow 3, n'autorise par défaut que `localhost`/IPs privées ;
+  refuse le nom de service Docker `mlflow` utilisé par le trainer. Fix : `--allowed-hosts
+  "mlflow:*,localhost:*"` dans `start.sh` — le wildcard `:*` est nécessaire, une liste
+  personnalisée sans lui a cassé jusqu'au healthcheck interne (`Host: localhost:5000`
+  ne matchait plus un simple `localhost` sans port).
+- **`ModuleNotFoundError: boto3` puis `NoCredentialsError`** — MLflow 3 fait l'upload
+  des artefacts modèle **côté client** (boto3 direct) au lieu de le proxifier via le
+  serveur. Fix : `boto3` ajouté à `trainer/requirements.txt` + mêmes credentials MinIO
+  (`MLFLOW_S3_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+  `AWS_DEFAULT_REGION`) que le service `mlflow` déjà présents, répliqués sur le service
+  `trainer` dans `docker-compose.yml`.
+
 ## État actuel
 
-- `make dvc-repro` tourne en GPU réel.
+- `make dvc-repro` tourne en GPU réel, training **et** tracking MLflow inclus.
+- Commit `8fd4706` (branche `raf5`) : bump serveur MLflow + fixes mémoire/sécurité/S3.
+- Commit `dbe7415` : suppression de la classe `MemmapSequence` dupliquée (§ 5).
 - Commit `d501356` (branche `raf5`) : `base/Dockerfile`, `trainer/Dockerfile`,
   `trainer/requirements.txt`, nouveau `trainer/gpu-entrypoint.sh`.
 - Commit antérieur `977a5eb` : fix `class_weight`/Keras 3, `tqdm` sur `train.py` et
@@ -129,3 +194,11 @@ cassé sur `raf5` tant que cette branche n'est pas celle utilisée pour la démo
   mis à jour en 29.7.2 pendant cette même session). À réévaluer si une future mise à
   jour Docker Desktop corrige le montage natif — le script est un no-op inoffensif
   sinon (pas besoin de le retirer préventivement).
+- Une expérience/modèle `smoke-test` / `smoke-test-model` traîne dans le tracking MLflow
+  (créée pour valider le fix § 6) — sans conséquence (instance de dev), à supprimer via
+  l'UI MLflow si ça gêne visuellement, pas urgent.
+- Le comportement mémoire du nouveau serveur MLflow 3 (job runner + consommateurs huey)
+  n'a été observé que sur un seul run de smoke test ; `2g` donne de la marge (~1.5 Go
+  observé en pointe) mais n'a pas été stress-testé sur un entraînement complet avec
+  plusieurs runs concurrents — à surveiller (`docker stats mlflow-server`) si le service
+  redevient instable en usage réel.
