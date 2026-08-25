@@ -128,6 +128,10 @@ services:
     env_file: .env
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
     depends_on:
       mlflow:
         condition: service_healthy
@@ -180,7 +184,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 2g
           cpus: "0.5"
     networks:
       - covid-net
