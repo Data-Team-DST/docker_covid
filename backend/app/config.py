@@ -1,6 +1,8 @@
 """Configuration centralisée — DS_COVID Backend"""
 
 from pydantic import model_validator
+from typing import Optional
+
 from pydantic_settings import BaseSettings
 
 
@@ -17,6 +19,10 @@ class Settings(BaseSettings):
     model_path: str = "data/models/best_model.keras"
     model_version: str = "1.0.0"
 
+    # Modèle de segmentation pulmonaire (U-Net) — génère le mask des images de predict/,
+    # qui n'en ont pas contrairement au dataset d'entraînement. cf. ds_covid.segmentation.
+    segmentation_model_path: str = "data/models/lung_unet.keras"
+
     # Classes (ordre doit correspondre à l'entraînement)
     class_names: list[str] = [
         "COVID",
@@ -30,8 +36,17 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 100
     max_upload_size_mb: int = 10
 
-    # Image preprocessing
-    img_size: tuple[int, int] = (224, 224)
+    # Image preprocessing — DOIT correspondre à params.yaml (paramètres utilisés à
+    # l'entraînement, section `preprocess` / `segmentation`) sous peine de train/serving skew.
+    img_size: tuple[int, int] = (256, 256)
+    masking: bool = True
+    cropping: bool = True
+    clahe: bool = True
+    clahe_clip_limit: float = 2.0
+    clahe_tile_grid_size: tuple[int, int] = (8, 8)
+    denoising_method: Optional[str] = None
+    clean_mask_components: int = 2
+    clean_mask_closing_kernel: int = 15
 
     class Config:
         """Configuration Pydantic : source du fichier .env."""

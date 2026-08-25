@@ -9,7 +9,7 @@ from app.api.metrics import stats
 from app.api.security import verify_api_key
 from app.config import settings
 from app.features.preprocessing import preprocess_image
-from app.models.loader import model_loader
+from app.models.loader import model_loader, segmentation_model_loader
 from app.rate_limit import limiter, predict_rate_limit
 from app.schemas.response import PredictionResponse
 
@@ -62,6 +62,19 @@ async def predict(
             ),
         )
 
+    # Le masking (mask généré par le U-Net) fait partie du pipeline de preprocessing
+    # utilisé à l'entraînement (cf. params.yaml preprocess.masking) : sans lui, les
+    # images envoyées au classifieur ne ressembleraient pas à ce qu'il a appris
+    # (train/serving skew) — on refuse plutôt que de prédire silencieusement en dégradé.
+    if settings.masking and not segmentation_model_loader.is_loaded:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Modèle de segmentation non disponible — vérifier que"
+                " data/models/ contient le U-Net"
+            ),
+        )
+
     if file.content_type not in ("image/jpeg", "image/png"):
         raise HTTPException(
             status_code=400, detail="Format accepté : JPEG ou PNG uniquement"
@@ -77,7 +90,19 @@ async def predict(
 
     try:
         t0 = time.time()
-        img_array = preprocess_image(image_bytes, settings.img_size)
+        img_array = preprocess_image(
+            image_bytes,
+            img_size=settings.img_size,
+            segmentation_model=segmentation_model_loader if segmentation_model_loader.is_loaded else None,
+            masking=settings.masking,
+            cropping=settings.cropping,
+            clahe=settings.clahe,
+            clahe_clip_limit=settings.clahe_clip_limit,
+            clahe_tile_grid_size=settings.clahe_tile_grid_size,
+            denoising_method=settings.denoising_method,
+            clean_mask_components=settings.clean_mask_components,
+            clean_mask_closing_kernel=settings.clean_mask_closing_kernel,
+        )
         predictions = model_loader.predict(img_array)
         latency_ms = round((time.time() - t0) * 1000, 1)
 

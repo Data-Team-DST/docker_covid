@@ -58,27 +58,28 @@ def squared_crop_to_lungs(masked_img: np.ndarray) -> np.ndarray:
     return masked_img[y1:y2, x1:x2]
 
 
-def process_single_image(
-    img_path: Path,
-    mask_path: Optional[Path],  # if None we skip masking
+def apply_pipeline(
+    img_array: np.ndarray,
+    mask_array: Optional[np.ndarray],  # if None we skip masking
     cropping: bool,
     denoising_method: Optional[str],  # if None we skip denoising
     clahe_processor: Optional[cv2.CLAHE],  # if None we skip CLAHE
     target_size: int,
 ) -> np.ndarray:
     """
-    Applique le pipeline de prétraitement à une seule image, selon les options choisies.
+    Applique le pipeline de prétraitement à une image déjà chargée en mémoire, selon les
+    options choisies. Cœur de `process_single_image` (chargement depuis disque, utilisé par
+    le stage DVC `preprocess`), extrait sous cette forme pure-array pour être aussi
+    utilisable à l'inférence (API) sur une image reçue en mémoire, sans écriture disque.
 
     ** On ne manipule que des images en L (grayscale) car ce sont des radiographies. **
 
     Pipeline complet détaillé :
 
-    1) chargement des raw data : l'image (299x299) et son Mask (256x256)
-
-    1) a) [OPTIONNEL] Denoising avec une méthode comme Gaussian Blur, si jamais la qualité des images est mauvaise
+    1) [OPTIONNEL] Denoising avec une méthode comme Gaussian Blur, si jamais la qualité des images est mauvaise
     (pas notre cas, curated dataset, mais pourrait être le cas d'une image donnée dans predict/)
 
-    2) Resize du Mask vers (299x299) pour fitter image. On utilise une interpolation de type INTER_NEAREST pour ne pas créer des valeurs autres que 0 ou 1
+    2) Resize du mask vers la taille de l'image. On utilise une interpolation de type INTER_NEAREST pour ne pas créer des valeurs autres que 0 ou 1
 
     3) Masking (multiplication pixel par pixel)
 
@@ -89,9 +90,9 @@ def process_single_image(
     6) Resize final vers le target size (ex : 128x128 ou 256x256) avec interpolation de type LANCZOS4 pour préserver les détails
 
     Args:
-         img_path: Path - chemin vers l'image à traiter
-         mask_path: Path | None - chemin vers le mask correspondant, ou None pour ne pas faire de masking
-         cropping: bool - appliquer le crop+padding pour recentrer les poumons si True (seulement actif si mask_path n'est pas None)
+         img_array: np.ndarray (H, W) uint8 - image en niveaux de gris à traiter
+         mask_array: np.ndarray (H, W) | None - mask correspondant, ou None pour ne pas faire de masking
+         cropping: bool - appliquer le crop+padding pour recentrer les poumons si True (seulement actif si mask_array n'est pas None)
          denoising_method: str | None - méthode de denoising à appliquer (ex: 'gaussian') ou None pour aucune
          clahe_processor: cv2.CLAHE | None - instance de cv2.CLAHE à appliquer, ou None pour ne pas faire de CLAHE
          target_size: int - résolution cible (carrée) pour l'image finale (ex: 128, 256)
@@ -100,25 +101,15 @@ def process_single_image(
          np.ndarray - image traitée au format numpy array, prête à être sauvegardée
 
     Raises:
-         FileNotFoundError - si l'image ou le mask (si masking activé) ne peuvent pas être chargés
          ValueError - si le crop est activé mais que l'image masquée ne contient aucun pixel de poumon (tous les pixels sont à zéro)
     """
-
-    # Charger l'image
-    img_array = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
-    if img_array is None:
-        raise FileNotFoundError(f"Impossible de charger l'image: {img_path}")
 
     # Denoising (optionnel)
     if denoising_method == "gaussian":
         img_array = cv2.GaussianBlur(img_array, (5, 5), 0)
 
     # Masking, cropping, padding (optionnel)
-    if mask_path:
-        mask_array = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
-        if mask_array is None:
-            raise FileNotFoundError(f"Impossible de charger le mask: {mask_path}")
-
+    if mask_array is not None:
         # Redimensionner le mask à la taille de l'image avec interpolation nearest pour garder les valeurs binaires
         mask_array = cv2.resize(
             mask_array, (img_array.shape[1], img_array.shape[0]), interpolation=cv2.INTER_NEAREST
@@ -147,3 +138,42 @@ def process_single_image(
     img_array = cv2.resize(img_array, (target_size, target_size), interpolation=cv2.INTER_LANCZOS4)
 
     return img_array  # uint8 (H, W)
+
+
+def process_single_image(
+    img_path: Path,
+    mask_path: Optional[Path],  # if None we skip masking
+    cropping: bool,
+    denoising_method: Optional[str],  # if None we skip denoising
+    clahe_processor: Optional[cv2.CLAHE],  # if None we skip CLAHE
+    target_size: int,
+) -> np.ndarray:
+    """
+    Charge une image (et son mask, si fourni) depuis le disque puis applique `apply_pipeline`.
+
+    Args:
+         img_path: Path - chemin vers l'image à traiter
+         mask_path: Path | None - chemin vers le mask correspondant, ou None pour ne pas faire de masking
+         cropping: bool - cf. `apply_pipeline`
+         denoising_method: str | None - cf. `apply_pipeline`
+         clahe_processor: cv2.CLAHE | None - cf. `apply_pipeline`
+         target_size: int - cf. `apply_pipeline`
+
+    Returns:
+         np.ndarray - image traitée au format numpy array, prête à être sauvegardée
+
+    Raises:
+         FileNotFoundError - si l'image ou le mask (si masking activé) ne peuvent pas être chargés
+         ValueError - si le crop est activé mais que l'image masquée ne contient aucun pixel de poumon (tous les pixels sont à zéro)
+    """
+    img_array = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+    if img_array is None:
+        raise FileNotFoundError(f"Impossible de charger l'image: {img_path}")
+
+    mask_array = None
+    if mask_path:
+        mask_array = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        if mask_array is None:
+            raise FileNotFoundError(f"Impossible de charger le mask: {mask_path}")
+
+    return apply_pipeline(img_array, mask_array, cropping, denoising_method, clahe_processor, target_size)
