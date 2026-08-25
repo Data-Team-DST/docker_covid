@@ -79,11 +79,12 @@ cache_set() {
 # Affiche [CACHE] si la valeur vient du cache
 CACHE_HIT=false
 
-# Préférer le Python du venv pour éviter les problèmes de shebang Windows/WSL
-VENV_PYTHON=".venv/bin/python"
-if [ ! -f "$VENV_PYTHON" ]; then
-    VENV_PYTHON="$PYTHON3"
-fi
+# Préférer le Python de chaque venv de service (pylint y tourne avec les vraies
+# deps du service importables, et évite les soucis de shebang Windows/WSL)
+BE_VENV_PYTHON="backend/.venv/bin/python"
+[ -f "$BE_VENV_PYTHON" ] || BE_VENV_PYTHON="$PYTHON3"
+FE_VENV_PYTHON="frontend/.venv/bin/python"
+[ -f "$FE_VENV_PYTHON" ] || FE_VENV_PYTHON="$PYTHON3"
 
 # =========================
 # Gestion des arguments
@@ -468,24 +469,15 @@ fi
 # 6. Pylint
 # =========================
 if [ "$SKIP_PYLINT" = false ]; then
-    # Utiliser python -m pylint pour éviter les problèmes de shebang Windows/WSL
-    if $VENV_PYTHON -m pylint --version &>/dev/null 2>&1; then
-        PYLINT_CMD="$VENV_PYTHON -m pylint"
-    elif python -m pylint --version &>/dev/null 2>&1; then
-        PYLINT_CMD="python -m pylint"
-    else
-        PYLINT_CMD=""
-    fi
 
-    if [ -n "$PYLINT_CMD" ]; then
-
-        # ── Pylint FE ──
+    # ── Pylint FE (frontend/.venv) ──
+    if $FE_VENV_PYTHON -m pylint --version &>/dev/null 2>&1; then
         _fe_key="pylint_fe_$(cache_key frontend)"
         if FE_SCORE=$(cache_get "$_fe_key"); then
             echo -e "${YELLOW}[Pylint FE]${NC} (cache) Score : ${FE_SCORE}/10"
         else
             echo -e "${YELLOW}[Pylint FE]${NC} Vérification frontend..."
-            $PYLINT_CMD frontend/ --rcfile=pyproject.toml > "$PYLINT_FE_LOG" 2>&1 || true
+            $FE_VENV_PYTHON -m pylint frontend/ --rcfile=pyproject.toml > "$PYLINT_FE_LOG" 2>&1 || true
             FE_SCORE=$($PYTHON3 - <<EOF
 import re
 log=open("$PYLINT_FE_LOG").read()
@@ -498,14 +490,19 @@ EOF
         fi
         echo "Pylint FE: ${FE_SCORE}/10" >> "$SUMMARY"
         $PYTHON3 -c "exit(0 if float('$FE_SCORE') >= 7 else 1)" || { tail -20 "$PYLINT_FE_LOG"; exit 1; }
+    else
+        echo -e "${RED}❌ Pylint FE non installé (frontend/.venv absent — lancez make setup-fe)${NC}"
+        exit 1
+    fi
 
-        # ── Pylint BE ──
+    # ── Pylint BE (backend/.venv) ──
+    if $BE_VENV_PYTHON -m pylint --version &>/dev/null 2>&1; then
         _be_key="pylint_be_$(cache_key backend/app)"
         if BE_SCORE=$(cache_get "$_be_key"); then
             echo -e "${YELLOW}[Pylint BE]${NC} (cache) Score : ${BE_SCORE}/10"
         else
             echo -e "${YELLOW}[Pylint BE]${NC} Vérification backend..."
-            $PYLINT_CMD backend/app --rcfile=pyproject.toml > "$PYLINT_BE_LOG" 2>&1 || true
+            $BE_VENV_PYTHON -m pylint backend/app --rcfile=pyproject.toml > "$PYLINT_BE_LOG" 2>&1 || true
             BE_SCORE=$($PYTHON3 - <<EOF
 import re
 log=open("$PYLINT_BE_LOG").read()
@@ -518,27 +515,20 @@ EOF
         fi
         echo "Pylint BE: ${BE_SCORE}/10" >> "$SUMMARY"
         $PYTHON3 -c "exit(0 if float('$BE_SCORE') >= 7 else 1)" || { tail -20 "$PYLINT_BE_LOG"; exit 1; }
-
     else
-        echo -e "${RED}❌ Pylint non installé (ni dans .venv ni dans PATH)${NC}"
-
+        echo -e "${RED}❌ Pylint BE non installé (backend/.venv absent — lancez make setup-be)${NC}"
         exit 1
     fi
+
 else
     echo -e "${YELLOW}⚠️ Pylint ignoré (--skip-pylint)${NC}"
     echo "Pylint: SKIPPED" >> "$SUMMARY"
 fi
 
 # =========================
-# 7. Tests + couverture
+# 7. Tests + couverture (backend)
 # =========================
-# Préférer le Python du venv pour éviter les problèmes de shebang Windows
-VENV_PYTHON=".venv/bin/python"
-if [ ! -f "$VENV_PYTHON" ]; then
-    VENV_PYTHON="$PYTHON3"
-fi
-
-if $VENV_PYTHON -m pytest --version &>/dev/null; then
+if $BE_VENV_PYTHON -m pytest --version &>/dev/null; then
     # Cache : hash des tests ET du code testé
     _test_key="tests_$(cache_key backend/tests backend/app)"
     if _test_cached=$(cache_get "$_test_key"); then
@@ -546,7 +536,7 @@ if $VENV_PYTHON -m pytest --version &>/dev/null; then
         echo "Tests: ${_test_cached}" >> "$SUMMARY"
     else
         echo -e "${YELLOW}[Tests]${NC} Exécution pytest..."
-        if $VENV_PYTHON -m pytest backend/tests \
+        if $BE_VENV_PYTHON -m pytest backend/tests \
             --cov=backend/app \
             --cov-report=xml:backend/coverage.xml \
             --cov-fail-under=$COVERAGE_THRESHOLD -q > "$PYTEST_LOG" 2>&1; then
@@ -564,7 +554,7 @@ if $VENV_PYTHON -m pytest --version &>/dev/null; then
         fi
     fi
 else
-    echo -e "${RED}❌ Pytest non installé (ni dans .venv ni dans PATH)${NC}"
+    echo -e "${RED}❌ Pytest non installé (backend/.venv absent — lancez make setup-be)${NC}"
     exit 1
 fi
 

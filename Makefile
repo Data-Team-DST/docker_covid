@@ -146,7 +146,7 @@ setup-fe: ## Crée/met à jour le venv frontend (frontend/.venv)
 		$(PYTHON) -m venv frontend/.venv; \
 	fi
 	@echo "$(YELLOW)Installation deps frontend...$(NC)"
-	@frontend/.venv/bin/pip install -q --require-hashes -r frontend/requirements.txt
+	@frontend/.venv/bin/pip install -q --require-hashes -r frontend/requirements-dev.txt
 	@echo "$(GREEN)✅ frontend/.venv prêt$(NC)"
 
 setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
@@ -238,11 +238,11 @@ load-test: setup-load-test ## Test de charge locust sur /predict — 10 req/s, P
 	@$(COMPOSE) up -d --force-recreate backend
 
 # ── Qualité ───────────────────────────────────────────────────────────────────
-lint: ## Vérifie la qualité du code (ruff + pylint + structure)
+lint: setup-be ## Vérifie la qualité du code (ruff + pylint + structure)
 	@echo "$(YELLOW)Vérification qualité...$(NC)"
 	@bash $(SCRIPTS)/check_quality.sh --skip-pylint
 
-lint-full: ## Vérification qualité complète (avec pylint)
+lint-full: setup-be setup-fe ## Vérification qualité complète (avec pylint)
 	@bash $(SCRIPTS)/check_quality.sh
 
 fix: ## Auto-corrige le style (black + isort + ruff)

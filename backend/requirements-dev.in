@@ -19,3 +19,6 @@ pytest-cov==6.0.0
 
 # Complexité cyclomatique (rituel /friday)
 radon==6.0.1
+
+# Lint (make lint-full / check_quality.sh)
+pylint==3.3.9
