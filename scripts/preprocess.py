@@ -18,7 +18,7 @@ from numpy.lib.format import open_memmap
 from tqdm import tqdm
 
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from ds_covid.preprocessing import process_single_image  # noqa: E402
 

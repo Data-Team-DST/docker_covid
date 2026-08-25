@@ -11,7 +11,8 @@ license = {file = "LICENSE"}
 requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
-where = ["backend/src"]
+where = ["."]
+include = ["ds_covid*"]
 
 # ── Ruff : linting + formatage ────────────────────────────────────────────────
 [tool.ruff]
@@ -50,9 +51,8 @@ ignore = [
 # Pages Streamlit : trailing whitespace dans CSS strings, loop vars de déstructuration
 "frontend/page/*.py" = ["W291", "W293", "B007"]
 "frontend/streamlit_app.py" = ["W291", "W293"]
-# Notebooks et code ML exploratoire — pas soumis au lint CI
-"backend/src/**" = ["ALL"]
-"backend/src/notebooks/**" = ["ALL"]
+# Pipeline ML exploratoire — pas soumis au lint CI
+"ds_covid/**" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

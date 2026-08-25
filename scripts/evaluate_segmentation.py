@@ -15,7 +15,7 @@ import tensorflow as tf
 import yaml
 
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from ds_covid.segmentation import clean_mask, dice_coef, iou_metric  # noqa: E402
 

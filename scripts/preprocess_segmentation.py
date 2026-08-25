@@ -19,7 +19,7 @@ from numpy.lib.format import open_memmap
 from tqdm import tqdm
 
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from ds_covid.segmentation import collect_pairs, load_pair  # noqa: E402
 

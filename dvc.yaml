@@ -4,7 +4,7 @@ stages:
     cmd: python scripts/augment.py
     deps:
       - scripts/augment.py
-      - backend/src/ds_covid/augmentation.py
+      - ds_covid/augmentation.py
       - data/raw
     params:
       - params.yaml:
@@ -23,7 +23,7 @@ stages:
     cmd: python scripts/preprocess.py
     deps:
       - scripts/preprocess.py
-      - backend/src/ds_covid/preprocessing.py
+      - ds_covid/preprocessing.py
       - data/augmented
     params:
       - params.yaml:
@@ -41,7 +41,7 @@ stages:
     cmd: python scripts/train.py
     deps:
       - scripts/train.py
-      - backend/src/ds_covid/models.py
+      - ds_covid/models.py
       - data/processed/X_train.npy
       - data/processed/y_train.npy
     params:
@@ -71,7 +71,7 @@ stages:
     cmd: python scripts/preprocess_segmentation.py
     deps:
       - scripts/preprocess_segmentation.py
-      - backend/src/ds_covid/segmentation.py
+      - ds_covid/segmentation.py
       - data/augmented
     params:
       - params.yaml:
@@ -90,8 +90,8 @@ stages:
     cmd: python scripts/train_segmentation.py
     deps:
       - scripts/train_segmentation.py
-      - backend/src/ds_covid/segmentation.py
-      - backend/src/ds_covid/data.py
+      - ds_covid/segmentation.py
+      - ds_covid/data.py
       - data/processed/segmentation/X_train.npy
       - data/processed/segmentation/M_train.npy
     params:
@@ -110,7 +110,7 @@ stages:
     cmd: python scripts/evaluate_segmentation.py
     deps:
       - scripts/evaluate_segmentation.py
-      - backend/src/ds_covid/segmentation.py
+      - ds_covid/segmentation.py
       - data/models/lung_unet.keras
       - data/processed/segmentation/X_test.npy
       - data/processed/segmentation/M_test.npy
