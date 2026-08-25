@@ -18,16 +18,15 @@ page/03_preprocessing.py    → page/03_preprocessing/{__init__, _sections}.py
 page/04_Machine_learning_et_optimisation.py
                              → page/04_.../{__init__, _confusion_matrices, _sections}.py
 page/05_Deep_learning_et_Interprétabilité.py   (page simple, pas de sous-package)
-page/06_cicd.py              → page/06_cicd/{__init__, _pipeline_create, _pipeline_exec,
-                                              _pipeline_load, _pipeline_steps, _pipeline_ui,
-                                              _sections}.py
+page/06_cicd/                → page/06_cicd/{__init__, _sections}.py
 page/07_conclusion_critique_perspective.py     (page simple)
 ```
 
 ## Notes structurelles
 
-- `page/06_cicd/_pipeline_*.py` exécute le pipeline `src.features.St_Pipeline.Transformateurs`
-  interactivement depuis l'UI — seul endroit du frontend qui touche à la logique ML directement
-  (reste du frontend = affichage/lecture de résultats déjà produits).
+- `page/06_cicd/` ne contient plus que la présentation pédagogique du pipeline CI/CD
+  (`_sections.py`) — le pipeline builder sklearn interactif (`_pipeline_*.py`, appelait
+  `src.features.St_Pipeline.Transformateurs`, cassé depuis la migration microservices) a été
+  retiré le 2026-08-24, aucune US ne le référençant.
 - Pas de tests dédiés au frontend à ce jour (`test_fe` en CI tourne en `continue-on-error: true`
   tant qu'aucun `test_*.py` n'existe sous `frontend/`).

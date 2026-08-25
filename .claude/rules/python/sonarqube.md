@@ -221,12 +221,9 @@ ligne nécessaire.
   n'étant pas installé sur la machine où le refactor a été fait ; à confirmer visuellement par
   Steven sur les pages `02_données` et `04_Machine_learning_et_optimisation` avant la
   soutenance.
-- `unused-import` (`06_cicd/_pipeline_load.py`, imports de classes pour un unpickling joblib) :
-  **laissé en l'état**, lié à un bug séparé (import cassé `src.features.St_Pipeline.
-  Transformateurs`, le module n'existe plus dans le repo) — pas corrigé, hors périmètre de
-  cette décision.
-- `I001` (ordre d'import Streamlit `06_cicd.py`) : ce fichier est un fallback mort (jamais
-  chargé — `06_cicd/__init__.py` existe et est préféré par `page/_loader.py`), non touché.
+- `unused-import` (`06_cicd/_pipeline_load.py`) et `I001` (`06_cicd.py` fallback mort) :
+  **caducs depuis le 2026-08-24** — `_pipeline_load.py` et le fallback top-level `06_cicd.py`
+  ont été supprimés (pipeline builder cassé retiré, commit `fc4e279`), plus rien à disabler.
 
 ## Checklist avant commit
 
