@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-log_dataset_mlflow.py — Enregistre les métadonnées DVC du dataset QualiPSO dans MLflow.
+log_dataset_mlflow.py — Enregistre les métadonnées DVC d'un dataset dans MLflow.
 
 Usage :
     python scripts/log_dataset_mlflow.py
@@ -11,11 +11,11 @@ Crée un run MLflow dans l'expérience "dataset-ingestion" avec :
 - Tags sprint/US pour traçabilité
 """
 import os
-import yaml
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 import mlflow
+import yaml
 
 ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data-service" / "data"
@@ -36,10 +36,10 @@ files = [f for f in files if f.is_file()]
 ext_counter = Counter(f.suffix.lower() for f in files)
 total_size_mb = sum(f.stat().st_size for f in files) / 1024 / 1024
 
-with mlflow.start_run(run_name="QualiPSO-dataset-v1"):
+with mlflow.start_run(run_name="dataset-v1"):
     # Paramètres dataset
     mlflow.log_params({
-        "dataset_name": "QualiPSO",
+        "dataset_name": "dataset",
         "dvc_hash": dvc_out["md5"],
         "nfiles": dvc_out["nfiles"],
         "size_bytes": dvc_out["size"],
@@ -60,8 +60,8 @@ with mlflow.start_run(run_name="QualiPSO-dataset-v1"):
 
     # Tags traçabilité
     mlflow.set_tags({
-        "data_source": "QualiPSO ZIP",
-        "dvc_remote": "/home/oneai/dvc-storage",
+        "data_source": "dataset ZIP",
+        "dvc_remote": "/local/dvc-storage",
         "stage": "ingestion",
     })
 
@@ -73,4 +73,4 @@ with mlflow.start_run(run_name="QualiPSO-dataset-v1"):
     print(f"\n✅ Run MLflow créé : {run_id}")
     print(f"   Fichiers : {len(files)} ({round(total_size_mb, 1)} MB)")
     print(f"   Hash DVC : {dvc_out['md5']}")
-    print(f"   → Visible dans MLflow UI > Experiments > dataset-ingestion")
+    print("   → Visible dans MLflow UI > Experiments > dataset-ingestion")

@@ -4,17 +4,22 @@ WORKDIR /app
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y git && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid 1000 appuser && \
+    useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown -R appuser:appuser /app
 
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
+ENV HOME=/home/appuser
+
+USER appuser
 
 EXPOSE 5001
 

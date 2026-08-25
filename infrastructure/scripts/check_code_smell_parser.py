@@ -5,7 +5,6 @@ Parser pour les annotations code-smell dans les fichiers Python.
 import re
 from pathlib import Path
 
-
 ANNOTATION_PATTERN = re.compile(
     r"#\s*code-smell:\s*max-lines=(\d+)(?:\s+reason=\"([^\"]+)\")?"
 )

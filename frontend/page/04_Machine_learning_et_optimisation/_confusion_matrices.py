@@ -2,7 +2,6 @@
 Search."""
 
 # code-smell: max-lines=141 reason="2 fonctions affichage matrices"
-# pylint: disable=too-many-locals
 
 from pathlib import Path
 
@@ -68,6 +67,54 @@ def render_initial_confusion_matrices(matrices_folder: Path):
                         )
 
 
+def _render_grid_search_selection(matrices_folder: Path) -> tuple[str, bool]:
+    """Render the model/filenames selection controls, return (choice, show_names)."""
+    choice = st.selectbox("Modèle :", ["all"] + MODELS, index=0, key="MATRICES_2")
+    show_names = st.checkbox(
+        "Afficher les noms de fichiers", value=True, key="NAMES2"
+    )
+    if st.button("Matrices de confusion (Grid Search)", key="LOAD2"):
+        st.session_state["sample_map"] = _load_matrix_map(matrices_folder, 2)
+    return choice, show_names
+
+
+def _render_grid_search_model_matrices(
+    model_name: str,
+    entries: list[dict],
+    show_names: bool,
+) -> None:
+    """Render the matrix images for a single model, two per row."""
+    st.markdown(f"### {model_name} — {len(entries)} matrices")
+    cols = st.columns(2)
+    for idx, entry in enumerate(entries):
+        img_path = Path(entry["image"])
+        if not img_path.exists():
+            continue
+        with cols[idx % 2]:
+            im = Image.open(img_path).convert("RGB")
+            im.thumbnail((500, 500))
+            caption = img_path.name if show_names else f"Matrice {idx + 1}"
+            st.image(
+                im,
+                caption=caption,
+                output_format="PNG",
+                use_container_width=True,
+            )
+
+
+def _render_grid_search_matrices_body(choice: str, show_names: bool) -> None:
+    """Render the title and matrices for all models matching the current choice."""
+    st.title("Matrices de confusion")
+    sample_map = st.session_state.get("sample_map", {})
+    if not sample_map:
+        st.info("Cliquez sur le bouton pour afficher les matrices.")
+        return
+    targets = list(sample_map.keys()) if choice == "all" else [choice]
+    for model_name, entries in sample_map.items():
+        if model_name in targets:
+            _render_grid_search_model_matrices(model_name, entries, show_names)
+
+
 def render_grid_search_matrices(matrices_folder: Path):
     """Display confusion matrices for Grid Search optimised models."""
     with st.container(border=True):
@@ -79,42 +126,10 @@ def render_grid_search_matrices(matrices_folder: Path):
             select_cont = st.container(border=True)
 
         with select_cont:
-            choice = st.selectbox(
-                "Modèle :", ["all"] + MODELS, index=0, key="MATRICES_2"
-            )
-            show_names = st.checkbox(
-                "Afficher les noms de fichiers", value=True, key="NAMES2"
-            )
-            if st.button("Matrices de confusion (Grid Search)", key="LOAD2"):
-                st.session_state["sample_map"] = _load_matrix_map(matrices_folder, 2)
+            choice, show_names = _render_grid_search_selection(matrices_folder)
 
         with display_cont:
-            st.title("Matrices de confusion")
-            sample_map = st.session_state.get("sample_map", {})
-            if not sample_map:
-                st.info("Cliquez sur le bouton pour afficher les matrices.")
-                return
-            targets = list(sample_map.keys()) if choice == "all" else [choice]
-            for model_name, entries in sample_map.items():
-                if model_name not in targets:
-                    continue
-                st.markdown(f"### {model_name} — {len(entries)} matrices")
-                cols = st.columns(2)
-                for idx, entry in enumerate(entries):
-                    img_path = Path(entry["image"])
-                    if img_path.exists():
-                        with cols[idx % 2]:
-                            im = Image.open(img_path).convert("RGB")
-                            im.thumbnail((500, 500))
-                            caption = (
-                                img_path.name if show_names else f"Matrice {idx + 1}"
-                            )
-                            st.image(
-                                im,
-                                caption=caption,
-                                output_format="PNG",
-                                use_container_width=True,
-                            )
+            _render_grid_search_matrices_body(choice, show_names)
 
         st.success(
             "Les hyperparamètres optimaux ont permis d'améliorer"

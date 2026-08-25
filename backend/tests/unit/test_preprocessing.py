@@ -4,7 +4,7 @@ import io
 
 import numpy as np
 import pytest
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from app.features.preprocessing import predict_lung_mask, preprocess_image
 

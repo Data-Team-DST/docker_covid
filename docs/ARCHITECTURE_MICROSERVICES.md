@@ -250,7 +250,8 @@ FRONTEND_URL=http://localhost:8501
 - [ ] Dockerfile (backend + frontend)
 - [ ] docker-compose.yml
 - [ ] GitHub Actions CI/CD
-- [ ] Kubernetes manifests (optionnel)
+- [ ] Kubernetes manifests (MUST — US-23, demandé explicitement par le roadmap mentor
+      "scalabilité avec Docker/Kubernetes", cf. dashboard/backlog.yaml)
 
 **Durée:** 3-5 jours | **Dépendance:** Phase 3
 

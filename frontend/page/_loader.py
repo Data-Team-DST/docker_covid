@@ -26,6 +26,6 @@ def load_pages(page_dir: Path, filenames: list) -> tuple:
             if not hasattr(mod, "run"):
                 raise AttributeError(f"Fonction `run()` absente dans {fname}")
             loaded.append((fname, mod))
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             errors.append((fname, str(e)))
     return loaded, errors

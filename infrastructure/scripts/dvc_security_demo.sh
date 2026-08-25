@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # dvc_security_demo.sh — Démonstration de la sécurité DVC
 #
-# Ce script prouve que les données sensibles (PDF/DOCX Sanofi) ne transitent
+# Ce script prouve que les données sensibles (PDF/DOCX) ne transitent
 # PAS par Git et ne sont jamais exposées dans le repository.
 #
 # Usage : bash scripts/dvc_security_demo.sh
@@ -30,16 +30,16 @@ TESTS_PASSED=0
 
 echo -e "${CYAN}${BOLD}"
 echo "╔══════════════════════════════════════════════════════════╗"
-echo "║  DVC Security Demo — Smart Doc Reduction                 ║"
+echo "║  DVC Security Demo                                        ║"
 echo "║  Preuve que les données sensibles sont protégées         ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
 cat > "$REPORT" << 'HEADER'
-# Rapport de sécurité DVC — Smart Doc Reduction
+# Rapport de sécurité DVC
 
 **Date :** $(date '+%Y-%m-%d %H:%M')
-**Objectif :** Prouver que les ~2GB de documents Sanofi (SOPs, WINs) ne transitent jamais par Git et ne sont jamais exposés dans le repository GitHub.
+**Objectif :** Prouver que les ~2GB de documents (SOPs, WINs) ne transitent jamais par Git et ne sont jamais exposés dans le repository GitHub.
 
 ---
 
@@ -49,7 +49,7 @@ cat > "$REPORT" << 'HEADER'
 |--------|----------|----------|
 | Données en clair dans GitHub | ❌ Possible si `git add` accidentel | ✅ Impossible (.gitignore + .dvc) |
 | Fuite via historique git | ❌ Permanent même après suppression | ✅ Jamais stocké dans git |
-| Accès non autorisé au remote | ❌ Dépend de GitHub permissions | ✅ Remote local OneAI uniquement |
+| Accès non autorisé au remote | ❌ Dépend de GitHub permissions | ✅ Remote local uniquement |
 | Traçabilité des versions data | ❌ Aucune | ✅ SHA256 + metadata dans .dvc |
 | Données dans les CI/CD logs | ❌ Risque si env vars mal gérées | ✅ Seuls les .dvc (hashes) sont loggés |
 
@@ -100,7 +100,7 @@ if [ -f "$DVC_DIR/config" ]; then
     REMOTE=$(grep "url" "$DVC_DIR/config" | awk '{print $3}')
     info "Remote configuré : $REMOTE"
     echo "### ✅ T3 — DVC initialisé" >> "$REPORT"
-    echo "Remote DVC : \`$REMOTE\` (stockage local OneAI, hors GitHub)" >> "$REPORT"
+    echo "Remote DVC : \`$REMOTE\` (stockage local, hors GitHub)" >> "$REPORT"
     TESTS_PASSED=$((TESTS_PASSED+1))
 else
     fail "T3: DVC non initialisé"
@@ -119,7 +119,7 @@ GIT_LEAK=$(git -C "$ROOT_DIR" ls-tree -r --name-only --full-tree $(git -C "$ROOT
 if [ -z "$GIT_LEAK" ]; then
     pass "T4: git history ne contient AUCUN document sensible (hors .gitkeep)"
     echo "### ✅ T4 — Aucune fuite via git history" >> "$REPORT"
-    echo "Seul \`.gitkeep\` (fichier vide de placeholder) apparaît dans l'historique — aucun document Sanofi." >> "$REPORT"
+    echo "Seul \`.gitkeep\` (fichier vide de placeholder) apparaît dans l'historique — aucun document sensible." >> "$REPORT"
     TESTS_PASSED=$((TESTS_PASSED+1))
 else
     fail "T4: git history contient des documents sensibles !"
@@ -147,10 +147,10 @@ echo ""
 
 REMOTE_URL=$(grep "url" "$DVC_DIR/config" 2>/dev/null | awk '{print $3}')
 if [[ "$REMOTE_URL" == /home/* ]] || [[ "$REMOTE_URL" == /mnt/* ]]; then
-    pass "T6: Remote DVC local ($REMOTE_URL) — données restent sur OneAI"
+    pass "T6: Remote DVC local ($REMOTE_URL) — données restent en local"
     echo "### ✅ T6 — Remote 100% local" >> "$REPORT"
     echo "URL du remote : \`$REMOTE_URL\`" >> "$REPORT"
-    echo "Les données ne quittent **jamais** l'environnement OneAI." >> "$REPORT"
+    echo "Les données ne quittent **jamais** l'environnement local." >> "$REPORT"
     TESTS_PASSED=$((TESTS_PASSED+1))
 elif [[ "$REMOTE_URL" == s3://* ]]; then
     info "T6: Remote S3 détecté ($REMOTE_URL) — vérifier les permissions bucket"
@@ -169,15 +169,15 @@ echo "---" >> "$REPORT"
 echo "## Résultat : $TESTS_PASSED/$TOTAL tests passés" >> "$REPORT"
 echo "" >> "$REPORT"
 if [ "$FAILURES" -eq 0 ]; then
-    echo "**✅ SÉCURISÉ** — Les données sensibles Sanofi sont protégées." >> "$REPORT"
+    echo "**✅ SÉCURISÉ** — Les données sensibles sont protégées." >> "$REPORT"
     echo "" >> "$REPORT"
     echo "### Garanties apportées par DVC" >> "$REPORT"
     cat >> "$REPORT" << 'GUARANTEES'
 1. **Isolation totale** : Les fichiers PDF/DOCX ne transitent JAMAIS par GitHub
 2. **Reproductibilité** : Chaque version de données est identifiée par son hash SHA256
 3. **Traçabilité** : `dvc log` et `dvc diff` permettent d'auditer chaque changement
-4. **Contrôle d'accès** : Le remote local est soumis aux permissions OneAI (RBAC)
-5. **Conformité** : 0 donnée Sanofi accessible publiquement ou via API externe
+4. **Contrôle d'accès** : Le remote local est soumis aux permissions du système de fichiers (RBAC)
+5. **Conformité** : 0 donnée sensible accessible publiquement ou via API externe
 
 ### Comment reproduire ces tests
 

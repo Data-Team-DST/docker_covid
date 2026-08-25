@@ -4,7 +4,7 @@ chef_projet: "Steven"
 stack: "FastAPI + Docker + DVC + MLflow + GitHub Actions + Prometheus/Grafana"
 version: "1.0"
 date_debut: "2026-03"
-total_sprints: 4
+total_sprints: 5
 total_semaines: 26
 soutenance: "2026-09-04"
 
@@ -144,11 +144,11 @@ sprints:
         done: false
       - id: US-16
         title: "Data augmentation + DVC pipeline augmenté"
-        description: "Ajouter stage augment dans dvc.yaml : rotation, flip, zoom, brightness. raw → augmented → processed → train. 42 330 images → ~170 000 après augmentation."
+        description: "✅ Stage augment ajouté dans dvc.yaml (commit 35ee130, Rafael) : rotation, flip, zoom, brightness. raw → augmented → processed → train. Fusionné avec prepro.py dans le même stage."
         depends_on: ["US-08"]
         points: 4
         priority: SHOULD
-        done: false
+        done: true
       - id: US-17
         title: "Dashboard agile opérationnel"
         description: "✅ Flask dashboard : backlog.yaml DS_COVID, suivi sprints/stories, data explorer DVC + search index, modal zoom, état persisté dans state.json. Lancé via make dashboard."
@@ -159,11 +159,11 @@ sprints:
         done: true
       - id: US-23
         title: "Déploiement Kubernetes (cluster fonctionnel)"
-        description: "🔄 Manifests déjà écrits dans infrastructure/kubernetes/ (namespace, backend, streamlit, mlflow, storage, ingress, configmap) — backend en 2 replicas, probes /health, PVC models-pvc. Reste à faire : valider le déploiement sur un cluster réel (kind/minikube), vérifier ConfigMap/Secret ds-covid-config et ds-covid-secrets, tester l'ingress. Demandé explicitement en Phase 3 par le roadmap mentor (\"scalabilité avec Docker/Kubernetes\"), mais marqué optionnel dans docs/ARCHITECTURE_MICROSERVICES.md — à clarifier si bloquant pour la soutenance."
+        description: "✅ Déploiement validé de bout en bout sur un cluster kind réel : manifests data-service/log-service ajoutés, mlflow.yaml corrigé (image + mémoire), ingress éclatée en 3 (streamlit/api/mlflow), accès DVC réel depuis les pods, tous les services en securityContext non-root. Demandé explicitement en Phase 3 par le roadmap mentor (\"scalabilité avec Docker/Kubernetes\")."
         depends_on: ["US-11"]
         points: 5
         priority: MUST
-        done: false
+        done: true
 
   - id: S4
     name: "Monitoring, Drift & Maintenance"
@@ -209,3 +209,53 @@ sprints:
         points: 3
         priority: MUST
         done: false
+
+  - id: HS
+    name: "Durcissement sécurité & qualité (hors-sprint)"
+    duration: "1 jour"
+    deadline: "2026-08-24"
+    points: 22
+    status: completed
+    stories:
+      - id: HS-1
+        title: "Sécurisation production backend"
+        description: "✅ Fail-fast si API_KEY vide et API_ENV=production (model_validator Pydantic, backend/app/config.py). Ne renvoie plus le détail brut d'exception sur les 500 de /api/v1/predict (fuite interne). USER non-root dans les Dockerfiles backend + data-service. K8s backend.yaml : securityContext non-root, tag :latest remplacé par un placeholder immuable, Secret retiré du repo (secrets.yaml.example)."
+        points: 5
+        priority: MUST
+        done: true
+        commits: [34c41a0, aab430e, 37f6c59, e19b002]
+      - id: HS-2
+        title: "Fiabilisation CI/CD"
+        description: "✅ 4 actions GitHub (checkout/setup-python/upload-artifact/download-artifact) épinglées sur SHA complet. permissions: {} deny-all au niveau workflow. --only-binary=\":all:\" sur les installs ruff/pylint. Corrigé un build data-service cassé en CI/Docker : pywin32==312 (paquet Windows-only) figé par erreur dans requirements.txt lors d'un pip-compile lancé sous Windows au lieu de Linux."
+        points: 4
+        priority: MUST
+        done: true
+        commits: [47dc264, 9c6fd9e, de6afbc]
+      - id: HS-3
+        title: "Qualité code & lint"
+        description: "✅ ruff check --fix repo-wide (37 fixes auto) + corrections manuelles B017/B905. radon ajouté aux dev-requirements (backend + data-service) pour le check de complexité cyclomatique du rituel /friday. Frontend : disables lint redondants retirés (broad-exception-caught déjà désactivé globalement, docstrings manquantes ajoutées, lignes >88 caractères reformatées) — validé sans régression (pylint 9.62/10 inchangé, 7 pages testées en live)."
+        points: 4
+        priority: SHOULD
+        done: true
+        commits: [0a66899, e2ca6bd, e37201f, cd91113]
+      - id: HS-4
+        title: "Coverage backend 77.5% → 95%"
+        description: "✅ Tests ajoutés pour predict.py (chemin succès + erreur 500) et loader.py (ModelLoader.load/predict, tous les cas), auparavant non couverts. 67/67 tests backend verts."
+        points: 3
+        priority: SHOULD
+        done: true
+        commits: [487d538]
+      - id: HS-5
+        title: "Gouvernance Claude Code"
+        description: "✅ Clarifié la contradiction entre la règle #7 de CLAUDE.md et l'état réel du .gitignore (.claude/rules|skills|agents volontairement publics). Grep email ajouté aux checks sécurité du rituel /friday (angle mort identifié). Rédigé 4 documents de cadrage (CHANTIER_*.md) pour les chantiers plus lourds mis de côté : migration Flask, refactor too-many-locals, décision sur le pipeline builder cassé (06_cicd), déploiement Kubernetes réel."
+        points: 3
+        priority: SHOULD
+        done: true
+        commits: [e16105b, 767a6fd, 19ca452, a333d9e, e4acaa0]
+      - id: HS-6
+        title: "Bugs découverts et traités en cours d'audit"
+        description: "✅ scikit-learn manquant dans frontend/requirements.txt (utilisé par la page 06_cicd, jamais déclaré) — ajouté. frontend/page/06_cicd.py (711 lignes) supprimé : fallback mort, jamais chargé (page/_loader.py préfère systématiquement le package 06_cicd/). Import cassé src.features.St_Pipeline.Transformateurs documenté en détail (cause racine à deux couches) plutôt que corrigé à la hâte — voir CHANTIER_ST_PIPELINE.md."
+        points: 3
+        priority: SHOULD
+        done: true
+        commits: [7e15df2, 3ab97d7]

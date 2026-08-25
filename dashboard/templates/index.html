@@ -12,6 +12,8 @@
     <span class="navbar-brand fw-bold">🫁 DS_COVID MLOps — Backlog</span>
     <span class="text-light small">Chef de projet : {{ backlog.chef_projet }} · Stack : {{ backlog.stack }}</span>
     <div class="d-flex gap-2">
+      <a href="contexte" class="btn btn-sm btn-outline-light">🫁 Contexte DS</a>
+      <a href="predict" class="btn btn-sm btn-outline-light">🔬 Prédicteur</a>
       <a href="data" class="btn btn-sm btn-outline-light">🗂 Data Explorer</a>
     </div>
   </nav>
@@ -88,6 +90,7 @@
           <span class="badge bg-dark me-2">{{ sprint.id }}</span>
           <strong>{{ sprint.name }}</strong>
           <span class="text-muted small ms-2">{{ sprint.duration }} · {{ sprint.points }} pts</span>
+          <a href="sprint/{{ sprint.id }}" class="small ms-2">🔍 Preuve de travail</a>
         </div>
         <div class="d-flex align-items-center gap-2">
           <div class="progress" style="width:120px;height:8px">

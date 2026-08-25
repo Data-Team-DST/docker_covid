@@ -9,7 +9,7 @@ import logging
 import logging.handlers
 import os
 from collections import deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -84,7 +84,7 @@ def health():
 def receive_log(entry: LogEntry):
     """Reçoit une entrée de log depuis n'importe quel service."""
     payload = {
-        "ts":      entry.ts or datetime.now(timezone.utc).isoformat(),
+        "ts":      entry.ts or datetime.now(UTC).isoformat(),
         "service": entry.service,
         "level":   entry.level,
         "logger":  entry.logger,

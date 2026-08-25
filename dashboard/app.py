@@ -1,6 +1,8 @@
 """Dashboard Flask — DS_COVID MLOps — suivi backlog agile."""
 import json
 import os
+import re
+import subprocess
 from collections import Counter
 from pathlib import Path
 
@@ -19,6 +21,59 @@ DVC_RAW_FILE = ROOT / "data" / "raw.dvc"
 MODELS_DIR = ROOT / "data" / "models"
 
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+API_KEY = os.getenv("API_KEY", "")
+REPO_URL = "https://github.com/Data-Team-DST/docker_covid"
+_SAFE_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def find_commits_for_story(story_id: str, limit: int = 5) -> list:
+    """Cherche dans tout l'historique git les commits référençant cette story.
+
+    Preuve vérifiable (lien vers un commit réel) plutôt qu'une capture fabriquée.
+    """
+    if not _SAFE_TOKEN_RE.match(story_id):
+        return []
+    try:
+        proc = subprocess.run(
+            ["git", "log", "--all", "--oneline", "-i", f"--grep={story_id}"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+            timeout=10, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    commits = []
+    for line in proc.stdout.splitlines()[:limit]:
+        sha, _, message = line.partition(" ")
+        commits.append({"sha": sha, "message": message, "url": f"{REPO_URL}/commit/{sha}"})
+    return commits
+
+
+def resolve_commits(shas: list) -> list:
+    """Résout des SHA connus (renseignés à la main dans backlog.yaml) via `git show`.
+
+    Le message de commit n'est jamais dupliqué dans le YAML : source de vérité = git,
+    donc pas de drift possible si un message est reformulé plus tard.
+    """
+    commits = []
+    for sha in shas:
+        if not _SAFE_TOKEN_RE.match(sha):
+            continue
+        try:
+            proc = subprocess.run(
+                ["git", "show", "-s", "--format=%h %s", sha],
+                cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+                timeout=10, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if proc.returncode != 0 or not proc.stdout.strip():
+            continue
+        short_sha, _, message = proc.stdout.strip().partition(" ")
+        commits.append(
+            {"sha": short_sha, "message": message, "url": f"{REPO_URL}/commit/{short_sha}"}
+        )
+    return commits
 
 
 def load_backlog() -> dict:
@@ -130,6 +185,71 @@ def index():
     backlog = merge_state(backlog, state)
     stats = compute_stats(backlog)
     return render_template("index.html", backlog=backlog, stats=stats)
+
+
+@app.route("/contexte")
+def contexte():
+    return render_template("contexte.html")
+
+
+@app.route("/sprint/<sprint_id>")
+def sprint_detail(sprint_id: str):
+    backlog = load_backlog()
+    state = load_state()
+    backlog = merge_state(backlog, state)
+    sprint = next((s for s in backlog["sprints"] if s["id"] == sprint_id), None)
+    if sprint is None:
+        return jsonify({"error": f"Sprint inconnu : {sprint_id}"}), 404
+
+    stories = [
+        {
+            **story,
+            "commits": (
+                resolve_commits(story["commits"])
+                if story.get("commits")
+                else find_commits_for_story(story["id"]) if story.get("done") else []
+            ),
+        }
+        for story in sprint["stories"]
+    ]
+    return render_template("sprint_detail.html", sprint=sprint, stories=stories)
+
+
+@app.route("/predict", methods=["GET", "POST"])
+def predict():
+    if request.method == "GET":
+        return render_template("predict.html", result=None, error=None)
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return render_template(
+            "predict.html", result=None, error="Aucun fichier sélectionné."
+        )
+
+    try:
+        r = requests.post(
+            f"{BACKEND_URL}/api/v1/predict",
+            files={"file": (file.filename, file.stream, file.mimetype)},
+            headers={"X-API-Key": API_KEY},
+            timeout=30,
+        )
+    except requests.exceptions.ConnectionError:
+        return render_template(
+            "predict.html",
+            result=None,
+            error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
+        )
+
+    if r.status_code != 200:
+        try:
+            detail = r.json().get("detail", r.text)
+        except ValueError:
+            detail = r.text
+        return render_template(
+            "predict.html", result=None, error=f"Erreur {r.status_code} : {detail}"
+        )
+
+    return render_template("predict.html", result=r.json(), error=None)
 
 
 @app.route("/data")
