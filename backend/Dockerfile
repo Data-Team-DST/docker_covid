@@ -11,11 +11,11 @@ RUN pip install --no-cache-dir --upgrade pip wheel
 WORKDIR /app
 
 # Requirements séparés pour profiter du cache Docker
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Code source
-COPY backend/app ./app
+COPY app ./app
 
 # Données/modèles montés en volume, pas copiés dans l'image
 RUN mkdir -p data/models data/raw data/processed tmp/logs \

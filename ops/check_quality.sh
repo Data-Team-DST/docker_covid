@@ -144,7 +144,7 @@ check_structure_complexity() {
     echo "========================================" >> "$STRUCTURE_REPORT"
     echo "" >> "$STRUCTURE_REPORT"
 
-    for root_dir in "backend/app" "frontend" "backend/src" "tmp"; do
+    for root_dir in "backend/app" "frontend" "backend/src" "trainer/src" "tmp"; do
         if [ ! -d "$root_dir" ]; then
             continue
         fi
@@ -261,7 +261,7 @@ from pathlib import Path
 
 # Cherche le parser (depuis la racine projet ou depuis le répertoire du script)
 _candidates = [
-    "infrastructure/scripts/check_code_smell_parser.py",
+    "ops/check_code_smell_parser.py",
     os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "check_code_smell_parser.py"),
 ]
 _parser = next((p for p in _candidates if os.path.isfile(p)), None)
@@ -412,7 +412,7 @@ fi
 # =========================
 # 4b. Requirements — imports
 # =========================
-_req_key="req_$(cache_key backend/app frontend backend/src)_$(md5sum backend/requirements*.txt frontend/requirements.txt data-service/requirements.txt 2>/dev/null | md5sum | cut -c1-8)"
+_req_key="req_$(cache_key backend/app frontend backend/src trainer/src)_$(md5sum backend/requirements*.txt frontend/requirements.txt data-service/requirements.txt 2>/dev/null | md5sum | cut -c1-8)"
 if _req_cached=$(cache_get "$_req_key"); then
     echo -e "${YELLOW}[Requirements]${NC} (cache) ${_req_cached}"
     echo "Requirements: ${_req_cached}" >> "$SUMMARY"

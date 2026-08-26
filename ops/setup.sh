@@ -18,7 +18,7 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 log()   { echo -e "${GREEN}[DS_COVID]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[DS_COVID]${NC} $*"; }
@@ -339,7 +339,7 @@ setup_dev() {
     # Build des images Docker localement
     title "Build des images Docker"
     log "docker compose build (backend + trainer + streamlit)..."
-    if docker compose -f "${SCRIPT_DIR}/../docker-compose.yml" --project-directory "${PROJECT_ROOT}" build; then
+    if docker compose -f "${SCRIPT_DIR}/../infrastructure/docker-compose.yml" --project-directory "${PROJECT_ROOT}" build; then
         log "Images construites avec succes"
     else
         warn "Build partiel -- l'image de base GHCR est peut-etre inaccessible"

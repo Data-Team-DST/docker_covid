@@ -17,15 +17,16 @@ import yaml
 from numpy.lib.format import open_memmap
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
+TRAINER_ROOT = Path(__file__).parent.parent
+REPO_ROOT = TRAINER_ROOT.parent
+sys.path.insert(0, str(TRAINER_ROOT / "src"))
 
 from ds_covid.preprocessing import process_single_image  # noqa: E402
 
-PARAMS_FILE = PROJECT_ROOT / "params.yaml"
-AUGMENTED_DIR = PROJECT_ROOT / "data" / "augmented"
-OUT_DIR = PROJECT_ROOT / "data" / "processed"
-STATS_FILE = PROJECT_ROOT / "outputs" / "preprocess_stats.json"
+PARAMS_FILE = REPO_ROOT / "params.yaml"
+AUGMENTED_DIR = REPO_ROOT / "data" / "augmented"
+OUT_DIR = REPO_ROOT / "data" / "processed"
+STATS_FILE = REPO_ROOT / "outputs" / "preprocess_stats.json"
 
 
 def load_params() -> dict:

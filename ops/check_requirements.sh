@@ -1,10 +1,10 @@
 #!/bin/bash
 # check_requirements.sh — Vérifie que chaque package déclaré est importé dans le code
 # Optimisé : un seul grep pour indexer tous les imports, puis lookup O(1) en mémoire
-# Usage : bash infrastructure/scripts/check_requirements.sh [--strict]
+# Usage : bash ops/check_requirements.sh [--strict]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 GREEN='\033[0;32m'
@@ -17,7 +17,7 @@ NC='\033[0m'
 STRICT=false
 [[ "${1:-}" == "--strict" ]] && STRICT=true
 
-SCAN_DIRS=(backend/app frontend backend/src)
+SCAN_DIRS=(backend/app frontend backend/src trainer/src)
 
 ARTIFACT_DIR="tmp/quality"
 IMPORT_CACHE_DIR="$ARTIFACT_DIR/.cache/imports"
@@ -159,7 +159,7 @@ UNUSED_SUMMARY=""   # accumule "fichier:package" pour le récap final
     echo "========================================"
 } >> "$REQ_REPORT"
 
-for req_file in backend/requirements.txt backend/requirements-dev.txt frontend/requirements.txt data-service/requirements.txt infrastructure/docker/base/requirements.txt infrastructure/docker/trainer/requirements.txt; do
+for req_file in backend/requirements.txt backend/requirements-dev.txt frontend/requirements.txt data-service/requirements.txt infrastructure/docker/base/requirements.txt trainer/requirements.txt; do
     [ -f "$req_file" ] || continue
     echo -e "\n${CYAN}📄 $(basename "$req_file")${NC}"
     echo "" >> "$REQ_REPORT"

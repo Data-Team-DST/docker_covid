@@ -3,14 +3,13 @@ FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-COPY frontend/requirements.txt /tmp/streamlit.txt
+COPY requirements.txt /tmp/streamlit.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install --ignore-installed blinker \
  && python -m pip install -r /tmp/streamlit.txt
 
-COPY backend/src/ /workspace/src/
-COPY frontend/ /workspace/frontend/
+COPY . /workspace/frontend/
 
 RUN chown -R appuser:appuser /workspace
 ENV HOME=/home/appuser

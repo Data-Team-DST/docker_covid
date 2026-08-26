@@ -19,15 +19,16 @@ import yaml
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
+TRAINER_ROOT = Path(__file__).parent.parent
+REPO_ROOT = TRAINER_ROOT.parent
+sys.path.insert(0, str(TRAINER_ROOT / "src"))
 
 from ds_covid.augmentation import augment_pair  # noqa: E402
 
-PARAMS_FILE = PROJECT_ROOT / "params.yaml"
-RAW_DIR = PROJECT_ROOT / "data" / "raw" / "COVID-19_Radiography_Dataset"
-OUT_DIR = PROJECT_ROOT / "data" / "augmented"
-STATS_FILE = PROJECT_ROOT / "outputs" / "augment_stats.json"
+PARAMS_FILE = REPO_ROOT / "params.yaml"
+RAW_DIR = REPO_ROOT / "data" / "raw" / "COVID-19_Radiography_Dataset"
+OUT_DIR = REPO_ROOT / "data" / "augmented"
+STATS_FILE = REPO_ROOT / "outputs" / "augment_stats.json"
 
 
 def load_params() -> dict:

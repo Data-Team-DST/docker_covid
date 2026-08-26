@@ -10,10 +10,10 @@ import numpy as np
 import tensorflow as tf
 from sklearn.metrics import classification_report, confusion_matrix
 
-PROJECT_ROOT   = Path(__file__).parent.parent
-MODELS_DIR     = PROJECT_ROOT / "data" / "models"
-PROCESSED      = PROJECT_ROOT / "data" / "processed"
-EVAL_FILE      = PROJECT_ROOT / "outputs" / "evaluation_report.json"
+REPO_ROOT      = Path(__file__).parent.parent.parent
+MODELS_DIR     = REPO_ROOT / "data" / "models"
+PROCESSED      = REPO_ROOT / "data" / "processed"
+EVAL_FILE      = REPO_ROOT / "outputs" / "evaluation_report.json"
 
 CLASS_NAMES = ["COVID", "Normal", "Viral Pneumonia", "Lung_Opacity"]
 
