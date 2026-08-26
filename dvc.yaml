@@ -51,7 +51,7 @@ stages:
           - preprocess.img_size
           - preprocess.random_seed
     outs:
-      - data/models/covid_model.keras
+      - data/models/classification.keras
     metrics:
       - outputs/metrics.json:
           cache: false
@@ -60,7 +60,7 @@ stages:
     cmd: python trainer/scripts/evaluate.py
     deps:
       - trainer/scripts/evaluate.py
-      - data/models/covid_model.keras
+      - data/models/classification.keras
       - data/processed/X_test.npy
       - data/processed/y_test.npy
     outs:
@@ -101,7 +101,7 @@ stages:
           - preprocess.img_size
           - preprocess.random_seed
     outs:
-      - data/models/lung_unet.keras
+      - data/models/segmentation.keras
     metrics:
       - outputs/segmentation_metrics.json:
           cache: false
@@ -111,7 +111,7 @@ stages:
     deps:
       - trainer/scripts/evaluate_segmentation.py
       - trainer/deep_learning/segmentation.py
-      - data/models/lung_unet.keras
+      - data/models/segmentation.keras
       - data/processed/segmentation/X_test.npy
       - data/processed/segmentation/M_test.npy
     params:

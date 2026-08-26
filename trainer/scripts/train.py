@@ -1,7 +1,7 @@
 """Stage DVC 3/4 — Entraînement CNN + tracking MLflow.
 
 Lit  : data/processed/{X,y}_train.npy (re-split en train/val en interne)
-Écrit: data/models/covid_model.keras  +  outputs/metrics.json
+Écrit: data/models/classification.keras  +  outputs/metrics.json
 """
 import json
 import os
@@ -117,7 +117,7 @@ def main() -> None:
         val_loss = float(history.history["val_loss"][-1])
 
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
-        model_path = MODELS_DIR / "covid_model.keras"
+        model_path = MODELS_DIR / "classification.keras"
         model.save(model_path)
         mlflow.keras.log_model(model, artifact_path="model",
                                registered_model_name=mlp["model_name"])

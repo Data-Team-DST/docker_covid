@@ -139,7 +139,7 @@ docker_covid/
 Adapter si besoin :
 
 ```env
-MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
+MODEL_PATH=data/models/classification.keras   # nom réel du fichier .keras
 ```
 
 **Sans modèle** : l'API démarre quand même.
@@ -152,7 +152,7 @@ MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
 Le pipeline ML est défini dans [`dvc.yaml`](dvc.yaml) avec 4 stages :
 
 ```
-data/raw  →  augment  →  data/augmented/  →  preprocess  →  data/processed/  →  train  →  data/models/covid_model.keras
+data/raw  →  augment  →  data/augmented/  →  preprocess  →  data/processed/  →  train  →  data/models/classification.keras
                                                                                                ↓
                                                                                            evaluate  →  outputs/evaluation_report.json
 ```

@@ -27,7 +27,7 @@ class ModelLoader:
 
         if not path.exists():
             logger.warning("Fichier modèle introuvable : %s", path)
-            logger.warning("→ Mets lung_unet.keras dans data/models/ et redémarre")
+            logger.warning("→ Mets segmentation.keras dans data/models/ et redémarre")
             return
 
         try:

@@ -1,7 +1,7 @@
 """Stage DVC — Entraînement du U-Net de segmentation pulmonaire + tracking MLflow.
 
 Lit  : data/processed/segmentation/{X,M}_train.npy (re-split en train/val en interne)
-Écrit: data/models/lung_unet.keras  +  outputs/segmentation_metrics.json
+Écrit: data/models/segmentation.keras  +  outputs/segmentation_metrics.json
 
 Entraînement en 2 phases (cf. build_unet) : l'encoder MobileNetV2 pré-entraîné ne doit
 pas être fine-tuné en entier dès le départ avec un LR élevé, sous peine de détruire les
@@ -68,7 +68,7 @@ def main() -> None:
     mlflow.set_experiment(mlp["segmentation_experiment_name"])
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    model_path = MODELS_DIR / "lung_unet.keras"
+    model_path = MODELS_DIR / "segmentation.keras"
 
     with mlflow.start_run():
         mlflow.log_params({

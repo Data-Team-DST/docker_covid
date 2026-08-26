@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # Modèle — DOIT correspondre à params.yaml (mlflow.segmentation_model_name /
     # entraîné par le stage DVC train_segmentation, cf. trainer/deep_learning/segmentation.py)
-    model_path: str = "data/models/lung_unet.keras"
+    model_path: str = "data/models/segmentation.keras"
     model_version: str = "1.0.0"
 
     # Résolution attendue en entrée du U-Net — doit correspondre à params.yaml
