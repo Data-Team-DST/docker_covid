@@ -14,9 +14,14 @@ from typing import Optional, Protocol
 import cv2
 import numpy as np
 
-# trainer/src est copié dans l'image Docker à côté de app/ (cf. backend/Dockerfile,
-# COPY trainer/src ./src) pour permettre cette réutilisation du pipeline d'entraînement.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
+# En image Docker, trainer/src est copié à côté de app/ (cf. backend/Dockerfile,
+# COPY trainer/src ./src) : backend/app/features/../../.. -> /app, /src est un sibling.
+# En local (pytest/make test-be, hors Docker), ce sibling n'existe pas : on retombe sur
+# trainer/src directement, sibling de backend/ à la racine du repo.
+_DOCKER_SRC = Path(__file__).resolve().parent.parent.parent / "src"
+_LOCAL_TRAINER_SRC = Path(__file__).resolve().parents[3] / "trainer" / "src"
+_SRC_DIR = _DOCKER_SRC if (_DOCKER_SRC / "ds_covid").is_dir() else _LOCAL_TRAINER_SRC
+sys.path.insert(0, str(_SRC_DIR))
 
 from ds_covid.preprocessing import apply_pipeline  # noqa: E402
 from ds_covid.segmentation import clean_mask  # noqa: E402
