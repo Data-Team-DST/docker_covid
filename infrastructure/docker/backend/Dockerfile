@@ -14,11 +14,10 @@ WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Code source
+# Code source — service autonome, aucune dépendance à backend/src (cf. app/features/
+# preprocessing.py : le pipeline de masking/CLAHE est dupliqué localement, et le mask
+# des poumons est obtenu via un appel HTTP au segmentation-service, pas embarqué ici).
 COPY backend/app ./app
-# backend/src (ds_covid) : pipeline de preprocessing/segmentation partagé avec
-# l'entraînement (cf. app/features/preprocessing.py) — réutilisé plutôt que dupliqué.
-COPY backend/src ./src
 
 # Données/modèles montés en volume, pas copiés dans l'image
 RUN mkdir -p data/models data/raw data/processed tmp/logs \

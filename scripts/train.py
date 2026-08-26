@@ -19,7 +19,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from tqdm.keras import TqdmCallback
 
 PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "backend" / "src"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # En local (hors Docker), MLFLOW_TRACKING_URI="http://mlflow:5000" (params.yaml)
 # ne se résout pas — .env fournit l'override http://localhost:5000. load_dotenv()

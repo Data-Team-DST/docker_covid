@@ -54,6 +54,7 @@ mlflow.db
 .coverage
 htmlcov/
 coverage.xml
+*-coverage.xml
 
 # Zip temporaires
 _zip_extracted/

@@ -40,15 +40,13 @@ class ModelLoader:
             logger.error("Échec chargement modèle : %s", e)
 
     def predict(self, img_array: np.ndarray) -> np.ndarray:
-        """Retourne la sortie brute du modèle pour le premier (et unique) élément du
-        batch : un vecteur de probabilités (shape [4]) pour le classifieur, ou un mask
-        (shape [H, W, 1]) pour le U-Net de segmentation."""
+        """Retourne le vecteur de probabilités (shape [4]) pour le premier (et unique)
+        élément du batch."""
         if not self.is_loaded:
             raise RuntimeError("Modèle non chargé")
         preds = self._model.predict(img_array, verbose=0)
         return preds[0]
 
 
-# Instances globales importées par les endpoints
+# Instance globale importée par les endpoints
 model_loader = ModelLoader()
-segmentation_model_loader = ModelLoader()

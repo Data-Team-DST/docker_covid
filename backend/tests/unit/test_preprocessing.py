@@ -2,9 +2,10 @@
 
 import io
 
+import httpx
 import numpy as np
 import pytest
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 
 from app.features.preprocessing import predict_lung_mask, preprocess_image
 
@@ -23,20 +24,25 @@ def make_test_image(size=(300, 300), mode="L") -> bytes:
     return buf.getvalue()
 
 
-class FakeSegmentationModel:
-    """Simule `ModelLoader.predict` (renvoie directement un mask sans dim de batch),
-    sans dépendre d'un vrai modèle Keras entraîné."""
-
-    def __init__(self, img_size: int, fill: float = 1.0):
-        self.img_size = img_size
-        self.fill = fill
-
-    def predict(self, img_array: np.ndarray) -> np.ndarray:
-        assert img_array.shape == (1, self.img_size, self.img_size, 1)
-        return np.full((self.img_size, self.img_size, 1), self.fill, dtype=np.float32)
+def _mask_png_bytes(size=(300, 300), fill: int = 255) -> bytes:
+    arr = np.full(size, fill, dtype=np.uint8)
+    img = Image.fromarray(arr, mode="L")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
 
 
-# ── Shape & dtype (masking désactivé : pas de dépendance à un modèle de segmentation) ──
+def _fake_segmentation_client(mask_png: bytes, status_code: int = 200) -> httpx.Client:
+    """Client httpx dont le transport est mocké : simule le segmentation-service
+    sans requête réseau réelle."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code, content=mask_png)
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+# ── Shape & dtype (masking désactivé : pas d'appel réseau) ─────────────────────────────
 
 
 def test_preprocess_output_shape():
@@ -115,29 +121,36 @@ def test_preprocess_invalid_bytes_raises():
         preprocess_image(b"not_an_image", masking=False)
 
 
-def test_preprocess_masking_without_model_falls_back(caplog):
-    """masking=True mais segmentation_model=None : ne doit pas planter, juste
-    dégrader (image non masquée) en loggant un avertissement."""
-    result = preprocess_image(make_test_image(), masking=True, segmentation_model=None)
-    assert result.shape == (1, 256, 256, 1)
-    assert "non masquée" in caplog.text
+# ── Masking via le segmentation-service (transport HTTP mocké) ─────────────────────────
 
 
-# ── Masking via un modèle de segmentation (mock) ────────────────────────────────────────
+def test_predict_lung_mask_calls_segmentation_service():
+    mask_png = _mask_png_bytes(size=(300, 300), fill=255)
+    client = _fake_segmentation_client(mask_png)
 
+    mask = predict_lung_mask(
+        make_test_image(size=(300, 300)), "http://segmentation-service:8001", timeout=5.0, client=client
+    )
 
-def test_predict_lung_mask_shape():
-    img = np.random.randint(0, 255, (300, 300), dtype=np.uint8)
-    model = FakeSegmentationModel(img_size=256, fill=1.0)  # prédit "tout est poumon"
-    mask = predict_lung_mask(img, model, model_img_size=256, clean_components=2, clean_kernel=15)
-    assert mask.shape == img.shape
+    assert mask.shape == (300, 300)
     assert mask.dtype == np.uint8
 
 
-def test_preprocess_with_masking_model():
-    model = FakeSegmentationModel(img_size=256, fill=1.0)
+def test_predict_lung_mask_raises_on_http_error():
+    client = _fake_segmentation_client(b"", status_code=503)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        predict_lung_mask(make_test_image(), "http://segmentation-service:8001", timeout=5.0, client=client)
+
+
+def test_preprocess_with_masking_calls_segmentation_service():
+    mask_png = _mask_png_bytes(size=(300, 300), fill=255)
+    client = _fake_segmentation_client(mask_png)
+
     result = preprocess_image(
         make_test_image(size=(300, 300)), img_size=(256, 256),
-        masking=True, cropping=True, segmentation_model=model,
+        masking=True, cropping=True,
+        segmentation_service_url="http://segmentation-service:8001",
+        segmentation_client=client,
     )
     assert result.shape == (1, 256, 256, 1)

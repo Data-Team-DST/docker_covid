@@ -22,8 +22,44 @@ services:
       - MODEL_PATH=${MODEL_PATH:-data/models/best_model.keras}
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
       - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-100}
+      - SEGMENTATION_SERVICE_URL=http://segmentation-service:8001
+    depends_on:
+      segmentation-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+    networks:
+      - covid-net
+
+  # ── Segmentation Service (U-Net : mask pulmonaire pour l'inférence) ────────
+  segmentation-service:
+    build:
+      context: ./segmentation-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY}/${GITHUB_USER}/covid-xray-segmentation-service:${IMAGE_TAG:-latest}
+    container_name: covid-xray-segmentation-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data:ro
+      - ./tmp/logs:/app/tmp/logs
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_SERVICE_URL=http://log-service:5002/v1/log
+      - MODEL_PATH=${SEGMENTATION_MODEL_PATH:-data/models/lung_unet.keras}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -122,7 +158,7 @@ services:
       - "${TRAINER_PORT:-8888}:8888"
     volumes:
       - ./data:/app/data
-      - ./backend/src:/app/src
+      - ./ds_covid:/app/ds_covid
       - ./models:/app/models
       - ./outputs:/app/outputs
     env_file: .env

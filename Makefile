@@ -15,10 +15,10 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 #   make dvc-repro  → lance `dvc repro` dans le container trainer (GPU, sans dvc local)
 
-.PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard start start-local start-docker start-all \
-        stop restart logs logs-all test test-be test-ds verify lint fix clean build shell help dashboard \
+.PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard setup-segmentation start start-local start-docker start-all \
+        stop restart logs logs-all test test-be test-ds test-segmentation verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
-        dvc-setup dvc-push dvc-pull dvc-repro load-test setup-load-test
+        dvc-setup dvc-setup-dagshub dvc-push dvc-pull dvc-push-dagshub dvc-pull-dagshub dvc-repro load-test setup-load-test
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 GREEN  := \033[0;32m
@@ -95,12 +95,30 @@ status: ## Status des containers
 	$(COMPOSE) ps
 
 # ── DVC ───────────────────────────────────────────────────────────────────────
+# .dvc/config.local (gitignoré) peut contenir plusieurs sections [remote "..."] —
+# chaque cible dvc-setup* ne touche qu'à SA section (strip-puis-append) pour ne pas
+# écraser les credentials d'un autre remote déjà configuré.
 dvc-setup: ## Configure DVC remote MinIO (credentials locaux, gitignorés)
 	@echo "$(YELLOW)Configuration DVC remote MinIO...$(NC)"
-	@echo "[remote \"minio\"]" > .dvc/config.local
-	@echo "    access_key_id = minioadmin" >> .dvc/config.local
-	@echo "    secret_access_key = minioadmin" >> .dvc/config.local
-	@echo "$(GREEN)✅ .dvc/config.local créé$(NC)"
+	@touch .dvc/config.local
+	@awk '$$0=="[remote \"minio\"]"{skip=1;next} /^\[/{skip=0} !skip' .dvc/config.local > .dvc/config.local.tmp && mv .dvc/config.local.tmp .dvc/config.local
+	@{ echo "[remote \"minio\"]"; echo "    access_key_id = minioadmin"; echo "    secret_access_key = minioadmin"; } >> .dvc/config.local
+	@echo "$(GREEN)✅ .dvc/config.local créé (remote minio)$(NC)"
+
+dvc-setup-dagshub: ## Configure DVC remote DagsHub (credentials locaux, gitignorés, lus depuis .env)
+	@if [ ! -f .env ]; then \
+		echo "$(RED)⚠ .env introuvable — copie .env.example puis renseigne REMOTE_S3_ACCESS_KEY/REMOTE_S3_SECRET_KEY (token DagsHub, dagshub.com → Settings → Tokens)$(NC)"; \
+		exit 1; \
+	fi
+	@set -a && . ./.env && set +a && \
+	if [ -z "$$REMOTE_S3_ACCESS_KEY" ] || [ "$$REMOTE_S3_ACCESS_KEY" = "put_token_here" ]; then \
+		echo "$(RED)⚠ REMOTE_S3_ACCESS_KEY non renseigné dans .env (token DagsHub)$(NC)"; \
+		exit 1; \
+	fi && \
+	touch .dvc/config.local && \
+	awk '$$0=="[remote \"dagshub\"]"{skip=1;next} /^\[/{skip=0} !skip' .dvc/config.local > .dvc/config.local.tmp && mv .dvc/config.local.tmp .dvc/config.local && \
+	{ echo "[remote \"dagshub\"]"; echo "    access_key_id = $$REMOTE_S3_ACCESS_KEY"; echo "    secret_access_key = $$REMOTE_S3_SECRET_KEY"; } >> .dvc/config.local
+	@echo "$(GREEN)✅ .dvc/config.local mis à jour (remote dagshub)$(NC)"
 
 dvc-push: setup-ds ## Pousse les données vers MinIO (make start-all requis)
 	@echo "$(YELLOW)Push DVC → MinIO...$(NC)"
@@ -111,6 +129,16 @@ dvc-pull: setup-ds ## Récupère les données depuis MinIO
 	@echo "$(YELLOW)Pull DVC ← MinIO...$(NC)"
 	@data-service/.venv/bin/dvc pull
 	@echo "$(GREEN)✅ Données récupérées$(NC)"
+
+dvc-push-dagshub: setup-ds dvc-setup-dagshub ## Pousse les données/modèles vers DagsHub (dvc push -r dagshub)
+	@echo "$(YELLOW)Push DVC → DagsHub...$(NC)"
+	@data-service/.venv/bin/dvc push -r dagshub
+	@echo "$(GREEN)✅ Données pushées vers DagsHub$(NC)"
+
+dvc-pull-dagshub: setup-ds dvc-setup-dagshub ## Récupère les données/modèles depuis DagsHub (dvc pull -r dagshub)
+	@echo "$(YELLOW)Pull DVC ← DagsHub...$(NC)"
+	@data-service/.venv/bin/dvc pull -r dagshub
+	@echo "$(GREEN)✅ Données récupérées depuis DagsHub$(NC)"
 
 dvc-repro: ## Lance dvc repro dans le container trainer (GPU + dvc préinstallés, pas besoin de dvc en local)
 	@echo "$(YELLOW)dvc repro dans le container trainer (GPU)...$(NC)"
@@ -157,6 +185,17 @@ setup-fe: ## Crée/met à jour le venv frontend (frontend/.venv)
 	@frontend/.venv/bin/pip install -q --require-hashes -r frontend/requirements-dev.txt
 	@echo "$(GREEN)✅ frontend/.venv prêt$(NC)"
 
+setup-segmentation: ## Crée/met à jour le venv segmentation-service (segmentation-service/.venv)
+	@if [ ! -f segmentation-service/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv segmentation-service...$(NC)"; \
+		$(PYTHON) -m venv segmentation-service/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps segmentation-service...$(NC)"
+	@segmentation-service/.venv/bin/pip install -q --require-hashes \
+		-r segmentation-service/requirements.txt \
+		-r segmentation-service/dev-requirements.txt
+	@echo "$(GREEN)✅ segmentation-service/.venv prêt$(NC)"
+
 setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
 	@if [ -d dashboard/.venv/Scripts ] && [ ! -f dashboard/.venv/bin/python ]; then \
 		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
@@ -171,7 +210,7 @@ setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
 	@echo "$(GREEN)✅ dashboard/.venv prêt$(NC)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
-test: test-be test-ds ## Lance les tests de tous les microservices (venvs isolés)
+test: test-be test-ds test-segmentation ## Lance les tests de tous les microservices (venvs isolés)
 
 test-be: setup-be ## Tests backend dans son venv isolé
 	@echo "$(YELLOW)── Tests backend ──────────────────────────────────────$(NC)"
@@ -190,6 +229,15 @@ test-ds: setup-ds ## Tests data-service dans son venv isolé
 		--cov-report=xml:ds-coverage.xml \
 		--cov-fail-under=80
 	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
+
+test-segmentation: setup-segmentation ## Tests segmentation-service dans son venv isolé
+	@echo "$(YELLOW)── Tests segmentation-service ─────────────────────────$(NC)"
+	@cd segmentation-service && PYTHONPATH=src:.. .venv/bin/python -m pytest tests/ -v \
+		--cov=segmentation_service \
+		--cov-report=term-missing \
+		--cov-report=xml:coverage.xml \
+		--cov-fail-under=80
+	@echo "$(GREEN)✅ Tests segmentation-service OK$(NC)"
 
 test-docker: ## Lance les tests dans le container Docker
 	docker compose exec backend pytest tests/ -v --cov=app
