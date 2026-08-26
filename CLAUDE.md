@@ -103,12 +103,16 @@ réelle avec l'utilisateur avant toute action de nettoyage de grande ampleur.
 
 ```
 backend/                    FastAPI — port 8000 — inférence ML
-├── Dockerfile                colocalisé (contexte backend/)
+├── Dockerfile                colocalisé mais contexte de build = racine du repo (pas backend/) :
+                               COPY trainer/src ./src, requis par app/features/preprocessing.py
+                               (réutilise ds_covid.preprocessing + ds_covid.segmentation pour un
+                               preprocessing d'inférence identique à celui de l'entraînement)
 ├── app/main.py                point d'entrée
 ├── app/config.py               configuration centralisée
 ├── app/api/                    health.py, predict.py, security.py, metrics.py
 ├── app/models/loader.py        chargement modèle Keras
-├── app/features/                preprocessing image
+├── app/features/                preprocessing image — dépend de trainer/src/ds_covid (copié au
+                                 build, pas d'import cross-service à l'exécution)
 ├── app/schemas/                  schémas Pydantic (réponses)
 └── src/ml/                     baseline sklearn — utilisé uniquement par backend/tests/,
                                  hors périmètre de trainer/ (ne dépend pas de ds_covid)
@@ -125,8 +129,13 @@ shared/                      logging_config.py — JSON structuré, importé par
 trainer/                     Pipeline d'entraînement — service dédié (ex-scripts/ + backend/src/ds_covid/)
 ├── Dockerfile                colocalisé (contexte trainer/), image de base partagée avec frontend/
 ├── requirements.txt           extras trainer (mlflow, dvc[s3], jupyterlab, albumentations…)
-├── src/ds_covid/               augmentation.py, features.py, models.py, preprocessing.py…
-└── scripts/                    preprocess.py, train.py, evaluate.py, augment.py (stages DVC)
+├── src/ds_covid/               augmentation.py, features.py, models.py, preprocessing.py,
+                                 segmentation.py (U-Net poumons), data.py (MemmapSequence)…
+                                 réutilisé par backend/ au build (COPY trainer/src, pas d'import
+                                 Python cross-service — voir backend/Dockerfile ci-dessus)
+└── scripts/                    preprocess.py, train.py, evaluate.py, augment.py +
+                                 preprocess_segmentation.py, train_segmentation.py,
+                                 evaluate_segmentation.py (stages DVC)
 
 infrastructure/
 ├── docker/                  Dockerfiles restants : mlflow, base (backend/frontend/trainer colocalisés)

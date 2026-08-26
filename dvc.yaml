@@ -66,3 +66,59 @@ stages:
     outs:
       - outputs/evaluation_report.json:
           cache: false
+
+  preprocess_segmentation:
+    cmd: python trainer/scripts/preprocess_segmentation.py
+    deps:
+      - trainer/scripts/preprocess_segmentation.py
+      - trainer/src/ds_covid/segmentation.py
+      - data/augmented
+    params:
+      - params.yaml:
+          - preprocess.img_size
+          - preprocess.classes
+    outs:
+      - data/processed/segmentation/X_train.npy
+      - data/processed/segmentation/X_test.npy
+      - data/processed/segmentation/M_train.npy
+      - data/processed/segmentation/M_test.npy
+    metrics:
+      - outputs/preprocess_segmentation_stats.json:
+          cache: false
+
+  train_segmentation:
+    cmd: python trainer/scripts/train_segmentation.py
+    deps:
+      - trainer/scripts/train_segmentation.py
+      - trainer/src/ds_covid/segmentation.py
+      - trainer/src/ds_covid/data.py
+      - data/processed/segmentation/X_train.npy
+      - data/processed/segmentation/M_train.npy
+    params:
+      - params.yaml:
+          - segmentation
+          - mlflow
+          - preprocess.img_size
+          - preprocess.random_seed
+    outs:
+      - data/models/lung_unet.keras
+    metrics:
+      - outputs/segmentation_metrics.json:
+          cache: false
+
+  evaluate_segmentation:
+    cmd: python trainer/scripts/evaluate_segmentation.py
+    deps:
+      - trainer/scripts/evaluate_segmentation.py
+      - trainer/src/ds_covid/segmentation.py
+      - data/models/lung_unet.keras
+      - data/processed/segmentation/X_test.npy
+      - data/processed/segmentation/M_test.npy
+    params:
+      - params.yaml:
+          - segmentation.batch_size
+          - segmentation.clean_mask_components
+          - segmentation.clean_mask_closing_kernel
+    outs:
+      - outputs/segmentation_evaluation_report.json:
+          cache: false

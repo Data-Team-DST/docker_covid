@@ -11,11 +11,14 @@ RUN pip install --no-cache-dir --upgrade pip wheel
 WORKDIR /app
 
 # Requirements séparés pour profiter du cache Docker
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Code source
-COPY app ./app
+COPY backend/app ./app
+# trainer/src (ds_covid) : pipeline de preprocessing/segmentation partagé avec
+# l'entraînement (cf. app/features/preprocessing.py) — réutilisé plutôt que dupliqué.
+COPY trainer/src ./src
 
 # Données/modèles montés en volume, pas copiés dans l'image
 RUN mkdir -p data/models data/raw data/processed tmp/logs \

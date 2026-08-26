@@ -5,8 +5,8 @@ services:
   # ── Backend FastAPI (inférence ML) ────────────────────────────────────────
   backend:
     build:
-      context: backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     image: ${REGISTRY}/${GITHUB_USER}/covid-xray-backend:${IMAGE_TAG:-latest}
     container_name: covid-xray-backend
     ports:

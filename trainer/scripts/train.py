@@ -27,6 +27,7 @@ sys.path.insert(0, str(TRAINER_ROOT / "src"))
 # en conteneur, où docker-compose fixe MLFLOW_TRACKING_URI directement).
 load_dotenv(REPO_ROOT / ".env")
 
+from ds_covid.data import MemmapSequence  # noqa: E402
 from ds_covid.models import build_cnn  # noqa: E402
 
 PARAMS_FILE  = REPO_ROOT / "params.yaml"

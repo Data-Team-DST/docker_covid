@@ -19,7 +19,7 @@ def test_settings_defaults():
 
 
 def test_settings_img_size():
-    assert settings.img_size == (224, 224)
+    assert settings.img_size == (256, 256)
 
 
 def test_settings_class_names_complete():
