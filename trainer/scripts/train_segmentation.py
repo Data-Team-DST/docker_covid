@@ -27,6 +27,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
 load_dotenv(PROJECT_ROOT / ".env")
 
 from deep_learning.data import MemmapSequence  # noqa: E402
+from deep_learning.mlflow_utils import MlflowEpochLogger  # noqa: E402
 from deep_learning.segmentation import build_unet, combined_loss, dice_coef, iou_metric  # noqa: E402
 
 PARAMS_FILE  = PROJECT_ROOT / "params.yaml"
@@ -102,6 +103,7 @@ def main() -> None:
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=1, min_lr=1e-5),
                 tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
                 TqdmCallback(desc="Phase 1/2 (decoder)", verbose=2),
+                MlflowEpochLogger(),  # métriques loguées epoch par epoch (visibilité temps réel dans MLflow)
             ],
             verbose=0,
         )
@@ -130,6 +132,9 @@ def main() -> None:
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2, min_lr=1e-7),
                 tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
                 TqdmCallback(desc="Phase 2/2 (fine-tune)", verbose=2),
+                # step_offset = épochs réellement écoulées en phase 1 (peut être < freeze_epochs
+                # si EarlyStopping a coupé court) : la timeline MLflow reste continue entre les 2 phases.
+                MlflowEpochLogger(step_offset=len(history_freeze.epoch)),
             ],
             verbose=0,
         )
@@ -137,7 +142,6 @@ def main() -> None:
         val_dice = float(history_finetune.history["val_dice_coef"][-1])
         val_iou  = float(history_finetune.history["val_iou_metric"][-1])
         val_loss = float(history_finetune.history["val_loss"][-1])
-        mlflow.log_metrics({"val_dice": val_dice, "val_iou": val_iou, "val_loss": val_loss})
 
         # ModelCheckpoint a déjà sauvegardé le meilleur modèle des 2 phases sur model_path ;
         # on recharge ces poids avant de logger dans le registry, au cas où la dernière
