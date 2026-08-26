@@ -86,7 +86,7 @@ services:
     ports:
       - "${STREAMLIT_PORT:-8501}:8501"
     volumes:
-      - ./frontend:/app/frontend
+      - ./frontend:/workspace/frontend
     env_file: .env
     environment:
       - BACKEND_URL=http://backend:8000
