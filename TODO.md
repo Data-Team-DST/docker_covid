@@ -30,26 +30,7 @@ pas un lockfile pip-compile. Si le hash-lock redevient souhaité : relancer
 disponibles, ou épingler manuellement chaque wheel nvidia à une version précise pour
 réduire l'espace de résolution.
 
-### 3. Bump TensorFlow 2.18→2.21 / MLflow 2.19.0→3.15.1 — jamais testé par un vrai build
-
-Récupéré depuis `origin/raf5` (nécessaire pour le driver CUDA 13.1 de la machine de
-Rafael) et appliqué à `infrastructure/docker/base/Dockerfile` +
-`infrastructure/docker/mlflow/Dockerfile` + `trainer/requirements.in`. Validé par Rafael
-sur sa machine, **mais jamais rebuild ni testé sur cette machine** (aucun GPU disponible
-ici pour vérifier). Un `docker compose build trainer mlflow base` avant la prochaine
-session d'entraînement réelle est nécessaire pour confirmer que rien ne casse côté image.
-
 ## Vérifications non faites
-
-### 4. `dvc dag` / `dvc repro` jamais lancés
-
-La cohérence du graphe `dvc.yaml` n'a été vérifiée que statiquement (lecture,
-`yaml.safe_load`). `dvc.lock` est resté intouché — il référence encore l'ancienne
-structure (`backend/src/ds_covid`, `scripts/`) et sera automatiquement régénéré (chemins +
-hashes) au prochain `dvc repro` réel. Un `dvc dag` (léger, ne nécessite pas les données)
-confirmerait que DVC résout bien tous les chemins actuels avant de lancer un `dvc repro`
-complet (lourd : pipeline sur 42 330 images, GPU requis pour les stages `train`/
-`train_segmentation`).
 
 ### 5. CI segmentation-service jamais déclenchée réellement
 
@@ -57,93 +38,118 @@ complet (lourd : pipeline sur 42 330 images, GPU requis pour les stages `train`/
 `cicd.yml` ajoutés par cohérence (raf5 ne l'avait pas câblé), mais jamais vus tourner en
 vrai sur GitHub Actions — à surveiller au prochain push/PR.
 
-## Bugs signalés, non corrigés (hors périmètre du moment)
+## Chantier post-soutenance — rôles et frontières des services
 
-### 6. `ops/check_quality.sh` — scanne `frontend/.venv`, crash sur fichier mal encodé
+Ouvert le 2026-08-26 (`CHANTIER_INFRA_SERVICES.md`), **à traiter après la soutenance du
+04/09/2026** (CLAUDE.md § Calendrier — pas de refactoring structurel risqué à l'approche de
+la démo). Détail complet, constats vérifiés et options dans le fichier lui-même ; ici,
+uniquement le suivi backlog.
 
-`make lint-full` (dépend de `setup-fe`) crée `frontend/.venv`, que le check de structure/
-code-smell de `check_quality.sh` scanne sans l'exclure (aucun filtre `.venv` dans son
-parcours de `frontend/`). Deux symptômes : faux positifs "arborescence trop profonde" sur
-les paquets installés, et un `UnicodeDecodeError` qui fait planter `make lint-full` sur un
-fichier `.py` mal encodé quelque part dans `frontend/.venv/lib/.../site-packages/`.
-Reproductible sur toute machine où `frontend/.venv` existe localement.
+### 14. `infrastructure/docker/base/` — `frontend` a-t-il vraiment besoin de l'image TF-GPU ?
 
-### 7. 4 findings `ruff` mineurs (code du merge `raf5`, auto-fixables)
+Non vérifié : lister les imports réels de `frontend/**/*.py` et confronter à
+`base/requirements.in`. Si confirmé que `frontend` n'a besoin que d'opencv/numpy/pandas/
+pillow, lui donner un Dockerfile léger (`python:3.11-slim`, comme `backend`) et laisser
+`base` (TensorFlow-GPU) à `trainer` seul.
 
-```
-backend/app/config.py:3:1: I001 [*] Import block is un-sorted or un-formatted
-backend/app/config.py:47:23: UP045 [*] Use `X | None` for type annotations
-backend/app/features/preprocessing.py:74:25: UP045 [*] Use `X | None` for type annotations
-backend/app/features/preprocessing.py:80:23: UP045 [*] Use `X | None` for type annotations
-```
+### 15. `frontend` (streamlit) vs `dashboard` (Flask) — deux responsabilités mélangées dans `dashboard`
 
-Note : `backend/app/features/preprocessing.py` a depuis été remplacé par la version
-autonome (appel HTTP segmentation-service) — revérifier si ces lignes précises existent
-encore avant d'appliquer `ruff check --fix`.
+`dashboard` porte déjà backlog agile interne + façade produit (data explorer, prédicteur
+live) avant même d'absorber le contenu streamlit. 3 options posées (scinder `dashboard`
+d'abord / créer un service `demonstration/` dédié / migrer le contenu tel quel dans
+`dashboard`). Prérequis avant de trancher : inventaire page par page de `frontend/page/`
+(conserver pour soutenance vs jetable).
 
-### 8. Nombreuses lignes >88 caractères dans le code du merge `raf5`
+### 16. `data-service` — mélange lecture (stats/recherche) et opérations DVC (pull/push/repro)
 
-`predict.py`, `config.py`, `features/preprocessing.py`, `models/loader.py` — dépassent la
-limite `pylint` (`max-line-length = 88`). `ruff` les ignore (E501 exclu du projet), mais
-`pylint`/`make lint-full` les signalerait. Préexistant, pas introduit par ce chantier.
+Même famille de problème que le point 15, moins visible. Piste : scinder en `data-service`
+(lecture seule) + `pipeline-service`/`dvc-service` (opérations DVC) — pas évident que ce
+soit rentable pour la taille du projet, priorité la plus faible des 4.
 
-## Audit qualité du refactor de Rafael (segmentation U-Net) — findings restants
+### 17. `mlflow` — câblé en écriture seule, aucun flux retour vers le déploiement
 
-Fait par l'agent `mle-reviewer` le 2026-08-26 sur l'état d'alors (segmentation en process
-dans le backend). Le point bloquant a été corrigé immédiatement. Les points 9-12
-concernent `trainer/scripts/train_segmentation.py` et `trainer/src/ds_covid/segmentation.py`
-— inchangés par la récupération de la suite de `raf5`, donc toujours valides.
-
-### 9. [IMPORTANT] `ModelCheckpoint` recréé à chaque phase — perte de comparaison inter-phases
-
-`trainer/scripts/train_segmentation.py` (phase 1 puis phase 2) : chaque `model.fit()`
-reçoit une **nouvelle** instance de `ModelCheckpoint(..., save_best_only=True)` — Keras
-réinitialise son "best" interne à +inf à chaque instanciation, donc la phase 2 ne sait rien
-du meilleur point de la phase 1. Si le fine-tuning démarre moins bien que la phase 1
-(risque documenté dans le docstring du fichier : "le val_dice s'effondre en 1-2 epochs si
-on dégèle tout dès le début"), la 1ère epoch de phase 2 écrase quand même `model_path` sans
-comparaison avec le vrai meilleur des deux phases.
-Fix : réutiliser la même instance de callback entre les deux `fit()` (Keras conserve
-`.best`), ou l'initialiser manuellement avec la meilleure val_loss de phase 1.
-
-### 10. [IMPORTANT] Métriques loguées MLflow potentiellement différentes du modèle sauvegardé
-
-`trainer/scripts/train_segmentation.py` logue `val_dice`/`val_iou`/`val_loss` de la
-**dernière** epoch de la phase 2, mais `EarlyStopping(restore_best_weights=True)` restaure
-en mémoire les poids de la **meilleure** epoch, et `model.load_weights(model_path)` (juste
-avant le log MLflow) recharge encore un troisième état possible (sujet au bug du point 9).
-Fix : recalculer dice/iou APRÈS `model.load_weights(model_path)`, juste avant de logger
-(`evaluate_segmentation.py` le fait déjà correctement sur le test set).
-
-### 11. [IMPORTANT] Aucun test sur les fonctions ML cœur de la segmentation
-
-Zéro test unitaire sur `dice_coef`, `dice_loss`, `combined_loss`, `iou_metric`,
-`clean_mask`, `collect_pairs`, `load_pair` (`trainer/src/ds_covid/segmentation.py`) ni sur
-`MemmapSequence` (`trainer/src/ds_covid/data.py`) — aucun `trainer/tests/` n'existe.
-Fix : `trainer/tests/test_segmentation.py` avec masks synthétiques (dice=1 sur masks
-identiques, dice=0 sur masks disjoints, `clean_mask` qui élimine bien un îlot parasite).
-Note : `segmentation-service/tests/` (récupéré depuis raf5) couvre `clean_mask` et le
-`ModelLoader` côté service HTTP — mais pas le pipeline d'entraînement lui-même.
-
-### 12. [MOYEN] Aucune passerelle de promotion sur l'évaluation du U-Net
-
-`trainer/scripts/train_segmentation.py` enregistre le modèle dans le MLflow Model Registry
-quelle que soit la qualité mesurée — pas de seuil minimum dice/iou, pas de comparaison au
-modèle en prod. Même manque que sur le pipeline de classification.
-
-### 13. [MOYEN] Triple duplication `params.yaml` / `backend/app/config.py` / `segmentation-service/config.py`
-
-Depuis la récupération de la suite de raf5, la config `img_size`/`clean_mask_*` existe
-maintenant à **trois** endroits distincts (`params.yaml` section `preprocess`/
-`segmentation`, `backend/app/config.py`, `segmentation-service/src/segmentation_service/
-config.py`) — cohérents aujourd'hui par inspection, rien ne garantit qu'ils le restent au
-prochain réentraînement. Un futur changement de `img_size` dans `params.yaml` doit être
-répercuté manuellement aux deux services, sans filet.
-Fix : test qui charge `params.yaml` et vérifie l'égalité avec les defaults de chaque
-`Settings`, ou source unique lue directement depuis `params.yaml` par les deux services.
+`trainer` logue systématiquement dans MLflow (Postgres + MinIO + service dédié port 5000),
+mais `backend` charge son modèle depuis un fichier `.keras` local, jamais depuis le Model
+Registry. Cohérent avec la maturité MLOps actuelle (Phase 4 — Monitoring/Drift — pas encore
+atteinte), pas une erreur. Question à trancher : rester en observation pure, ou câbler un
+vrai flux registry → déploiement (backend/data-service interroge le stage `Production` au
+lieu d'un chemin codé en dur) ? À clarifier en premier (conditionne si le point 14 vaut le
+coût).
 
 ## Fait — pour mémoire (ne pas rouvrir sans raison)
 
+- **2026-08-26, #3 — bump TF 2.18→2.21 / MLflow 2.19.0→3.15.1, rebuild + GPU confirmés**
+  (non committé — build local uniquement, rien à committer). Correction d'une erreur de
+  cette même session : cette machine a bien un GPU (RTX 3060, driver 591.86, CUDA 13.1,
+  runtime Docker `nvidia` fonctionnel) — la note "aucun GPU disponible ici" écrite plus
+  haut dans ce fichier était fausse. Rebuild fait **depuis cette branche** (pas `main`,
+  qui n'a pas encore les commits du bump) :
+  - `docker build -f infrastructure/docker/base/Dockerfile -t covid-xray-base:bump-verify .`
+    → OK (`tensorflow/tensorflow:2.21.0-gpu`)
+  - `docker compose -f infrastructure/docker-compose.yml --project-directory . build mlflow`
+    → OK (`mlflow==3.15.1` confirmé via `pip show` dans l'image)
+  - `docker build -f trainer/Dockerfile --build-arg BASE_IMAGE=covid-xray-base:bump-verify
+    -t covid-xray-trainer:bump-verify trainer` → OK, installe bien `trainer/requirements.txt`
+    actuel (liste à plat post-abandon hash-lock, cf. #2) sur le nouveau `base`
+  - `docker run --gpus all covid-xray-trainer:bump-verify python -c "..."` →
+    `TF 2.21.0` / `MLflow 3.15.1` / `GPUs detected: [PhysicalDevice(... GPU:0 ...)]`
+  - Images taguées `:bump-verify` laissées en local (pas nettoyées, faible coût) ; un
+    conteneur mlflow différent tournait déjà (sain, 4h+ d'uptime) — non touché.
+- **2026-08-26, traitement des points #4/6/7/8/9/10/11/12/13 (non committé)** — tout
+  vérifié en sandbox jetable (conteneur Docker, mounts en lecture seule, CLAUDE.md #9),
+  jamais en écrivant dans un venv réel :
+  - **#4** `dvc dag` exécuté (image `trainer` en conteneur, repo monté en lecture seule) —
+    les 6 stages du graphe se résolvent sans erreur.
+  - **#6** `ops/check_quality.sh` : exclusion `.venv`/`venv`/`__pycache__` des 3 boucles
+    `find` de `check_structure_complexity` (pattern `-prune`) + du scan Python de
+    `check_code_smell` ; `except OSError` élargi à `except (OSError, UnicodeDecodeError)`
+    dans `check_quality.sh` et `ops/check_code_smell_parser.py::get_file_annotation`.
+    Vérifié isolément (arbre de test avec `.venv` simulé → bien exclu).
+  - **#7** `ruff check --fix backend/app/config.py backend/app/features/preprocessing.py`
+    appliqué (I001 + 8× UP045, plus nombreux que les 4 lignes listées à l'origine —
+    `preprocessing.py` avait grossi depuis). `ruff check backend/app/` → clean. Suite
+    backend complète rejouée en conteneur (`python:3.11-slim`, deps hash-lockées) : 71
+    tests passés, coverage 94.41% (seuil 80%).
+  - **#8** Revu : gate `pylint` informative uniquement en CI (`|| true` assumé dans
+    `cicd.yml`), ne bloque rien. Laissé tel quel, pas d'action nécessaire.
+  - **#9** `trainer/scripts/train_segmentation.py` : une seule instance de
+    `ModelCheckpoint` (`checkpoint_cb`) réutilisée entre phase 1 et phase 2. Vérifié par
+    smoke-test dédié (U-Net réel, données synthétiques, sandbox conteneur) :
+    `checkpoint_cb.best` passe de 1.1852 (fin phase 1) à 1.1830 (fin phase 2) — cumulatif,
+    ne régresse pas.
+  - **#10** Métriques `val_dice`/`val_iou`/`val_loss` recalculées via
+    `model.evaluate(val_seq_ft, verbose=0, return_dict=True)` juste après
+    `model.load_weights(model_path)`, au lieu de lire `history_finetune` (dernière epoch,
+    potentiellement différente du modèle réellement sauvegardé). Clés `return_dict`
+    (`loss`/`dice_coef`/`iou_metric`) confirmées empiriquement dans le même smoke-test ;
+    `eval_metrics["loss"]` retombe exactement sur `checkpoint_cb.best`.
+  - **#12** Ajout `segmentation.min_val_dice: 0.5` dans `params.yaml` (**valeur
+    provisoire, à recalibrer par Steven** une fois de vraies métriques disponibles — pas
+    de baseline réelle sur cette machine, pas de GPU) + passerelle dans
+    `train_segmentation.py` : sous le seuil, `mlflow.keras.log_model(...)` est appelé
+    **sans** `registered_model_name` (reste artefact du run, n'entre pas dans le Model
+    Registry) et un `[WARN]` est loggé. Comparaison à un modèle "Production" existant
+    volontairement hors scope (cf. chantier #17 ci-dessous — mlflow reste write-only pour
+    l'instant, sujet distinct).
+  - **#11** `trainer/tests/test_segmentation.py` (14 tests : dice_coef/dice_loss/
+    combined_loss/iou_metric sur masks synthétiques identiques/disjoints, clean_mask,
+    collect_pairs, load_pair) + `trainer/tests/test_data.py` (7 tests : MemmapSequence —
+    `__len__`, batching, sous-ensemble d'indices, shuffle, class_weight) +
+    `trainer/tests/conftest.py` (sys.path vers `trainer/src`, `trainer/` n'étant pas
+    câblé dans `[tool.pytest.ini_options]` du `pyproject.toml` racine). 21/21 verts en
+    sandbox (image `ghcr.io/data-team-dst/covid-xray-trainer:latest`, pytest installé à
+    la volée, repo monté en lecture seule).
+  - **#13** Pas de source unique (rejeté : forcerait soit un import Python cross-service
+    interdit par R8, soit une refonte du chargement de config plus large que le périmètre
+    du jour) — tests de cohérence à la place :
+    `backend/tests/unit/test_config.py::test_defaults_match_params_yaml_preprocess_section`
+    et `segmentation-service/tests/test_config.py::test_defaults_match_params_yaml`,
+    chacun ne lisant que `params.yaml` + la config de son propre service. Vérifiés en
+    sandbox : backend 71 tests / 94.41% cov, segmentation-service 16 tests / 92.94% cov.
+  - **Non couvert par cette session** (pas de GPU, pas de vraies données ici) : un run
+    réel `dvc repro` (`train_segmentation`) sur le dataset complet reste la seule
+    validation de bout en bout des points #9/#10/#12 en conditions réelles — les smoke-
+    tests ci-dessus valident la logique, pas la performance du modèle.
 - `ops/data/{models,processed}/.gitkeep` accidentels → supprimés (`20ef63e`)
 - Incohérence volume streamlit `/app/frontend` vs `WORKDIR /workspace` → corrigée (`2b1e65d`)
 - Merge `raf5` (instantané ancien) intégré, conflit `backend/Dockerfile` résolu → `1bd8474`
