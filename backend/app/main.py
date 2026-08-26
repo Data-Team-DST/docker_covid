@@ -19,7 +19,6 @@ from app.rate_limit import limiter
 setup_logging()
 logger = logging.getLogger(__name__)
 
-
 app = FastAPI(
     title="DS_COVID — API d'inférence",
     description=(

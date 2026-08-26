@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.config import settings
-from app.models.loader import model_loader, segmentation_model_loader
+from app.models.loader import model_loader
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +22,5 @@ async def lifespan(fastapi_app: FastAPI):
         logger.info("Modèle chargé avec succès")
     else:
         logger.warning("Modèle non chargé — /predict retournera 503")
-
-    logger.info(
-        "Chargement modèle de segmentation depuis : %s",
-        settings.segmentation_model_path,
-    )
-    segmentation_model_loader.load(settings.segmentation_model_path)
-    if segmentation_model_loader.is_loaded:
-        logger.info("Modèle de segmentation chargé avec succès")
-    elif settings.masking:
-        logger.warning(
-            "Modèle de segmentation non chargé — /predict retournera 503"
-            " (masking requis)"
-        )
     yield
     logger.info("Arrêt du backend")
