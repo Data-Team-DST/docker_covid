@@ -147,6 +147,7 @@ POSTGRES_USER=mlflow
 POSTGRES_PASSWORD=mlflow
 POSTGRES_DB=mlflow
 ENVEOF
+            warn "Mots de passe par defaut (minioadmin / mlflow) -- a changer avant tout usage partage"
             log ".env minimal cree"
         fi
     else

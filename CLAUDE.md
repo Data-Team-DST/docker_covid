@@ -122,8 +122,9 @@ infrastructure/
 ├── docker/                  Dockerfiles par service (backend, streamlit, mlflow, trainer, base)
 ├── kubernetes/               manifests K8s (Phase 3)
 ├── scripts/                  setup.sh, check_quality.sh, fix_style.sh, start_local.sh
-└── docker-compose.yml        stack complète (9 services : backend, data-service, log-service,
-                               frontend, dashboard, mlflow, minio, postgres, ...)
+└── docker-compose.yml        stack complète (9 services : backend, data-service, streamlit,
+                               trainer, mlflow, log-service, postgres, minio, minio-init).
+                               `dashboard` (Flask) n'est pas dans ce compose, lancé à part.
 
 scripts/                     Pipeline DVC : preprocess.py, train.py, evaluate.py, augment.py, evaluate.py
 data/raw.dvc                 42 330 images, versionné DVC (806 MB), remote MinIO

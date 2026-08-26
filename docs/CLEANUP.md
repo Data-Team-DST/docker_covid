@@ -50,6 +50,20 @@ Ne pas corriger en masse cette semaine (voir CLAUDE.md § Calendrier).
       `/v1/data/stats` (refresh + hit). Couverture `router.py` : 38% → 83%, couverture globale
       data-service : 44% → 83%. Lint (`ruff==0.8.6`) et 24 tests (2 existants + 22 nouveaux)
       validés dans un venv isolé avant application.
+- [x] `infrastructure/scripts/dvc_security_demo.sh` et `infrastructure/scripts/log_dataset_mlflow.py`
+      — supprimés (chantier `CHANTIER_INFRA.md`, 2026-08-26). Orphelins confirmés (aucune
+      référence Makefile/README/CI) et logique entièrement liée à un autre projet (dossier
+      `data-service/data/` inexistant ici, types de fichiers `.docx/.pdf/.xlsx/.pptx`, remote DVC
+      local `/home/*` au lieu de MinIO S3) — adapter aurait signifié réécrire, pas corriger.
+      Referme le point resté ouvert dans l'entrée précédente ("hors périmètre").
+- [x] `infrastructure/docker/base/requirements.txt` et `infrastructure/docker/trainer/requirements.txt`
+      — verrouillés via `pip-compile --generate-hashes` (chantier `CHANTIER_INFRA.md`, 2026-08-26),
+      seule zone du repo encore non verrouillée. `.in` ajoutés à côté de chaque `.txt`. Compilé en
+      Python 3.11 (même version que les autres lock files du repo) dans un venv jetable WSL Ubuntu
+      — jamais sur cette machine Windows (voir piège `pip-compile` déjà documenté en mémoire projet)
+      et jamais en écrivant dans le repo réel (CLAUDE.md règle #9). Versions déjà pinnées ailleurs
+      réutilisées pour cohérence : `numpy==2.0.2`, `scikit-learn==1.5.2`, `pillow==11.0.0` (comme
+      `backend/requirements.txt`), `mlflow==2.19.0` (comme `infrastructure/docker/mlflow/Dockerfile`).
 - [x] CI (`cicd.yml:117,156,203-204`) — `pip install -r requirements*.txt` passe désormais par
       `--require-hashes`. Lock files générés avec `pip-compile --generate-hashes` pour
       `backend/requirements-dev.txt`, `frontend/requirements.txt` et

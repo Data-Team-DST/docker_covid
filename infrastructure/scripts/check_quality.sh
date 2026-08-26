@@ -109,7 +109,7 @@ run_check() {
     local name="$1"
     local cmd="$2"
     echo -e "${YELLOW}[${name}]${NC} Exécution..."
-    if eval "$cmd"; then
+    if bash -c "$cmd"; then
         echo -e "${GREEN}✅ ${name} OK${NC}"
         echo "${name}: OK" >> "$SUMMARY"
     else
