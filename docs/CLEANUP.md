@@ -64,6 +64,20 @@ Ne pas corriger en masse cette semaine (voir CLAUDE.md § Calendrier).
       et jamais en écrivant dans le repo réel (CLAUDE.md règle #9). Versions déjà pinnées ailleurs
       réutilisées pour cohérence : `numpy==2.0.2`, `scikit-learn==1.5.2`, `pillow==11.0.0` (comme
       `backend/requirements.txt`), `mlflow==2.19.0` (comme `infrastructure/docker/mlflow/Dockerfile`).
+- [x] Nettoyage racine du repo (`CHANTIER_ROOT_CLEANUP.md`, 2026-08-26, supprimé après
+      consolidation ici) : `src/` (dossier vide, résidu mort de l'ancienne arborescence
+      "Phase 1"), `COVID-19_Radiography_Dataset (1).zip` (777 MB, gitignoré, clutter local) et
+      `tmp/` (705 KB, gitignoré, contenu 100% régénéré à la demande par les scripts) supprimés.
+      Aucun des trois n'était tracké par git — zéro impact sur l'historique.
+- [ ] **Décidé de ne PAS corriger** : `test.ipynb` contient encore, dans son historique git
+      (révisions `57f2c91`, `b013391`, `e6858f6` — antérieures au nettoyage du HEAD documenté
+      plus haut), des chemins `/home/cepa/DST/docker_covid/...`. Réécriture d'historique
+      (`git filter-repo`/BFG) envisagée puis explicitement refusée après consultation de
+      l'équipe (`Data-Team-DST`) le 2026-08-26 : opération destructive (force-push, tous les SHA
+      après `e6858f6` changent, tout clone existant doit être re-cloné), sans garantie
+      rétroactive si un clone existe déjà, pour un gain limité (un nom d'utilisateur de machine
+      de formation, pas un secret/donnée personnelle sensible). Accepté tel quel, proximité de
+      la soutenance (04/09/2026) à l'appui de ce choix.
 - [x] CI (`cicd.yml:117,156,203-204`) — `pip install -r requirements*.txt` passe désormais par
       `--require-hashes`. Lock files générés avec `pip-compile --generate-hashes` pour
       `backend/requirements-dev.txt`, `frontend/requirements.txt` et
