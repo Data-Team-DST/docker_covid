@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.metrics import classification_report, confusion_matrix
 
-PROJECT_ROOT   = Path(__file__).parent.parent
+PROJECT_ROOT   = Path(__file__).parent.parent.parent
 MODELS_DIR     = PROJECT_ROOT / "data" / "models"
 PROCESSED      = PROJECT_ROOT / "data" / "processed"
 EVAL_FILE      = PROJECT_ROOT / "outputs" / "evaluation_report.json"

@@ -21,13 +21,13 @@ from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
 from tqdm.keras import TqdmCallback
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-from ds_covid.data import MemmapSequence  # noqa: E402
-from ds_covid.segmentation import build_unet, combined_loss, dice_coef, iou_metric  # noqa: E402
+from deep_learning.data import MemmapSequence  # noqa: E402
+from deep_learning.segmentation import build_unet, combined_loss, dice_coef, iou_metric  # noqa: E402
 
 PARAMS_FILE  = PROJECT_ROOT / "params.yaml"
 PROCESSED    = PROJECT_ROOT / "data" / "processed" / "segmentation"

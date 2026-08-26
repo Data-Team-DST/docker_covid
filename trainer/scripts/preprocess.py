@@ -4,7 +4,7 @@ Lit  : data/augmented/{train,test}/{classe}/{images,masks}/  (sortie du stage au
        déjà splittée — le split train/test est fait dans augment.py, avant augmentation)
 Écrit: data/processed/{X,y}_{train,test}.npy
 
-Pipeline par image (voir ds_covid.preprocessing.process_single_image) :
+Pipeline par image (voir deep_learning.preprocessing.process_single_image) :
   denoising (optionnel) → masking + crop poumons (optionnel) → CLAHE (optionnel) → resize
 """
 import json
@@ -17,10 +17,10 @@ import yaml
 from numpy.lib.format import open_memmap
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
 
-from ds_covid.preprocessing import process_single_image  # noqa: E402
+from deep_learning.preprocessing import process_single_image  # noqa: E402
 
 PARAMS_FILE = PROJECT_ROOT / "params.yaml"
 AUGMENTED_DIR = PROJECT_ROOT / "data" / "augmented"

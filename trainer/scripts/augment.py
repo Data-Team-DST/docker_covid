@@ -19,10 +19,10 @@ import yaml
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
 
-from ds_covid.augmentation import augment_pair  # noqa: E402
+from deep_learning.augmentation import augment_pair  # noqa: E402
 
 PARAMS_FILE = PROJECT_ROOT / "params.yaml"
 RAW_DIR = PROJECT_ROOT / "data" / "raw" / "COVID-19_Radiography_Dataset"

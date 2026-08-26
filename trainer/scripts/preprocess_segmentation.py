@@ -6,7 +6,7 @@ Lit  : data/augmented/{train,test}/{classe}/{images,masks}/  (même sortie que l
        splittées train/test)
 Écrit: data/processed/segmentation/{X,M}_{train,test}.npy
 
-Contrairement à ds_covid.preprocessing.process_single_image (pipeline classification),
+Contrairement à deep_learning.preprocessing.process_single_image (pipeline classification),
 on ne masque/crop/CLAHE PAS l'image ici : le mask est la cible à prédire, pas une
 entrée du preprocessing.
 """
@@ -18,10 +18,10 @@ import yaml
 from numpy.lib.format import open_memmap
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
 
-from ds_covid.segmentation import collect_pairs, load_pair  # noqa: E402
+from deep_learning.segmentation import collect_pairs, load_pair  # noqa: E402
 
 PARAMS_FILE = PROJECT_ROOT / "params.yaml"
 AUGMENTED_DIR = PROJECT_ROOT / "data" / "augmented"

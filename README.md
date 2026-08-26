@@ -113,7 +113,11 @@ docker_covid/
 │   ├── kubernetes/          # Manifests K8s (Phase 3)
 │   ├── docker-compose.yml   # Stack complète (9 services)
 │   └── scripts/             # setup.sh, check_quality.sh, fix_style.sh, start_local.sh
-├── scripts/                 # Pipeline DVC : preprocess.py, train.py, evaluate.py
+├── trainer/                 # Service d'entraînement (Dockerfile + pipeline DVC)
+│   ├── Dockerfile
+│   ├── deep_learning/       # Package partagé par les stages (augmentation, models, segmentation…)
+│   └── scripts/             # preprocess.py, train.py, evaluate.py, *_segmentation.py
+├── scripts/load_test/       # Locust — charge sur POST /api/v1/predict (sans rapport avec trainer/)
 ├── docs/                    # Architecture, SMART, backlogs, vérification US
 ├── data/
 │   ├── raw.dvc              # 42 330 images trackées DVC (806 MB)

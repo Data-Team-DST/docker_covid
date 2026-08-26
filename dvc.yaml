@@ -1,10 +1,10 @@
 stages:
 
   augment:
-    cmd: python scripts/augment.py
+    cmd: python trainer/scripts/augment.py
     deps:
-      - scripts/augment.py
-      - ds_covid/augmentation.py
+      - trainer/scripts/augment.py
+      - trainer/deep_learning/augmentation.py
       - data/raw
     params:
       - params.yaml:
@@ -20,10 +20,10 @@ stages:
           cache: false
 
   preprocess:
-    cmd: python scripts/preprocess.py
+    cmd: python trainer/scripts/preprocess.py
     deps:
-      - scripts/preprocess.py
-      - ds_covid/preprocessing.py
+      - trainer/scripts/preprocess.py
+      - trainer/deep_learning/preprocessing.py
       - data/augmented
     params:
       - params.yaml:
@@ -38,10 +38,10 @@ stages:
           cache: false
 
   train:
-    cmd: python scripts/train.py
+    cmd: python trainer/scripts/train.py
     deps:
-      - scripts/train.py
-      - ds_covid/models.py
+      - trainer/scripts/train.py
+      - trainer/deep_learning/models.py
       - data/processed/X_train.npy
       - data/processed/y_train.npy
     params:
@@ -57,9 +57,9 @@ stages:
           cache: false
 
   evaluate:
-    cmd: python scripts/evaluate.py
+    cmd: python trainer/scripts/evaluate.py
     deps:
-      - scripts/evaluate.py
+      - trainer/scripts/evaluate.py
       - data/models/covid_model.keras
       - data/processed/X_test.npy
       - data/processed/y_test.npy
@@ -68,10 +68,10 @@ stages:
           cache: false
 
   preprocess_segmentation:
-    cmd: python scripts/preprocess_segmentation.py
+    cmd: python trainer/scripts/preprocess_segmentation.py
     deps:
-      - scripts/preprocess_segmentation.py
-      - ds_covid/segmentation.py
+      - trainer/scripts/preprocess_segmentation.py
+      - trainer/deep_learning/segmentation.py
       - data/augmented
     params:
       - params.yaml:
@@ -87,11 +87,11 @@ stages:
           cache: false
 
   train_segmentation:
-    cmd: python scripts/train_segmentation.py
+    cmd: python trainer/scripts/train_segmentation.py
     deps:
-      - scripts/train_segmentation.py
-      - ds_covid/segmentation.py
-      - ds_covid/data.py
+      - trainer/scripts/train_segmentation.py
+      - trainer/deep_learning/segmentation.py
+      - trainer/deep_learning/data.py
       - data/processed/segmentation/X_train.npy
       - data/processed/segmentation/M_train.npy
     params:
@@ -107,10 +107,10 @@ stages:
           cache: false
 
   evaluate_segmentation:
-    cmd: python scripts/evaluate_segmentation.py
+    cmd: python trainer/scripts/evaluate_segmentation.py
     deps:
-      - scripts/evaluate_segmentation.py
-      - ds_covid/segmentation.py
+      - trainer/scripts/evaluate_segmentation.py
+      - trainer/deep_learning/segmentation.py
       - data/models/lung_unet.keras
       - data/processed/segmentation/X_test.npy
       - data/processed/segmentation/M_test.npy

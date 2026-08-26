@@ -150,15 +150,15 @@ services:
   # ── Trainer (entraînement + MLflow logging) ────────────────────────────────
   trainer:
     build:
-      context: .
-      dockerfile: infrastructure/${TRAINER_DOCKERFILE}
+      context: ./trainer
+      dockerfile: Dockerfile
     image: ${TRAINER_IMAGE}:${IMAGE_TAG:-latest}
     container_name: ${TRAINER_CONTAINER_NAME:-covid-xray-trainer}
     ports:
       - "${TRAINER_PORT:-8888}:8888"
     volumes:
       - ./data:/app/data
-      - ./ds_covid:/app/ds_covid
+      - ./trainer/deep_learning:/app/deep_learning
       - ./models:/app/models
       - ./outputs:/app/outputs
     env_file: .env

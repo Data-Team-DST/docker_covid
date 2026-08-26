@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["ds_covid*", "baseline*"]
+include = ["baseline*"]
 
 # ── Ruff : linting + formatage ────────────────────────────────────────────────
 [tool.ruff]
@@ -52,7 +52,7 @@ ignore = [
 "frontend/page/*.py" = ["W291", "W293", "B007"]
 "frontend/streamlit_app.py" = ["W291", "W293"]
 # Pipeline ML exploratoire — pas soumis au lint CI
-"ds_covid/**" = ["ALL"]
+"trainer/deep_learning/**" = ["ALL"]
 "baseline/**" = ["ALL"]
 
 [tool.ruff.lint.isort]
