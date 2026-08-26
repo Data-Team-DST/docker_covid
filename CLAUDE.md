@@ -55,6 +55,15 @@ les répertoires réels du repo. Retour d'expérience : une validation a partiel
 `backend/.venv` réel préexistant en montant le repo en écriture directe dans un conteneur
 Docker.
 
+La copie doit lister explicitement les dossiers nécessaires (ex. `Makefile`, `pyproject.toml`,
+`backend/`, `data-service/`, `ops/`…), jamais copier l'arbre complet avec des exclusions
+(`tar --exclude=...`). Retour d'expérience : une copie par exclusion doit quand même parcourir
+tout l'arbre pour décider quoi exclure — sur cette machine, les `.venv` locaux de chaque
+service (backend/.venv, data-service/.venv, frontend/.venv, dashboard/.venv, chacun des
+dizaines de milliers de petits fichiers) et `data/` (plusieurs Go) rendent ce parcours
+extrêmement lent (plus de 10 minutes, bloqué). Une copie ciblée du même contenu utile a pris
+quelques secondes.
+
 **10 — Une erreur qui révèle un risque récurrent appelle une proposition de règle.**
 Quand une erreur commise en session coûte du temps, risque une régression ou trompe
 l'utilisateur (hypothèse fausse, vérification qui ne vérifie rien, effet de bord non anticipé)
