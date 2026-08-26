@@ -47,6 +47,12 @@ segmentation:
                                     # seul op lors du unfreeze complet de l'encoder MobileNetV2
   clean_mask_components: 2         # post-traitement : nombre de composantes connexes à garder
   clean_mask_closing_kernel: 15    # taille du noyau de fermeture morphologique
+  min_val_dice: 0.5                # seuil minimum de val_dice sous lequel le modèle n'est PAS
+                                    # enregistré dans le MLflow Model Registry (reste artefact du
+                                    # run uniquement) — valeur provisoire, à recalibrer par Steven
+                                    # une fois de vraies métriques d'entraînement disponibles
+                                    # (TODO.md #12 ; comparaison à un modèle "Production" existant
+                                    # volontairement hors scope, cf. CHANTIER_INFRA_SERVICES.md #4)
 
 mlflow:
   experiment_name: ds_covid_cnn

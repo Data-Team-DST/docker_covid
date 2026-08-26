@@ -83,6 +83,13 @@ def main() -> None:
 
         model, encoder = build_unet(input_shape=(img_h, img_w, 1))
 
+        # Une seule instance de ModelCheckpoint, réutilisée entre les 2 phases : Keras
+        # conserve son état `.best` d'une instance à l'autre, donc la phase 2 sait ne pas
+        # écraser model_path si son point de départ est moins bon que le meilleur de la
+        # phase 1 (cf. TODO.md #9 — une nouvelle instance par phase réinitialise `.best`
+        # à +inf et fait perdre cette comparaison).
+        checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True)
+
         # --- Phase 1 : encoder gelé, seul le decoder (initialisé aléatoirement) apprend ---
         for layer in encoder.layers:
             layer.trainable = False
@@ -100,7 +107,7 @@ def main() -> None:
             callbacks=[
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True),
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=1, min_lr=1e-5),
-                tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
+                checkpoint_cb,
             ],
             verbose=1,
         )
@@ -127,27 +134,50 @@ def main() -> None:
             callbacks=[
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=4, restore_best_weights=True),
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2, min_lr=1e-7),
-                tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
+                checkpoint_cb,
             ],
             verbose=1,
         )
 
-        val_dice = float(history_finetune.history["val_dice_coef"][-1])
-        val_iou  = float(history_finetune.history["val_iou_metric"][-1])
-        val_loss = float(history_finetune.history["val_loss"][-1])
+        # ModelCheckpoint a déjà sauvegardé le meilleur modèle des 2 phases sur model_path ;
+        # on recharge ces poids avant de mesurer/logger, au cas où la dernière epoch de la
+        # phase 2 ne serait pas la meilleure (restore_best_weights ne couvre que la phase où
+        # il est actif — cf. checkpoint_cb ci-dessus pour la comparaison inter-phases).
+        model.load_weights(model_path)
+
+        # Recalcule les métriques sur le modèle effectivement rechargé plutôt que de logger
+        # celles de la dernière epoch de la phase 2 (cf. TODO.md #10 — ces deux valeurs
+        # peuvent diverger : dernière epoch ≠ meilleure epoch ≠ poids rechargés depuis
+        # model_path). evaluate_segmentation.py applique déjà ce principe sur le test set.
+        eval_metrics = model.evaluate(val_seq_ft, verbose=0, return_dict=True)
+        val_dice = float(eval_metrics["dice_coef"])
+        val_iou  = float(eval_metrics["iou_metric"])
+        val_loss = float(eval_metrics["loss"])
         mlflow.log_metrics({"val_dice": val_dice, "val_iou": val_iou, "val_loss": val_loss})
 
-        # ModelCheckpoint a déjà sauvegardé le meilleur modèle des 2 phases sur model_path ;
-        # on recharge ces poids avant de logger dans le registry, au cas où la dernière
-        # epoch de la phase 2 ne serait pas la meilleure (restore_best_weights ne couvre
-        # que la phase où il est actif).
-        model.load_weights(model_path)
-        mlflow.keras.log_model(model, artifact_path="model", registered_model_name=mlp["segmentation_model_name"])
+        # Passerelle de promotion (TODO.md #12) : sous le seuil, le modèle reste un artefact
+        # du run (traçable, rejouable) mais n'entre pas dans le Model Registry — évite de le
+        # polluer avec un modèle sous-performant. Comparaison à un éventuel modèle déjà en
+        # stage "Production" : volontairement hors scope (cf. CHANTIER_INFRA_SERVICES.md #4 —
+        # mlflow reste write-only pour l'instant, sujet à trancher séparément).
+        min_val_dice = sp["min_val_dice"]
+        promoted = val_dice >= min_val_dice
+        if promoted:
+            mlflow.keras.log_model(model, artifact_path="model", registered_model_name=mlp["segmentation_model_name"])
+        else:
+            mlflow.keras.log_model(model, artifact_path="model")
+            print(
+                f"[WARN] val_dice={val_dice:.4f} < min_val_dice={min_val_dice:.4f} — "
+                "modèle NON enregistré dans le Model Registry (reste artefact du run).",
+                flush=True,
+            )
+        mlflow.log_metric("registered", int(promoted))
 
         metrics = {
             "val_dice":  val_dice,
             "val_iou":   val_iou,
             "val_loss":  val_loss,
+            "registered": promoted,
             "freeze_epochs_run":    len(history_freeze.epoch),
             "fine_tune_epochs_run": len(history_finetune.epoch),
         }
