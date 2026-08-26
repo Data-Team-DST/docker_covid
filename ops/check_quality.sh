@@ -160,7 +160,7 @@ check_structure_complexity() {
             if [ "$depth" -gt "$max_depth_found" ]; then
                 max_depth_found=$depth
             fi
-        done < <(find "$root_dir" -type d 2>/dev/null)
+        done < <(find "$root_dir" -type d \( -name ".venv" -o -name "venv" -o -name "__pycache__" \) -prune -o -type d -print 2>/dev/null)
 
         local root_depth
         root_depth=$(echo "$root_dir" | tr -cd '/' | wc -c)
@@ -193,7 +193,7 @@ check_structure_complexity() {
                 fi
                 echo "      $status $dir : $file_count fichiers" >> "$STRUCTURE_REPORT"
             fi
-        done < <(find "$root_dir" -type d 2>/dev/null)
+        done < <(find "$root_dir" -type d \( -name ".venv" -o -name "venv" -o -name "__pycache__" \) -prune -o -type d -print 2>/dev/null)
         echo "" >> "$STRUCTURE_REPORT"
 
         # 3. Listing exhaustif sous-dossiers par dossier
@@ -213,7 +213,7 @@ check_structure_complexity() {
                 fi
                 echo "      $status $dir : $subdir_count sous-dossiers" >> "$STRUCTURE_REPORT"
             fi
-        done < <(find "$root_dir" -type d 2>/dev/null)
+        done < <(find "$root_dir" -type d \( -name ".venv" -o -name "venv" -o -name "__pycache__" \) -prune -o -type d -print 2>/dev/null)
         echo "" >> "$STRUCTURE_REPORT"
         echo "----------------------------------------" >> "$STRUCTURE_REPORT"
         echo "" >> "$STRUCTURE_REPORT"
@@ -290,12 +290,12 @@ for root_dir in root_dirs:
 
     files = sorted(root.rglob("*.py"))
     for file_path in files:
-        if "__pycache__" in str(file_path):
+        if {"__pycache__", ".venv", "venv"} & set(file_path.parts):
             continue
 
         try:
             line_count = sum(1 for _ in open(file_path, encoding="utf-8"))
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             continue
 
         result = evaluate_file(file_path, line_count, MAX_LINES)
