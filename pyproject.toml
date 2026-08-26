@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["ds_covid*"]
+include = ["ds_covid*", "baseline*"]
 
 # ── Ruff : linting + formatage ────────────────────────────────────────────────
 [tool.ruff]
@@ -53,6 +53,7 @@ ignore = [
 "frontend/streamlit_app.py" = ["W291", "W293"]
 # Pipeline ML exploratoire — pas soumis au lint CI
 "ds_covid/**" = ["ALL"]
+"baseline/**" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
@@ -72,7 +73,7 @@ known_first_party = ["app"]
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 python_files = ["test_*.py", "*_test.py"]
-pythonpath = ["backend"]
+pythonpath = ["backend", "."]
 addopts = [
     "--strict-markers",
 ]

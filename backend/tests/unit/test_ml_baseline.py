@@ -9,9 +9,9 @@ from sklearn.ensemble import (
     RandomForestClassifier,
 )
 from sklearn.svm import LinearSVC
-from src.ml.baseline import AdaBoost, GradientBoosting, LinearSVM, RandomForest
-from src.ml.evaluate import compute_metrics, top_class
-from src.ml.predict import predict_from_features, predict_proba_from_features
+from baseline.baseline import AdaBoost, GradientBoosting, LinearSVM, RandomForest
+from baseline.evaluate import compute_metrics, top_class
+from baseline.predict import predict_from_features, predict_proba_from_features
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
