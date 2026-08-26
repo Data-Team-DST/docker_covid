@@ -6,3 +6,7 @@
 [remote "dagshub"]
     url = s3://docker_covid
     endpointurl = https://dagshub.com/api/v1/repo-buckets/s3/DST_Data_Team
+[remote "dagshub-storage"]
+    url = https://dagshub.com/DST_Data_Team/docker_covid.dvc
+    auth = basic
+    user = bioinfodl

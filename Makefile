@@ -117,8 +117,10 @@ dvc-setup-dagshub: ## Configure DVC remote DagsHub (credentials locaux, gitignor
 	fi && \
 	touch .dvc/config.local && \
 	awk '$$0=="[remote \"dagshub\"]"{skip=1;next} /^\[/{skip=0} !skip' .dvc/config.local > .dvc/config.local.tmp && mv .dvc/config.local.tmp .dvc/config.local && \
-	{ echo "[remote \"dagshub\"]"; echo "    access_key_id = $$REMOTE_S3_ACCESS_KEY"; echo "    secret_access_key = $$REMOTE_S3_SECRET_KEY"; } >> .dvc/config.local
-	@echo "$(GREEN)✅ .dvc/config.local mis à jour (remote dagshub)$(NC)"
+	{ echo "[remote \"dagshub\"]"; echo "    access_key_id = $$REMOTE_S3_ACCESS_KEY"; echo "    secret_access_key = $$REMOTE_S3_SECRET_KEY"; } >> .dvc/config.local && \
+	awk '$$0=="[remote \"dagshub-storage\"]"{skip=1;next} /^\[/{skip=0} !skip' .dvc/config.local > .dvc/config.local.tmp && mv .dvc/config.local.tmp .dvc/config.local && \
+	{ echo "[remote \"dagshub-storage\"]"; echo "    password = $$REMOTE_S3_ACCESS_KEY"; } >> .dvc/config.local
+	@echo "$(GREEN)✅ .dvc/config.local mis à jour (remotes dagshub + dagshub-storage)$(NC)"
 
 dvc-push: setup-ds ## Pousse les données vers MinIO (make start-all requis)
 	@echo "$(YELLOW)Push DVC → MinIO...$(NC)"
@@ -130,9 +132,11 @@ dvc-pull: setup-ds ## Récupère les données depuis MinIO
 	@data-service/.venv/bin/dvc pull
 	@echo "$(GREEN)✅ Données récupérées$(NC)"
 
-dvc-push-dagshub: setup-ds dvc-setup-dagshub ## Pousse les données/modèles vers DagsHub (dvc push -r dagshub)
-	@echo "$(YELLOW)Push DVC → DagsHub...$(NC)"
+dvc-push-dagshub: setup-ds dvc-setup-dagshub ## Pousse les données/modèles vers DagsHub (bucket S3 + DagsHub Storage natif)
+	@echo "$(YELLOW)Push DVC → DagsHub (bucket S3)...$(NC)"
 	@data-service/.venv/bin/dvc push -r dagshub
+	@echo "$(YELLOW)Push DVC → DagsHub Storage (natif — nécessaire pour la prévisualisation sur dagshub.com)...$(NC)"
+	@data-service/.venv/bin/dvc push -r dagshub-storage
 	@echo "$(GREEN)✅ Données pushées vers DagsHub$(NC)"
 
 dvc-pull-dagshub: setup-ds dvc-setup-dagshub ## Récupère les données/modèles depuis DagsHub (dvc pull -r dagshub)
