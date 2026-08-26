@@ -1,5 +1,19 @@
-mlflow==2.19.0
+mlflow==3.15.1
+boto3
 dvc[s3]
 jupyterlab
 albumentations
 seaborn
+tqdm
+# tensorflow 2.21 exige protobuf>=6.31.1,<8 ; mlflow/opentelemetry-proto/databricks-sdk
+# acceptent une plage plus large — on épingle dans l'intersection valide pour éviter que
+# pip ne remonte au-delà de ce que tensorflow supporte (voir historique : avec TF 2.18 et
+# protobuf 6.x non épinglé, ça cassait les stubs tensorboard — MessageFactory.GetPrototype).
+protobuf<7,>=6.31.1
+# tensorflow[and-cuda] pip wheels — l'image tensorflow/tensorflow:*-gpu embarque un cuDNN
+# apt (8.x) plus vieux que ce que le binaire TF 2.21 attend (9.x), ce qui casse la
+# détection GPU (CUDNN_STATUS_INTERNAL_ERROR). TF trouve automatiquement ces wheels via
+# leur propre RPATH, sans configuration LD_LIBRARY_PATH supplémentaire.
+nvidia-cudnn-cu12
+nvidia-cublas-cu12
+nvidia-cufft-cu12

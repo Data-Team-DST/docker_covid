@@ -10,3 +10,7 @@ RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install -r /tmp/trainer.txt
 
 COPY src/ /workspace/src/
+
+COPY gpu-entrypoint.sh /usr/local/bin/gpu-entrypoint.sh
+RUN chmod +x /usr/local/bin/gpu-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/gpu-entrypoint.sh"]

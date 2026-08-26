@@ -11,7 +11,7 @@ augment:
 
 preprocess:
   img_size: [256, 256]
-  max_samples_per_class: null   # limite par classe sur les images BRUTES (null = toutes) — utilisé par augment.py
+  max_samples_per_class: 500   # limite par classe sur les images BRUTES (null = toutes) — utilisé par augment.py
   test_split: 0.2                # part réservée au test, prélevée avant augmentation — utilisé par augment.py
   random_seed: 42                # seed du split train/test (augment.py) ET du split train/val (train.py)
   masking: true                 # applique le mask de segmentation des poumons
@@ -42,7 +42,9 @@ segmentation:
   fine_tune_epochs: 25             # phase 2 : encoder dégelé, fine-tuning complet
   fine_tune_lr: 0.00001            # LR très bas : affiner sans détruire les poids ImageNet
   batch_size: 32
-  fine_tune_batch_size: 16         # phase 2 plus gourmande en mémoire (gradients sur tout le réseau)
+  fine_tune_batch_size: 8          # phase 2 plus gourmande en mémoire (gradients sur tout le réseau) —
+                                    # 16 déclenche un OOM GPU (RTX 3060 12GB) : 9.16GiB demandés pour un
+                                    # seul op lors du unfreeze complet de l'encoder MobileNetV2
   clean_mask_components: 2         # post-traitement : nombre de composantes connexes à garder
   clean_mask_closing_kernel: 15    # taille du noyau de fermeture morphologique
 

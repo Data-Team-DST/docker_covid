@@ -13,5 +13,7 @@ echo "[mlflow-start] Starting server..."
 exec mlflow server \
   --host 0.0.0.0 \
   --port 5000 \
+  --workers 1 \
+  --allowed-hosts "mlflow:*,localhost:*" \
   --backend-store-uri "$DB_URI" \
   --default-artifact-root "s3://${MLFLOW_BUCKET:-mlflow}"
