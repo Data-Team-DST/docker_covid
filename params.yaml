@@ -49,8 +49,8 @@ segmentation:
   clean_mask_closing_kernel: 15    # taille du noyau de fermeture morphologique
 
 mlflow:
-  experiment_name: ds_covid_cnn
+  experiment_name: classification
   tracking_uri: http://mlflow:5000
-  model_name: covid_xray_cnn
-  segmentation_experiment_name: ds_covid_unet_segmentation
-  segmentation_model_name: lung_segmentation_unet
+  model_name: classification
+  segmentation_experiment_name: segmentation
+  segmentation_model_name: segmentation
