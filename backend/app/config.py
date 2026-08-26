@@ -1,8 +1,7 @@
 """Configuration centralisée — DS_COVID Backend"""
 
-from pydantic import model_validator
-from typing import Optional
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -46,7 +45,7 @@ class Settings(BaseSettings):
     clahe: bool = True
     clahe_clip_limit: float = 2.0
     clahe_tile_grid_size: tuple[int, int] = (8, 8)
-    denoising_method: Optional[str] = None
+    denoising_method: str | None = None
 
     class Config:
         """Configuration Pydantic : source du fichier .env."""
