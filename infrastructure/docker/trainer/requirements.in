@@ -1,0 +1,5 @@
+mlflow==2.19.0
+dvc[s3]
+jupyterlab
+albumentations
+seaborn

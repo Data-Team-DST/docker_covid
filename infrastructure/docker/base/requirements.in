@@ -1,0 +1,6 @@
+numpy==2.0.2
+pandas
+scikit-learn==1.5.2
+matplotlib
+opencv-python
+pillow==11.0.0
