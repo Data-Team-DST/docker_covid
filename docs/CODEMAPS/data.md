@@ -9,17 +9,17 @@ transformation + les endpoints `data-service` qui exposent l'un et l'autre en HT
 ## Pipeline DVC (`dvc.yaml`)
 
 ```
-augment      python scripts/augment.py
-             deps: data/raw, scripts/augment.py, backend/src/ds_covid/augmentation.py
+augment      python trainer/scripts/augment.py
+             deps: data/raw, trainer/scripts/augment.py, trainer/src/ds_covid/augmentation.py
              outs: data/augmented
 
-preprocess   python scripts/preprocess.py
-             deps: data/augmented, scripts/preprocess.py, backend/src/ds_covid/preprocessing.py
+preprocess   python trainer/scripts/preprocess.py
+             deps: data/augmented, trainer/scripts/preprocess.py, trainer/src/ds_covid/preprocessing.py
              outs: data/processed/{X,y}_{train,test}.npy
 
 train        (voir dvc.yaml — modèle + protocole intégrés depuis train.ipynb cette semaine)
 
-evaluate     scripts/evaluate.py
+evaluate     trainer/scripts/evaluate.py
 ```
 
 Paramètres : `params.yaml` (CLAHE, split, seed, classes — paramétrable depuis 2026-08-24).

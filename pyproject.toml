@@ -11,7 +11,7 @@ license = {file = "LICENSE"}
 requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
-where = ["backend/src"]
+where = ["backend/src", "trainer/src"]
 
 # ── Ruff : linting + formatage ────────────────────────────────────────────────
 [tool.ruff]
@@ -53,6 +53,7 @@ ignore = [
 # Notebooks et code ML exploratoire — pas soumis au lint CI
 "backend/src/**" = ["ALL"]
 "backend/src/notebooks/**" = ["ALL"]
+"trainer/src/**" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

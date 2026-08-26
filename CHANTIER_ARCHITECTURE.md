@@ -74,8 +74,40 @@ partiellement (#1 et #3 se résolvent plus proprement une fois #4 tranché).
 3. #3 (renommage/déplacement `infrastructure/scripts/`)
 4. #2 en dernier (kubernetes/, indépendant, faible enjeu)
 
-## Non traité ici
+## Clôture — 2026-08-26
 
-Aucune action prise — audit seul, comme `CHANTIER_INFRA.md`. Toute correction repasse par la
-Validation humaine obligatoire (CLAUDE.md) et une confirmation explicite du périmètre avant
-chaque étape, une fois la soutenance du 04/09/2026 passée.
+Steven a explicitement demandé l'exécution complète du chantier le jour même de l'audit,
+malgré la recommandation initiale d'attendre la soutenance (§ ci-dessus, décision actée en
+session). Les 4 points ont été traités dans l'ordre suggéré (#4 → #1 → #3 → #2) :
+
+- **#4** : `backend/src/ds_covid/` + `scripts/{preprocess,train,evaluate,augment}.py` +
+  `infrastructure/docker/trainer/` extraits vers un nouveau service `trainer/`
+  (`trainer/src/ds_covid/`, `trainer/scripts/`, `trainer/Dockerfile`, `trainer/requirements.txt`).
+  `dvc.yaml`, `pyproject.toml`, `docker-compose.yml`, `.env.example` mis à jour en conséquence.
+  `backend/src/ml/` (sklearn baseline, utilisé uniquement par les tests) n'a pas bougé — hors
+  périmètre, aucun rapport avec `ds_covid`.
+- **#1** : `backend/Dockerfile` et `frontend/Dockerfile` colocalisés (contexte de build devient
+  le dossier du service). `mlflow` reste centralisé sous `infrastructure/docker/mlflow/` comme
+  prévu par l'audit initial. `COPY backend/src/` dans le Dockerfile streamlit supprimée (devenue
+  impossible avec le nouveau contexte, confirmée morte par grep — rien dans `frontend/` ne
+  l'utilisait).
+- **#3** : `infrastructure/scripts/` renommé en `ops/` (racine). Recalcul des chemins relatifs
+  dans les 5 scripts bash concernés (`../..` → `..`, un niveau de nesting en moins).
+- **#2** : `infrastructure/kubernetes/` déplacé vers `kubernetes/` (racine). Effet de bord
+  détecté et corrigé : `.gitignore` référençait encore `infrastructure/kubernetes/secrets.yaml`
+  (protection cassée par le déplacement) — mis à jour vers le nouveau chemin.
+
+CI (`cicd.yml`, `docker-images.yml`), `Makefile`, `README.md`, `verify.sh`, `CLAUDE.md` et les
+CODEMAPS vivants (`docs/CODEMAPS/{architecture,data,dependencies}.md`) mis à jour en
+conséquence. Vérification faite en statique uniquement (syntaxe YAML/Python, grep de résidus) —
+`make lint`/`make test`/`docker compose build`/`dvc repro` non exécutés dans cette session
+(CLAUDE.md règle #9 : pas d'écriture dans les venvs/conteneurs réels sans sandbox).
+
+Points laissés de côté, à reproposer :
+- Incohérence préexistante `WORKDIR /workspace` (Dockerfile) vs volume `./frontend:/app/frontend`
+  (docker-compose) sur le service streamlit — repérée pendant l'exploration, non corrigée
+  (hors périmètre des 4 points).
+- `ops/data/{models,processed}/.gitkeep` : résidu probablement accidentel (contenu incongru pour
+  un dossier d'outillage bash), déplacé tel quel sans investigation plus poussée.
+- `docs/CODEMAPS/codemap-diff.txt` et `docs/CLEANUP.md`/`docs/us-verification.md` : journaux
+  datés, volontairement non réécrits (documentent un état passé).

@@ -103,32 +103,45 @@ réelle avec l'utilisateur avant toute action de nettoyage de grande ampleur.
 
 ```
 backend/                    FastAPI — port 8000 — inférence ML
-├── app/main.py              point d'entrée
-├── app/config.py            configuration centralisée
-├── app/api/                 health.py, predict.py, security.py, metrics.py
-├── app/models/loader.py     chargement modèle Keras
-├── app/features/            preprocessing image
-└── app/schemas/              schémas Pydantic (réponses)
+├── Dockerfile                colocalisé (contexte backend/)
+├── app/main.py                point d'entrée
+├── app/config.py               configuration centralisée
+├── app/api/                    health.py, predict.py, security.py, metrics.py
+├── app/models/loader.py        chargement modèle Keras
+├── app/features/                preprocessing image
+├── app/schemas/                  schémas Pydantic (réponses)
+└── src/ml/                     baseline sklearn — utilisé uniquement par backend/tests/,
+                                 hors périmètre de trainer/ (ne dépend pas de ds_covid)
 
 data-service/                FastAPI — port 5001 — DVC pull/push/status, stats données
 └── src/data_service/         main.py, api/v1/router.py
 
 log-service/                 FastAPI — port 5002 — agrégateur logs JSON centralisé
 frontend/                    Streamlit — port 8501 — multi-pages (01_accueil … 07_conclusion)
+├── Dockerfile                colocalisé (contexte frontend/)
 dashboard/                   Flask — port 5050 — backlog agile + data explorer
 shared/                      logging_config.py — JSON structuré, importé par tous les services
 
+trainer/                     Pipeline d'entraînement — service dédié (ex-scripts/ + backend/src/ds_covid/)
+├── Dockerfile                colocalisé (contexte trainer/), image de base partagée avec frontend/
+├── requirements.txt           extras trainer (mlflow, dvc[s3], jupyterlab, albumentations…)
+├── src/ds_covid/               augmentation.py, features.py, models.py, preprocessing.py…
+└── scripts/                    preprocess.py, train.py, evaluate.py, augment.py (stages DVC)
+
 infrastructure/
-├── docker/                  Dockerfiles par service (backend, streamlit, mlflow, trainer, base)
-├── kubernetes/               manifests K8s (Phase 3)
-├── scripts/                  setup.sh, check_quality.sh, fix_style.sh, start_local.sh
+├── docker/                  Dockerfiles restants : mlflow, base (backend/frontend/trainer colocalisés)
 └── docker-compose.yml        stack complète (9 services : backend, data-service, streamlit,
                                trainer, mlflow, log-service, postgres, minio, minio-init).
                                `dashboard` (Flask) n'est pas dans ce compose, lancé à part.
 
-scripts/                     Pipeline DVC : preprocess.py, train.py, evaluate.py, augment.py, evaluate.py
+kubernetes/                  manifests K8s (Phase 3, non déployé) — racine, hors infrastructure/
+ops/                          setup.sh, check_quality.sh, fix_style.sh, start_local.sh
+                               (ex-infrastructure/scripts/, renommé pour éviter la collision
+                               avec scripts/load_test/)
+
+scripts/load_test/           Locust — test de charge sur /predict
 data/raw.dvc                 42 330 images, versionné DVC (806 MB), remote MinIO
-dvc.yaml / params.yaml       Pipeline reproductible (dvc repro)
+dvc.yaml / params.yaml       Pipeline reproductible (dvc repro) — stages dans trainer/scripts/
 ```
 
 **Isolation de service** : `backend/.venv` et `data-service/.venv` sont deux venvs distincts

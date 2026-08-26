@@ -33,7 +33,7 @@ règle R8 `.claude/rules/python/import_cascade.md`).
 | mlflow | 5000 | Tracking expériences ML | image officielle |
 | postgres | 5432 | Backend MLflow | image officielle |
 | minio | 9000/9001 | Artifacts MLflow + remote DVC | image officielle |
-| trainer | 8888 | Conteneur d'entraînement (notebooks) | `infrastructure/docker/trainer/` |
+| trainer | 8888 | Conteneur d'entraînement (notebooks) | `trainer/` |
 
 Déclarés dans `infrastructure/docker-compose.yml` (9 services + volumes `postgres-data`,
 `minio-data` + réseau `covid-net`).
@@ -52,7 +52,7 @@ Déclarés dans `infrastructure/docker-compose.yml` (9 services + volumes `postg
 ## Déploiement
 
 - Local : `infrastructure/docker-compose.yml` (dev complet)
-- K8s (Phase 3, non déployé en prod à ce jour) : `infrastructure/kubernetes/*.yaml`
+- K8s (Phase 3, non déployé en prod à ce jour) : `kubernetes/*.yaml`
   (namespace `ds-covid`, ingress nginx routant `/`→streamlit, `/api`→backend, `/mlflow`→mlflow)
 - CI/CD : `.github/workflows/cicd.yml` — lint → test → sonarcloud → build (GHCR matrix) →
   deploy smoke-test → summary

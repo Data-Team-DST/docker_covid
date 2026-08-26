@@ -28,10 +28,10 @@ make setup
 
 ```bash
 # Depuis la racine du projet (WSL ou Git Bash)
-bash infrastructure/scripts/setup.sh          # setup
-bash infrastructure/scripts/check_quality.sh  # qualité
-bash infrastructure/scripts/fix_style.sh      # auto-style
-bash infrastructure/scripts/start_local.sh    # backend+frontend sans Docker
+bash ops/setup.sh          # setup
+bash ops/check_quality.sh  # qualité
+bash ops/fix_style.sh      # auto-style
+bash ops/start_local.sh    # backend+frontend sans Docker
 ```
 
 > ⚠️ Toujours utiliser des `/` (slash) et non des `\` (backslash) en WSL/bash.

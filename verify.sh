@@ -143,13 +143,13 @@ check_grep "US-08" "Stage 'evaluate'"    "evaluate:"   dvc.yaml
 
 # ── US-09 ─────────────────────────────────────────────────────────────────────
 section "US-09 · Qualité code"
-check_file "US-09" "check_quality.sh"      infrastructure/scripts/check_quality.sh
-check_file "US-09" "check_requirements.sh" infrastructure/scripts/check_requirements.sh
+check_file "US-09" "check_quality.sh"      ops/check_quality.sh
+check_file "US-09" "check_requirements.sh" ops/check_requirements.sh
 
 # ── US-10 ─────────────────────────────────────────────────────────────────────
 section "US-10 · Refactoring scripts"
-check_file "US-10" "infrastructure/scripts/"       infrastructure/scripts
-check_file "US-10" "setup.sh (infrastructure/scripts/)" infrastructure/scripts/setup.sh
+check_file "US-10" "ops/"       ops
+check_file "US-10" "setup.sh (ops/)" ops/setup.sh
 check_file "US-10" "Makefile"                      Makefile
 
 # ── US-13 ─────────────────────────────────────────────────────────────────────

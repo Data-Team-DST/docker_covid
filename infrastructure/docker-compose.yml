@@ -5,8 +5,8 @@ services:
   # ── Backend FastAPI (inférence ML) ────────────────────────────────────────
   backend:
     build:
-      context: .
-      dockerfile: infrastructure/docker/backend/Dockerfile
+      context: backend
+      dockerfile: Dockerfile
     image: ${REGISTRY}/${GITHUB_USER}/covid-xray-backend:${IMAGE_TAG:-latest}
     container_name: covid-xray-backend
     ports:
@@ -79,8 +79,8 @@ services:
   # ── Frontend Streamlit ─────────────────────────────────────────────────────
   streamlit:
     build:
-      context: .
-      dockerfile: infrastructure/${STREAMLIT_DOCKERFILE}
+      context: frontend
+      dockerfile: Dockerfile
     image: ${STREAMLIT_IMAGE}:${IMAGE_TAG:-latest}
     container_name: ${STREAMLIT_CONTAINER_NAME:-covid-xray-streamlit}
     ports:
@@ -114,15 +114,15 @@ services:
   # ── Trainer (entraînement + MLflow logging) ────────────────────────────────
   trainer:
     build:
-      context: .
-      dockerfile: infrastructure/${TRAINER_DOCKERFILE}
+      context: trainer
+      dockerfile: Dockerfile
     image: ${TRAINER_IMAGE}:${IMAGE_TAG:-latest}
     container_name: ${TRAINER_CONTAINER_NAME:-covid-xray-trainer}
     ports:
       - "${TRAINER_PORT:-8888}:8888"
     volumes:
       - ./data:/app/data
-      - ./backend/src:/app/src
+      - ./trainer/src:/app/src
       - ./models:/app/models
       - ./outputs:/app/outputs
     env_file: .env

@@ -304,13 +304,13 @@ jobs:
         include:
           - service: backend
             image: ghcr.io/data-team-dst/covid-xray-backend
-            context: .
-            dockerfile: infrastructure/docker/backend/Dockerfile
+            context: backend
+            dockerfile: backend/Dockerfile
             build_args: ""
           - service: frontend
             image: ghcr.io/data-team-dst/covid-xray-streamlit
-            context: .
-            dockerfile: infrastructure/docker/streamlit/Dockerfile
+            context: frontend
+            dockerfile: frontend/Dockerfile
             build_args: BASE_IMAGE=ghcr.io/data-team-dst/covid-xray-base:latest
           - service: data-service
             image: ghcr.io/data-team-dst/covid-xray-data-service
