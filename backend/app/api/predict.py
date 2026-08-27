@@ -7,7 +7,12 @@ import time
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
-from app.api.metrics import stats
+from app.api.metrics import (
+    inference_latency_seconds,
+    low_confidence_predictions_total,
+    predictions_by_class_total,
+    stats,
+)
 from app.api.security import verify_api_key
 from app.config import settings
 from app.features.preprocessing import preprocess_image
@@ -94,7 +99,8 @@ async def predict(
             segmentation_service_timeout_s=settings.segmentation_service_timeout_s,
         )
         predictions = model_loader.predict(img_array)
-        latency_ms = round((time.time() - t0) * 1000, 1)
+        elapsed_s = time.time() - t0
+        latency_ms = round(elapsed_s * 1000, 1)
 
         predicted_idx = int(predictions.argmax())
         predicted_class = settings.class_names[predicted_idx]
@@ -105,6 +111,10 @@ async def predict(
         }
 
         stats.increment_predict()
+        inference_latency_seconds.observe(elapsed_s)
+        predictions_by_class_total.labels(predicted_class=predicted_class).inc()
+        if confidence < 0.6:
+            low_confidence_predictions_total.inc()
         logger.info(
             "Prédiction : %s (%.1f%%) | %sms",
             predicted_class,

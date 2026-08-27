@@ -13,7 +13,7 @@ from app.api.predict import router as predict_router
 from app.config import settings
 from app.lifespan import lifespan
 from app.logging_config import setup_logging
-from app.middleware import log_requests
+from app.middleware import log_requests, track_http_metrics
 from app.rate_limit import limiter
 
 setup_logging()
@@ -45,6 +45,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.middleware("http")(log_requests)
+app.middleware("http")(track_http_metrics)
 
 app.include_router(health_router, tags=["Health"])
 app.include_router(predict_router, prefix="/api/v1", tags=["Prediction"])
