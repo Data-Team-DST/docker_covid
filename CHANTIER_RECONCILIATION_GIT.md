@@ -1,5 +1,19 @@
 # Chantier — Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`
 
+**Clos le 2026-08-27.** La grosse divergence (~30 commits de chaque côté, décrite ci-dessous)
+a été réconciliée dans l'après-midi via `main` (PR #27 + #28, commit `4142cc9`). Un reliquat
+plus petit est apparu ensuite : `dev` a continué d'avancer avec le travail de Léna (branche
+`Lena-Mix`, suivi MLflow en ligne via DagsHub) pendant qu'on ajoutait la feature MLflow
+Registry sur `chore/claude-code-setup` — 5 commits d'un côté, 3 de l'autre. Réglé par un
+`git merge origin/dev` direct (commit `f94badc`), **sans conflit** : `dvc.lock` a
+automatiquement gardé la version de Léna (`classification.keras` hash `c6000211...`,
+`segmentation.keras` hash `17f8dafc...`), qui correspond exactement aux fichiers déjà
+récupérés en local via `dvc pull -r dagshub` (confirmés réels, pas juste committés — même
+vérification que celle qui avait manqué pour `raf5`). Tests + lint des deux services
+re-vérifiés après le merge, tout vert. Reste à pousser (`git push`).
+
+---
+
 Ouvert le 2026-08-27, suite à une session de pipeline DVC GPU complet (classification +
 segmentation) sur `chore/claude-code-setup`. **Contrairement à `CHANTIER_INFRA_SERVICES.md`,
 ce chantier n'est pas à reporter après la soutenance** — c'est une divergence git qui

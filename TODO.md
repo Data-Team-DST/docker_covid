@@ -7,18 +7,16 @@ fixes GPU/MLflow/DagsHub). Chaque point ci-dessous a été identifié en session
 volontairement laissé de côté (décision à prendre, hors périmètre du moment, ou correction
 non triviale).
 
-## Urgent — avant tout nouveau push/merge
-
-### 0. Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`
-
-Ouvert le 2026-08-27. `main` et cette branche ont divergé indépendamment (~30 commits
-chacune) depuis le merge de la PR #26, avec du recoupement réel sur le nommage des modèles
-(`classification.keras`/`segmentation.keras` sur main vs `covid_model.keras`/`lung_unet.keras`
-ici) et sur `max_samples_per_class`/`dvc.lock`. Détail complet, constat vérifié et stratégie
-proposée dans `CHANTIER_RECONCILIATION_GIT.md` — **à traiter en premier**, contrairement au
-chantier post-soutenance ci-dessous.
-
 ## Décisions en attente
+
+### 0. ~~Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`~~ **close le 2026-08-27**
+
+Grosse divergence (~30 commits chacune, PR #26) réconciliée via `main` (PR #27/#28,
+`4142cc9`) dans l'après-midi. Reliquat plus petit avec `dev` (travail de Léna, suivi MLflow
+en ligne) réglé le soir même par un `git merge origin/dev` sans conflit (`f94badc`) —
+`dvc.lock` a gardé la version de Léna, qui correspond aux fichiers modèles déjà vérifiés
+réels sur DagsHub. Détail complet dans `CHANTIER_RECONCILIATION_GIT.md`. Reste seulement à
+pousser (`git push`).
 
 ### 1. `params.yaml` — `max_samples_per_class: 500` restreint le dataset d'entraînement
 
