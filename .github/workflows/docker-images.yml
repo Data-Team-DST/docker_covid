@@ -57,7 +57,7 @@ jobs:
         include:
           - image: trainer
             context: ./trainer
-            dockerfile: Dockerfile
+            dockerfile: trainer/Dockerfile
           - image: streamlit
             context: .
             dockerfile: infrastructure/docker/streamlit/Dockerfile
