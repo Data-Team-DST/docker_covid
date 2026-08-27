@@ -28,10 +28,10 @@ make setup
 
 ```bash
 # Depuis la racine du projet (WSL ou Git Bash)
-bash infrastructure/scripts/setup.sh          # setup
-bash infrastructure/scripts/check_quality.sh  # qualité
-bash infrastructure/scripts/fix_style.sh      # auto-style
-bash infrastructure/scripts/start_local.sh    # backend+frontend sans Docker
+bash ops/setup.sh          # setup
+bash ops/check_quality.sh  # qualité
+bash ops/fix_style.sh      # auto-style
+bash ops/start_local.sh    # backend+frontend sans Docker
 ```
 
 > ⚠️ Toujours utiliser des `/` (slash) et non des `\` (backslash) en WSL/bash.
@@ -115,7 +115,7 @@ docker_covid/
 │   └── scripts/             # setup.sh, check_quality.sh, fix_style.sh, start_local.sh
 ├── trainer/                 # Service d'entraînement (Dockerfile + pipeline DVC)
 │   ├── Dockerfile
-│   ├── deep_learning/       # Package partagé par les stages (augmentation, models, segmentation…)
+│   ├── src/ds_covid/        # Package partagé par les stages (augmentation, models, segmentation…)
 │   └── scripts/             # preprocess.py, train.py, evaluate.py, *_segmentation.py
 ├── scripts/load_test/       # Locust — charge sur POST /api/v1/predict (sans rapport avec trainer/)
 ├── docs/                    # Architecture, SMART, backlogs, vérification US

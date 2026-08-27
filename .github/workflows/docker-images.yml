@@ -56,11 +56,11 @@ jobs:
       matrix:
         include:
           - image: trainer
-            context: ./trainer
+            context: trainer
             dockerfile: trainer/Dockerfile
           - image: streamlit
-            context: .
-            dockerfile: infrastructure/docker/streamlit/Dockerfile
+            context: frontend
+            dockerfile: frontend/Dockerfile
 
     permissions:
       packages: write

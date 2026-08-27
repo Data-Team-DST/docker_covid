@@ -3,7 +3,7 @@ U-Net de segmentation pulmonaire (encoder MobileNetV2 pré-entraîné).
 
 Sert à générer le mask des poumons pour les images de predict/ (qui n'ont pas de
 mask associé, contrairement au dataset raw), afin de reproduire à l'inférence le
-même preprocessing (masking + crop + CLAHE, cf. deep_learning.preprocessing) que celui
+même preprocessing (masking + crop + CLAHE, cf. ds_covid.preprocessing) que celui
 appliqué au training set du modèle de classification.
 """
 

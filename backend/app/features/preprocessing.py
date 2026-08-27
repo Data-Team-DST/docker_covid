@@ -2,7 +2,7 @@
 """Preprocessing des images pour l'inférence.
 
 Pipeline autonome (masking + crop poumons + CLAHE + resize + normalisation),
-identique à celui de l'entraînement (`deep_learning.preprocessing.apply_pipeline`)
+identique à celui de l'entraînement (`ds_covid.preprocessing.apply_pipeline`)
 mais dupliqué ici plutôt qu'importé : ce service reste buildable/déployable
 indépendamment du pipeline d'entraînement (cf. logging_config.py pour la même
 logique appliquée au logging — frontières de service du projet).
@@ -71,7 +71,7 @@ def apply_pipeline(
     target_size: int,
 ) -> np.ndarray:
     """Applique masking + crop + CLAHE + resize à une image en niveaux de gris déjà
-    chargée en mémoire. Identique à `deep_learning.preprocessing.apply_pipeline`."""
+    chargée en mémoire. Identique à `ds_covid.preprocessing.apply_pipeline`."""
 
     if denoising_method == "gaussian":
         img_array = cv2.GaussianBlur(img_array, (5, 5), 0)

@@ -3,13 +3,13 @@ FROM ${BASE_IMAGE}
 
 WORKDIR /workspace
 
-COPY frontend/requirements.txt /tmp/streamlit.txt
+COPY requirements.txt /tmp/streamlit.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install --ignore-installed blinker \
  && python -m pip install -r /tmp/streamlit.txt
 
-COPY frontend/ /workspace/frontend/
+COPY . /workspace/frontend/
 
 RUN id -u appuser >/dev/null 2>&1 || (groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser) \
  && chown -R appuser:appuser /workspace

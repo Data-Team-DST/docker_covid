@@ -6,7 +6,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: infrastructure/docker/backend/Dockerfile
+      dockerfile: backend/Dockerfile
     image: ${REGISTRY}/${GITHUB_USER}/covid-xray-backend:${IMAGE_TAG:-latest}
     container_name: covid-xray-backend
     ports:
@@ -44,7 +44,7 @@ services:
   # ── Segmentation Service (U-Net : mask pulmonaire pour l'inférence) ────────
   segmentation-service:
     build:
-      context: ./segmentation-service
+      context: segmentation-service
       dockerfile: Dockerfile
     image: ${REGISTRY}/${GITHUB_USER}/covid-xray-segmentation-service:${IMAGE_TAG:-latest}
     container_name: covid-xray-segmentation-service
@@ -115,14 +115,14 @@ services:
   # ── Frontend Streamlit ─────────────────────────────────────────────────────
   streamlit:
     build:
-      context: .
-      dockerfile: infrastructure/${STREAMLIT_DOCKERFILE}
+      context: frontend
+      dockerfile: Dockerfile
     image: ${STREAMLIT_IMAGE}:${IMAGE_TAG:-latest}
     container_name: ${STREAMLIT_CONTAINER_NAME:-covid-xray-streamlit}
     ports:
       - "${STREAMLIT_PORT:-8501}:8501"
     volumes:
-      - ./frontend:/app/frontend
+      - ./frontend:/workspace/frontend
     env_file: .env
     environment:
       - BACKEND_URL=http://backend:8000
@@ -150,7 +150,7 @@ services:
   # ── Trainer (entraînement + MLflow logging) ────────────────────────────────
   trainer:
     build:
-      context: ./trainer
+      context: trainer
       dockerfile: Dockerfile
     image: ${TRAINER_IMAGE}:${IMAGE_TAG:-latest}
     container_name: ${TRAINER_CONTAINER_NAME:-covid-xray-trainer}
@@ -158,7 +158,7 @@ services:
       - "${TRAINER_PORT:-8888}:8888"
     volumes:
       - ./data:/app/data
-      - ./trainer/deep_learning:/app/deep_learning
+      - ./trainer/src:/app/src
       - ./models:/app/models
       - ./outputs:/app/outputs
     env_file: .env
@@ -168,6 +168,7 @@ services:
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - LOG_SERVICE_BASE_URL=http://log-service:5002
     depends_on:
       mlflow:
         condition: service_healthy
@@ -313,11 +314,16 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MLFLOW_BUCKET=${MLFLOW_BUCKET:-mlflow}
+      - DVC_BUCKET=${DVC_BUCKET:-dvcstore}
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
-      mc mb --ignore-existing local/${MLFLOW_BUCKET:-mlflow};
-      mc mb --ignore-existing local/${DVC_BUCKET:-dvcstore};
+      mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\";
+      mc mb --ignore-existing \"local/$$MLFLOW_BUCKET\";
+      mc mb --ignore-existing \"local/$$DVC_BUCKET\";
       exit 0;
       "
     deploy:
@@ -328,9 +334,79 @@ services:
     networks:
       - covid-net
 
+  # ── Prometheus (collecte des métriques /metrics du backend) ───────────────
+  # Sous profil "monitoring" : ne démarre pas avec `make start-all`, pour ne
+  # pas alourdir le quotidien. Lancer avec `make monitoring-start`
+  # (équivalent : docker compose --profile monitoring up -d prometheus grafana).
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.53.0}
+    container_name: ${PROMETHEUS_CONTAINER_NAME:-covid-xray-prometheus}
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./infrastructure/docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/docker/monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    networks:
+      - covid-net
+    profiles:
+      - monitoring
+
+  # ── Grafana (visualisation des métriques Prometheus) ──────────────────────
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:11.1.0}
+    container_name: ${GRAFANA_CONTAINER_NAME:-covid-xray-grafana}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./infrastructure/docker/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    networks:
+      - covid-net
+    profiles:
+      - monitoring
+
 volumes:
   postgres-data:
   minio-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   covid-net:

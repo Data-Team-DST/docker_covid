@@ -8,7 +8,7 @@ stages:
       md5: a918294d0bd698396493e00520a9cffa.dir
       size: 807555159
       nfiles: 42355
-    - path: trainer/deep_learning/augmentation.py
+    - path: trainer/src/ds_covid/augmentation.py
       hash: md5
       md5: 4cd9fd0af80f904bf9ddb20f30f09228
       size: 3558
@@ -55,7 +55,7 @@ stages:
       md5: 7b410e8f44665735a766d412fbe8931d.dir
       size: 58087731
       nfiles: 2720
-    - path: trainer/deep_learning/preprocessing.py
+    - path: trainer/src/ds_covid/preprocessing.py
       hash: md5
       md5: a015351845c3a355abdd124dbe9f8247
       size: 7611
@@ -117,7 +117,7 @@ stages:
       hash: md5
       md5: e94e8b0f10a5db11913f8b5b273d0624
       size: 5248
-    - path: trainer/deep_learning/models.py
+    - path: trainer/src/ds_covid/models.py
       hash: md5
       md5: a17a869a5c97643cfef6868cf7b11bd8
       size: 1600
@@ -183,7 +183,7 @@ stages:
       md5: 7b410e8f44665735a766d412fbe8931d.dir
       size: 58087731
       nfiles: 2720
-    - path: trainer/deep_learning/segmentation.py
+    - path: trainer/src/ds_covid/segmentation.py
       hash: md5
       md5: 56765a9abd51d186c03f7e071214a80a
       size: 6258
@@ -233,11 +233,11 @@ stages:
       hash: md5
       md5: d5a4dbd96d84f9f6daaacb6f07e8996f
       size: 335544448
-    - path: trainer/deep_learning/data.py
+    - path: trainer/src/ds_covid/data.py
       hash: md5
       md5: d46cac686df39ba30bd303115dff491f
       size: 2182
-    - path: trainer/deep_learning/segmentation.py
+    - path: trainer/src/ds_covid/segmentation.py
       hash: md5
       md5: 56765a9abd51d186c03f7e071214a80a
       size: 6258
@@ -291,7 +291,7 @@ stages:
       hash: md5
       md5: 060a5015c3f9052b567edda02330e473
       size: 20971648
-    - path: trainer/deep_learning/segmentation.py
+    - path: trainer/src/ds_covid/segmentation.py
       hash: md5
       md5: 56765a9abd51d186c03f7e071214a80a
       size: 6258

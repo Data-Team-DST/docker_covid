@@ -23,7 +23,7 @@ __pycache__/
 *.pyc
 
 # Secrets K8s réels (le gabarit secrets.yaml.example reste tracké)
-infrastructure/kubernetes/secrets.yaml
+kubernetes/secrets.yaml
 
 # Data & modèles (versionnés via DVC en Phase 2)
 data/raw/

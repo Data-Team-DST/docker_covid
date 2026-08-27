@@ -21,7 +21,7 @@
 
 **frontend** : `streamlit`, `plotly`, `pandas`, `pillow`. `kagglehub` (téléchargement dataset).
 
-**ML pipeline** (`backend/src/ds_covid/`) : `tensorflow`, `scikit-learn`, `opencv`/`albumentations`
+**ML pipeline** (`trainer/src/ds_covid/`) : `tensorflow`, `scikit-learn`, `opencv`/`albumentations`
 selon les stages (augment/preprocess).
 
 ## Fichiers de lock

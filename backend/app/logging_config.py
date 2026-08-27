@@ -25,6 +25,10 @@ LOG_LEVEL       = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_DIR         = Path(os.getenv("LOG_DIR", "/app/tmp/logs"))
 LOG_SERVICE_URL = os.getenv("LOG_SERVICE_URL", "http://log-service:5002/v1/log")
 
+# Logger dédié à la télémétrie de prédiction (scores par classe), consommé par
+# trainer/scripts/drift_report.py via GET /v1/logs sur le log-service — voir US-20.
+TELEMETRY_LOGGER_NAME = "app.predict.telemetry"
+
 
 class _JsonFormatter(logging.Formatter):
     """Formatte chaque log en une ligne JSON structurée."""
@@ -46,6 +50,19 @@ class _JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
+class _LoggerNameFilter(logging.Filter):
+    """Filtre les enregistrements par nom de logger exact (inclusion ou exclusion)."""
+
+    def __init__(self, logger_name: str, *, exclude: bool = False) -> None:
+        super().__init__()
+        self._logger_name = logger_name
+        self._exclude = exclude
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        matches = record.name == self._logger_name
+        return not matches if self._exclude else matches
+
+
 class _AsyncHTTPHandler(logging.Handler):
     """Envoie les logs au log-service dans un thread daemon (non-bloquant)."""
 
@@ -62,6 +79,9 @@ class _AsyncHTTPHandler(logging.Handler):
             "msg":     record.getMessage(),
             "ts":      datetime.now(UTC).isoformat(),
         }
+        extra_data = getattr(record, "extra_data", None)
+        if extra_data:
+            payload["extra"] = extra_data
         threading.Thread(target=self._post, args=(payload,), daemon=True).start()
 
     def _post(self, payload: dict) -> None:
@@ -110,6 +130,16 @@ def setup_logging() -> None:
         )
 
     # 3. Log-service central (non-bloquant, silencieux si indisponible)
+    #    WARNING+ pour tous les loggers, sauf la télémétrie de prédiction qui a
+    #    son propre handler (point 4) pour ne pas la dupliquer ici.
     http_handler = _AsyncHTTPHandler(service_name, LOG_SERVICE_URL)
-    http_handler.setLevel(logging.WARNING)  # n'envoie que WARNING+ au central
+    http_handler.setLevel(logging.WARNING)
+    http_handler.addFilter(_LoggerNameFilter(TELEMETRY_LOGGER_NAME, exclude=True))
     root.addHandler(http_handler)
+
+    # 4. Télémétrie de prédiction (INFO, scores par classe) → log-service,
+    #    uniquement pour TELEMETRY_LOGGER_NAME (voir app/api/predict.py).
+    telemetry_handler = _AsyncHTTPHandler(service_name, LOG_SERVICE_URL)
+    telemetry_handler.setLevel(logging.INFO)
+    telemetry_handler.addFilter(_LoggerNameFilter(TELEMETRY_LOGGER_NAME))
+    root.addHandler(telemetry_handler)

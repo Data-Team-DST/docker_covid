@@ -1,4 +1,4 @@
-# code-smell: max-lines=140 reason="Doc OpenAPI (responses=) + gestion d'erreurs multi-services (classifieur + segmentation-service)"
+# code-smell: max-lines=145 reason="Doc OpenAPI (responses=) + gestion d'erreurs multi-services (classifieur + segmentation-service) + télémétrie US-20"
 """Endpoint /predict — DS_COVID Backend"""
 
 import logging
@@ -11,11 +11,13 @@ from app.api.metrics import stats
 from app.api.security import verify_api_key
 from app.config import settings
 from app.features.preprocessing import preprocess_image
+from app.logging_config import TELEMETRY_LOGGER_NAME
 from app.models.loader import model_loader
 from app.rate_limit import limiter, predict_rate_limit
 from app.schemas.response import PredictionResponse
 
 logger = logging.getLogger(__name__)
+telemetry_logger = logging.getLogger(TELEMETRY_LOGGER_NAME)
 router = APIRouter()
 
 
@@ -108,6 +110,15 @@ async def predict(
             predicted_class,
             confidence * 100,
             latency_ms,
+        )
+        telemetry_logger.info(
+            "prediction",
+            extra={"extra_data": {
+                "predicted_class": predicted_class,
+                "confidence": confidence,
+                "scores": scores,
+                "latency_ms": latency_ms,
+            }},
         )
 
         return PredictionResponse(

@@ -4,7 +4,7 @@ stages:
     cmd: python trainer/scripts/augment.py
     deps:
       - trainer/scripts/augment.py
-      - trainer/deep_learning/augmentation.py
+      - trainer/src/ds_covid/augmentation.py
       - data/raw
     params:
       - params.yaml:
@@ -23,7 +23,7 @@ stages:
     cmd: python trainer/scripts/preprocess.py
     deps:
       - trainer/scripts/preprocess.py
-      - trainer/deep_learning/preprocessing.py
+      - trainer/src/ds_covid/preprocessing.py
       - data/augmented
     params:
       - params.yaml:
@@ -41,7 +41,7 @@ stages:
     cmd: python trainer/scripts/train.py
     deps:
       - trainer/scripts/train.py
-      - trainer/deep_learning/models.py
+      - trainer/src/ds_covid/models.py
       - data/processed/X_train.npy
       - data/processed/y_train.npy
     params:
@@ -71,7 +71,7 @@ stages:
     cmd: python trainer/scripts/preprocess_segmentation.py
     deps:
       - trainer/scripts/preprocess_segmentation.py
-      - trainer/deep_learning/segmentation.py
+      - trainer/src/ds_covid/segmentation.py
       - data/augmented
     params:
       - params.yaml:
@@ -90,8 +90,8 @@ stages:
     cmd: python trainer/scripts/train_segmentation.py
     deps:
       - trainer/scripts/train_segmentation.py
-      - trainer/deep_learning/segmentation.py
-      - trainer/deep_learning/data.py
+      - trainer/src/ds_covid/segmentation.py
+      - trainer/src/ds_covid/data.py
       - data/processed/segmentation/X_train.npy
       - data/processed/segmentation/M_train.npy
     params:
@@ -110,7 +110,7 @@ stages:
     cmd: python trainer/scripts/evaluate_segmentation.py
     deps:
       - trainer/scripts/evaluate_segmentation.py
-      - trainer/deep_learning/segmentation.py
+      - trainer/src/ds_covid/segmentation.py
       - data/models/segmentation.keras
       - data/processed/segmentation/X_test.npy
       - data/processed/segmentation/M_test.npy

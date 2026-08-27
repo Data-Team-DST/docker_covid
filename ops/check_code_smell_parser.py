@@ -35,7 +35,7 @@ def get_file_annotation(file_path: Path) -> dict | None:
                         "reason": reason,
                         "tolerance_limit": tolerance_limit,
                     }
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         pass
     return None
 
