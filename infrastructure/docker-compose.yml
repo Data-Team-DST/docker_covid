@@ -176,7 +176,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: 8g
           cpus: "2.0"
         reservations:
           devices:

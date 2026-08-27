@@ -28,7 +28,7 @@ sys.path.insert(0, str(TRAINER_ROOT / "src"))
 load_dotenv(REPO_ROOT / ".env")
 
 from ds_covid.data import MemmapSequence  # noqa: E402
-from ds_covid.mlflow_utils import MlflowEpochLogger  # noqa: E402
+from ds_covid.mlflow_utils import DualMlflowRun, MlflowEpochLogger  # noqa: E402
 from ds_covid.segmentation import (  # noqa: E402
     build_unet,
     combined_loss,
@@ -76,8 +76,8 @@ def main() -> None:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     model_path = MODELS_DIR / "segmentation.keras"
 
-    with mlflow.start_run():
-        mlflow.log_params({
+    with DualMlflowRun(mlp["segmentation_experiment_name"]) as tracking:
+        tracking.log_params({
             "freeze_epochs":       sp["freeze_epochs"],
             "freeze_lr":           sp["freeze_lr"],
             "fine_tune_epochs":    sp["fine_tune_epochs"],
@@ -119,7 +119,7 @@ def main() -> None:
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=1, min_lr=1e-5),
                 checkpoint_cb,
                 TqdmCallback(desc="Phase 1/2 (decoder)", verbose=2),
-                MlflowEpochLogger(),  # métriques loguées epoch par epoch (visibilité temps réel dans MLflow)
+                MlflowEpochLogger(mirror=tracking),  # métriques loguées dans les deux MLflow
             ],
             verbose=0,
         )
@@ -154,7 +154,7 @@ def main() -> None:
                 TqdmCallback(desc="Phase 2/2 (fine-tune)", verbose=2),
                 # step_offset = épochs réellement écoulées en phase 1 (peut être < freeze_epochs
                 # si EarlyStopping a coupé court) : la timeline MLflow reste continue entre les 2 phases.
-                MlflowEpochLogger(step_offset=len(history_freeze.epoch)),
+                MlflowEpochLogger(step_offset=len(history_freeze.epoch), mirror=tracking),
             ],
             verbose=0,
         )
@@ -183,14 +183,15 @@ def main() -> None:
         min_val_dice = sp["min_val_dice"]
         promoted = val_dice >= min_val_dice
         if promoted:
-            mlflow.keras.log_model(model, artifact_path="model", registered_model_name=mlp["segmentation_model_name"])
+            mlflow.keras.log_model(model, name="model", registered_model_name=mlp["segmentation_model_name"])
         else:
-            mlflow.keras.log_model(model, artifact_path="model")
+            mlflow.keras.log_model(model, name="model")
             print(
                 f"[WARN] val_dice={val_dice:.4f} < min_val_dice={min_val_dice:.4f} — "
                 "modèle NON enregistré dans le Model Registry (reste artefact du run).",
                 flush=True,
             )
+        tracking.log_model(model, "model")
         mlflow.log_metric("registered", int(promoted))
 
         metrics = {
