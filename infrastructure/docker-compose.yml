@@ -168,6 +168,7 @@ services:
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      - LOG_SERVICE_BASE_URL=http://log-service:5002
     depends_on:
       mlflow:
         condition: service_healthy
