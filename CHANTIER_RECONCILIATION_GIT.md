@@ -1,4 +1,14 @@
-# Chantier — Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`
+# Chantier — Réconciliation `chore/claude-code-setup` ↔ `main`/`dev` — ✅ CLOS (2026-08-27)
+
+**Résolu** : PR #27 (`chore/claude-code-setup` → `dev`) puis PR #28 (`dev` → `main`), toutes
+deux mergées le 2026-08-27, CI complète verte sur les deux. Décisions de résolution des
+conflits listés ci-dessous (renommage modèles, `params.yaml`, `dvc.lock`, module
+`trainer/src/ds_covid`) appliquées comme décrit. Deux bugs CI préexistants (indépendants de
+cette réconciliation) trouvés et corrigés au passage : smoke-test backend crashant faute
+d'`API_KEY` en prod, lockfile `backend/requirements-dev.txt` cassé par un bloc dupliqué. US-18
+(non traité ici, hors scope) : voir `CHANTIER_US18.md`.
+
+---
 
 Ouvert le 2026-08-27, suite à une session de pipeline DVC GPU complet (classification +
 segmentation) sur `chore/claude-code-setup`. **Contrairement à `CHANTIER_INFRA_SERVICES.md`,

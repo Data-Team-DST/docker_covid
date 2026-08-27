@@ -9,14 +9,17 @@ non triviale).
 
 ## Urgent — avant tout nouveau push/merge
 
-### 0. Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`
+### 0. Réconciliation `chore/claude-code-setup` ↔ `main`/`dev` — ✅ clos le 2026-08-27
 
-Ouvert le 2026-08-27. `main` et cette branche ont divergé indépendamment (~30 commits
-chacune) depuis le merge de la PR #26, avec du recoupement réel sur le nommage des modèles
-(`classification.keras`/`segmentation.keras` sur main vs `covid_model.keras`/`lung_unet.keras`
-ici) et sur `max_samples_per_class`/`dvc.lock`. Détail complet, constat vérifié et stratégie
-proposée dans `CHANTIER_RECONCILIATION_GIT.md` — **à traiter en premier**, contrairement au
-chantier post-soutenance ci-dessous.
+Ouvert le 2026-08-27, clos le même jour. `main` et cette branche avaient divergé
+indépendamment (~30 commits chacune) depuis le merge de la PR #26. Réconcilié via
+PR #27 (`chore/claude-code-setup` → `dev`, mergée) puis PR #28 (`dev` → `main`, mergée) —
+CI complète verte sur les deux (lint, tests, coverage, build des 4 images, smoke-test).
+Décisions de résolution détaillées dans `CHANTIER_RECONCILIATION_GIT.md`. Deux bugs CI
+préexistants (non liés à la réconciliation) trouvés et corrigés au passage : smoke-test
+backend qui crashait faute d'`API_KEY` en prod, lockfile `backend/requirements-dev.txt`
+cassé par un bloc dupliqué. US-18 restant (infra posée par `dev`, instrumentation pas
+câblée) : plan détaillé dans `CHANTIER_US18.md`.
 
 ## Décisions en attente
 
