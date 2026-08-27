@@ -8,14 +8,14 @@ stages:
       md5: a918294d0bd698396493e00520a9cffa.dir
       size: 807555159
       nfiles: 42355
+    - path: trainer/scripts/augment.py
+      hash: md5
+      md5: cd65d3a2f6ea7b00039321493735736d
+      size: 5882
     - path: trainer/src/ds_covid/augmentation.py
       hash: md5
       md5: 4cd9fd0af80f904bf9ddb20f30f09228
       size: 3558
-    - path: trainer/scripts/augment.py
-      hash: md5
-      md5: 5ea84c90905557c088430c9dfce2b8b5
-      size: 5878
     params:
       params.yaml:
         augment:
@@ -34,19 +34,19 @@ stages:
           Normal: 1
           Viral Pneumonia: 2
           Lung_Opacity: 3
-        preprocess.max_samples_per_class:
+        preprocess.max_samples_per_class: 100
         preprocess.random_seed: 42
         preprocess.test_split: 0.2
     outs:
     - path: data/augmented
       hash: md5
-      md5: 096579bff2c8614fbe41b3b87ee6dbb0.dir
-      size: 3029485553
-      nfiles: 143910
+      md5: 7b410e8f44665735a766d412fbe8931d.dir
+      size: 58087731
+      nfiles: 2720
     - path: outputs/augment_stats.json
       hash: md5
-      md5: 319b264438625bf4a568edd8c3b5fc36
-      size: 317
+      md5: 58de886c31ef780a3bb7123062c61e51
+      size: 301
   preprocess:
     cmd: python trainer/scripts/preprocess.py
     deps:
@@ -55,21 +55,21 @@ stages:
       md5: 7b410e8f44665735a766d412fbe8931d.dir
       size: 58087731
       nfiles: 2720
+    - path: trainer/scripts/preprocess.py
+      hash: md5
+      md5: f7cdd4426ecfc3688c891f0c02c1045c
+      size: 5243
     - path: trainer/src/ds_covid/preprocessing.py
       hash: md5
       md5: a015351845c3a355abdd124dbe9f8247
       size: 7611
-    - path: trainer/scripts/preprocess.py
-      hash: md5
-      md5: ed9ed3abfa0861147ec5216cb9d13bfb
-      size: 4885
     params:
       params.yaml:
         preprocess:
           img_size:
           - 256
           - 256
-          max_samples_per_class:
+          max_samples_per_class: 100
           test_split: 0.2
           random_seed: 42
           masking: true
@@ -88,43 +88,43 @@ stages:
     outs:
     - path: data/processed/X_test.npy
       hash: md5
-      md5: 00ad40f369df0ba9f42e0820c95b885a
-      size: 1110179968
+      md5: f0da27ae4fbd07a6e78e30e324d84b99
+      size: 20971648
     - path: data/processed/X_train.npy
       hash: md5
-      md5: 856d095839e30b49f901ad4602a27b38
-      size: 17752391808
+      md5: 5711d711a47626a21f8a7baee647f6e1
+      size: 335544448
     - path: data/processed/y_test.npy
       hash: md5
-      md5: acaab5dbead97adaafffcd69259bc708
-      size: 17068
+      md5: 6eb5e6a56bd98ddd021ab65f2cadda0b
+      size: 448
     - path: data/processed/y_train.npy
       hash: md5
-      md5: 09ad38dd2628fddc2fc51215d5d90ed7
-      size: 271008
+      md5: e94e8b0f10a5db11913f8b5b273d0624
+      size: 5248
     - path: outputs/preprocess_stats.json
       hash: md5
-      md5: e63eee4bec7af9888334c5003731b036
-      size: 334
+      md5: 3082e7faf6450243b64cc1f436b0f1ad
+      size: 317
   train:
     cmd: python trainer/scripts/train.py
     deps:
     - path: data/processed/X_train.npy
       hash: md5
-      md5: 856d095839e30b49f901ad4602a27b38
-      size: 17752391808
+      md5: 5711d711a47626a21f8a7baee647f6e1
+      size: 335544448
     - path: data/processed/y_train.npy
       hash: md5
       md5: e94e8b0f10a5db11913f8b5b273d0624
       size: 5248
+    - path: trainer/scripts/train.py
+      hash: md5
+      md5: 3cb5050c75d99a1024c653247515ebc4
+      size: 5533
     - path: trainer/src/ds_covid/models.py
       hash: md5
       md5: a17a869a5c97643cfef6868cf7b11bd8
       size: 1600
-    - path: trainer/scripts/train.py
-      hash: md5
-      md5: b47815d46b2fdba379abc291eb242243
-      size: 5547
     params:
       params.yaml:
         mlflow:
@@ -145,36 +145,36 @@ stages:
     outs:
     - path: data/models/classification.keras
       hash: md5
-      md5: 34c529d1cc58dc5754d84d268966544a
+      md5: c6000211c7d6cd85d4836225976d1b36
       size: 5154350
     - path: outputs/metrics.json
       hash: md5
-      md5: b92a886b0533fa5f626f09600badfbbe
-      size: 91
+      md5: 538167678b0d03e7b83ca9e366c9316f
+      size: 74
   evaluate:
     cmd: python trainer/scripts/evaluate.py
     deps:
     - path: data/models/classification.keras
       hash: md5
-      md5: 34c529d1cc58dc5754d84d268966544a
+      md5: c6000211c7d6cd85d4836225976d1b36
       size: 5154350
     - path: data/processed/X_test.npy
       hash: md5
-      md5: 00ad40f369df0ba9f42e0820c95b885a
-      size: 1110179968
+      md5: f0da27ae4fbd07a6e78e30e324d84b99
+      size: 20971648
     - path: data/processed/y_test.npy
       hash: md5
-      md5: acaab5dbead97adaafffcd69259bc708
-      size: 17068
+      md5: 6eb5e6a56bd98ddd021ab65f2cadda0b
+      size: 448
     - path: trainer/scripts/evaluate.py
       hash: md5
-      md5: cc2416e33102fb9a4a7576896e222fab
-      size: 1918
+      md5: 9bdb46290a1cdb419ad253f47496547d
+      size: 1909
     outs:
     - path: outputs/evaluation_report.json
       hash: md5
-      md5: 7c8a6a35a570678676392448b180abc1
-      size: 1398
+      md5: 99db20a2e15769e151f4ee4703c80795
+      size: 1204
   preprocess_segmentation:
     cmd: python trainer/scripts/preprocess_segmentation.py
     deps:
@@ -183,14 +183,14 @@ stages:
       md5: 7b410e8f44665735a766d412fbe8931d.dir
       size: 58087731
       nfiles: 2720
-    - path: trainer/src/ds_covid/segmentation.py
-      hash: md5
-      md5: 56765a9abd51d186c03f7e071214a80a
-      size: 6258
     - path: trainer/scripts/preprocess_segmentation.py
       hash: md5
-      md5: 6210d40badc3ac480c19ac8a61648748
-      size: 3271
+      md5: 2b292ae05e0db5f5d20838b9c9a525a4
+      size: 3270
+    - path: trainer/src/ds_covid/segmentation.py
+      hash: md5
+      md5: eaa83432e9a3c0bdc0b9c3b0b206dd8f
+      size: 6253
     params:
       params.yaml:
         preprocess.classes:
@@ -233,18 +233,18 @@ stages:
       hash: md5
       md5: d5a4dbd96d84f9f6daaacb6f07e8996f
       size: 335544448
-    - path: trainer/src/ds_covid/data.py
-      hash: md5
-      md5: d46cac686df39ba30bd303115dff491f
-      size: 2182
-    - path: trainer/src/ds_covid/segmentation.py
-      hash: md5
-      md5: 56765a9abd51d186c03f7e071214a80a
-      size: 6258
     - path: trainer/scripts/train_segmentation.py
       hash: md5
-      md5: ae20c1dbe617923ea7b8312cdfb87eda
-      size: 7659
+      md5: c1b3a9504eebb1b1e02129a21240c026
+      size: 10225
+    - path: trainer/src/ds_covid/data.py
+      hash: md5
+      md5: 3d00c07f9aada9710deb07ef35673893
+      size: 2235
+    - path: trainer/src/ds_covid/segmentation.py
+      hash: md5
+      md5: eaa83432e9a3c0bdc0b9c3b0b206dd8f
+      size: 6253
     params:
       params.yaml:
         mlflow:
@@ -263,26 +263,27 @@ stages:
           freeze_lr: 0.001
           fine_tune_epochs: 25
           fine_tune_lr: 1e-05
-          batch_size: 32
+          batch_size: 16
           fine_tune_batch_size: 8
           clean_mask_components: 2
           clean_mask_closing_kernel: 15
+          min_val_dice: 0.5
     outs:
     - path: data/models/segmentation.keras
       hash: md5
-      md5: 715961265f2e596eaadeaeeb110ded17
-      size: 188131874
+      md5: 17f8dafc33a92a09ee8e6940fd8cc422
+      size: 173529528
     - path: outputs/segmentation_metrics.json
       hash: md5
-      md5: 126f5ed3985d1d7574244094cf5af5d3
-      size: 159
+      md5: 91521e415c4640049641067cd0fd0bfe
+      size: 181
   evaluate_segmentation:
     cmd: python trainer/scripts/evaluate_segmentation.py
     deps:
     - path: data/models/segmentation.keras
       hash: md5
-      md5: 715961265f2e596eaadeaeeb110ded17
-      size: 188131874
+      md5: 17f8dafc33a92a09ee8e6940fd8cc422
+      size: 173529528
     - path: data/processed/segmentation/M_test.npy
       hash: md5
       md5: f0de43bd7244d2d90ae1d31420d362f4
@@ -291,21 +292,21 @@ stages:
       hash: md5
       md5: 060a5015c3f9052b567edda02330e473
       size: 20971648
-    - path: trainer/src/ds_covid/segmentation.py
-      hash: md5
-      md5: 56765a9abd51d186c03f7e071214a80a
-      size: 6258
     - path: trainer/scripts/evaluate_segmentation.py
       hash: md5
-      md5: c48b99160981a2033c1e79a4b1d9d797
-      size: 2546
+      md5: 252f3774570f926866875d3b3afada35
+      size: 2526
+    - path: trainer/src/ds_covid/segmentation.py
+      hash: md5
+      md5: eaa83432e9a3c0bdc0b9c3b0b206dd8f
+      size: 6253
     params:
       params.yaml:
-        segmentation.batch_size: 32
+        segmentation.batch_size: 16
         segmentation.clean_mask_closing_kernel: 15
         segmentation.clean_mask_components: 2
     outs:
     - path: outputs/segmentation_evaluation_report.json
       hash: md5
-      md5: 97d6bc0a9683bcfd0e178e7a9f2490ce
-      size: 188
+      md5: a03e460aa990b5ab363b4ff1a16b4ae4
+      size: 187
