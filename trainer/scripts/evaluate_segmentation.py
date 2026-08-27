@@ -1,6 +1,6 @@
 """Stage DVC — Évaluation du U-Net de segmentation sur le jeu de test.
 
-Lit  : data/models/lung_unet.keras + data/processed/segmentation/{X,M}_test.npy
+Lit  : data/models/segmentation.keras + data/processed/segmentation/{X,M}_test.npy
 Écrit: outputs/segmentation_evaluation_report.json
 
 Métriques calculées sur le mask brut (seuillage à 0.5) ET sur le mask nettoyé
@@ -32,7 +32,7 @@ def load_params() -> dict:
 
 def main() -> None:
     sp = load_params()
-    model_path = MODELS_DIR / "lung_unet.keras"
+    model_path = MODELS_DIR / "segmentation.keras"
     print(f"[INFO] Chargement modèle : {model_path}", flush=True)
     model = tf.keras.models.load_model(model_path, compile=False)
 

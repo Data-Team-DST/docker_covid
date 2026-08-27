@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     api_version: str = "0.1.0"
 
     # Modèle — ADAPTER CE PATH selon le vrai nom du fichier .keras
-    model_path: str = "data/models/best_model.keras"
+    model_path: str = "data/models/classification.keras"
     model_version: str = "1.0.0"
 
     # Segmentation Service — génère le mask des images de predict/, qui n'en ont pas

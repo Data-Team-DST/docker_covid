@@ -1,6 +1,6 @@
 """Stage DVC 4/4 — Évaluation du modèle entraîné.
 
-Lit  : data/models/covid_model.keras + data/processed/{X,y}_test.npy
+Lit  : data/models/classification.keras + data/processed/{X,y}_test.npy
 Écrit: outputs/evaluation_report.json
 """
 import json
@@ -19,7 +19,7 @@ CLASS_NAMES = ["COVID", "Normal", "Viral Pneumonia", "Lung_Opacity"]
 
 
 def main() -> None:
-    model_path = MODELS_DIR / "covid_model.keras"
+    model_path = MODELS_DIR / "classification.keras"
     print(f"[INFO] Chargement modèle : {model_path}", flush=True)
     model = tf.keras.models.load_model(model_path)
 

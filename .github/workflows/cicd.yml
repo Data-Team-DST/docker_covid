@@ -467,7 +467,7 @@ jobs:
           docker run -d --name smoke-backend \
             -p 8000:8000 \
             -e API_ENV=production \
-            -e MODEL_PATH=data/models/best_model.keras \
+            -e MODEL_PATH=data/models/classification.keras \
             -e PYTHONUNBUFFERED=1 \
             -e LOG_SERVICE_URL=http://localhost:5002/v1/log \
             -v "${{ github.workspace }}/tmp/logs:/app/tmp/logs" \

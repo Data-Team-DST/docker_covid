@@ -1,7 +1,7 @@
 """Stage DVC — Entraînement du U-Net de segmentation pulmonaire + tracking MLflow.
 
 Lit  : data/processed/segmentation/{X,M}_train.npy (re-split en train/val en interne)
-Écrit: data/models/lung_unet.keras  +  outputs/segmentation_metrics.json
+Écrit: data/models/segmentation.keras  +  outputs/segmentation_metrics.json
 
 Entraînement en 2 phases (cf. build_unet) : l'encoder MobileNetV2 pré-entraîné ne doit
 pas être fine-tuné en entier dès le départ avec un LR élevé, sous peine de détruire les
@@ -19,6 +19,7 @@ import tensorflow as tf
 import yaml
 from dotenv import load_dotenv
 from sklearn.model_selection import train_test_split
+from tqdm.keras import TqdmCallback
 
 TRAINER_ROOT = Path(__file__).parent.parent
 REPO_ROOT = TRAINER_ROOT.parent
@@ -27,7 +28,13 @@ sys.path.insert(0, str(TRAINER_ROOT / "src"))
 load_dotenv(REPO_ROOT / ".env")
 
 from ds_covid.data import MemmapSequence  # noqa: E402
-from ds_covid.segmentation import build_unet, combined_loss, dice_coef, iou_metric  # noqa: E402
+from ds_covid.mlflow_utils import MlflowEpochLogger  # noqa: E402
+from ds_covid.segmentation import (  # noqa: E402
+    build_unet,
+    combined_loss,
+    dice_coef,
+    iou_metric,
+)
 
 PARAMS_FILE  = REPO_ROOT / "params.yaml"
 PROCESSED    = REPO_ROOT / "data" / "processed" / "segmentation"
@@ -67,7 +74,7 @@ def main() -> None:
     mlflow.set_experiment(mlp["segmentation_experiment_name"])
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    model_path = MODELS_DIR / "lung_unet.keras"
+    model_path = MODELS_DIR / "segmentation.keras"
 
     with mlflow.start_run():
         mlflow.log_params({
@@ -106,16 +113,25 @@ def main() -> None:
             epochs=sp["freeze_epochs"],
             callbacks=[
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True),
+                # Le decoder seul (encoder gelé) peut quand même déstabiliser à LR constant
+                # une fois qu'il a bien convergé (chute brutale observée en pratique après
+                # ~6 epochs à ce LR) ; ce ReduceLROnPlateau baisse le LR avant que ça arrive.
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=1, min_lr=1e-5),
                 checkpoint_cb,
+                TqdmCallback(desc="Phase 1/2 (decoder)", verbose=2),
+                MlflowEpochLogger(),  # métriques loguées epoch par epoch (visibilité temps réel dans MLflow)
             ],
-            verbose=1,
+            verbose=0,
         )
 
         # --- Phase 2 : encoder dégelé, fine-tuning complet avec un LR beaucoup plus bas ---
         for layer in encoder.layers:
             layer.trainable = True
 
+        # LR très inférieur à celui de la phase 1 (cf. params.yaml segmentation.fine_tune_lr
+        # vs freeze_lr) : l'objectif est d'affiner les features ImageNet à la marge, pas de
+        # les réapprendre — un LR aussi haut qu'en phase 1 les détruirait (effondrement du
+        # val_dice observé en pratique en fine-tunant tout d'un coup à un LR élevé).
         model.compile(
             optimizer=tf.keras.optimizers.Adam(sp["fine_tune_lr"]),
             loss=combined_loss, metrics=[dice_coef, iou_metric],
@@ -135,8 +151,12 @@ def main() -> None:
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=4, restore_best_weights=True),
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=2, min_lr=1e-7),
                 checkpoint_cb,
+                TqdmCallback(desc="Phase 2/2 (fine-tune)", verbose=2),
+                # step_offset = épochs réellement écoulées en phase 1 (peut être < freeze_epochs
+                # si EarlyStopping a coupé court) : la timeline MLflow reste continue entre les 2 phases.
+                MlflowEpochLogger(step_offset=len(history_freeze.epoch)),
             ],
-            verbose=1,
+            verbose=0,
         )
 
         # ModelCheckpoint a déjà sauvegardé le meilleur modèle des 2 phases sur model_path ;

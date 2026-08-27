@@ -134,9 +134,9 @@ check_http "US-07" "log-service /health → 200"  "$LOG_URL/health"
 section "US-08 · DVC pipeline reproductible"
 check_file "US-08" "dvc.yaml"            dvc.yaml
 check_file "US-08" "params.yaml"         params.yaml
-check_file "US-08" "scripts/preprocess.py" scripts/preprocess.py
-check_file "US-08" "scripts/train.py"    scripts/train.py
-check_file "US-08" "scripts/evaluate.py" scripts/evaluate.py
+check_file "US-08" "trainer/scripts/preprocess.py" trainer/scripts/preprocess.py
+check_file "US-08" "trainer/scripts/train.py"    trainer/scripts/train.py
+check_file "US-08" "trainer/scripts/evaluate.py" trainer/scripts/evaluate.py
 check_grep "US-08" "Stage 'preprocess'"  "preprocess:" dvc.yaml
 check_grep "US-08" "Stage 'train'"       "train:"      dvc.yaml
 check_grep "US-08" "Stage 'evaluate'"    "evaluate:"   dvc.yaml

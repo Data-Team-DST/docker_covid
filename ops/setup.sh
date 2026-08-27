@@ -139,7 +139,7 @@ setup_env() {
             cat > "${PROJECT_ROOT}/.env" << 'ENVEOF'
 # DS_COVID -- Variables d'environnement
 BACKEND_URL=http://localhost:8000
-MODEL_PATH=/app/data/models/best_model.keras
+MODEL_PATH=/app/data/models/classification.keras
 MLFLOW_TRACKING_URI=http://mlflow:5000
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=minioadmin

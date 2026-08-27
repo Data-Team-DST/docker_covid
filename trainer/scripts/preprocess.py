@@ -94,6 +94,10 @@ def write_split(
                 target_size=img_w,
             )
             arr = arr.astype("float32")
+            # [-1, 1] plutôt que minmax [0, 1] (exploré dans train.ipynb) : doit
+            # rester identique à backend/app/features/preprocessing.py::preprocess_image,
+            # qui applique exactement (arr / 127.5) - 1.0 à l'inférence — un écart ici
+            # provoquerait un train/serving skew (déjà rencontré une fois sur ce projet).
             arr = (arr / 127.5) - 1.0          # normalise vers [-1, 1]
             X[i] = arr.reshape(img_h, img_w, 1)
         except Exception as e:

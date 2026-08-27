@@ -113,7 +113,11 @@ docker_covid/
 │   ├── kubernetes/          # Manifests K8s (Phase 3)
 │   ├── docker-compose.yml   # Stack complète (9 services)
 │   └── scripts/             # setup.sh, check_quality.sh, fix_style.sh, start_local.sh
-├── scripts/                 # Pipeline DVC : preprocess.py, train.py, evaluate.py
+├── trainer/                 # Service d'entraînement (Dockerfile + pipeline DVC)
+│   ├── Dockerfile
+│   ├── src/ds_covid/        # Package partagé par les stages (augmentation, models, segmentation…)
+│   └── scripts/             # preprocess.py, train.py, evaluate.py, *_segmentation.py
+├── scripts/load_test/       # Locust — charge sur POST /api/v1/predict (sans rapport avec trainer/)
 ├── docs/                    # Architecture, SMART, backlogs, vérification US
 ├── data/
 │   ├── raw.dvc              # 42 330 images trackées DVC (806 MB)
@@ -135,7 +139,7 @@ docker_covid/
 Adapter si besoin :
 
 ```env
-MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
+MODEL_PATH=data/models/classification.keras   # nom réel du fichier .keras
 ```
 
 **Sans modèle** : l'API démarre quand même.
@@ -148,7 +152,7 @@ MODEL_PATH=data/models/best_model.keras   # nom réel du fichier .keras
 Le pipeline ML est défini dans [`dvc.yaml`](dvc.yaml) avec 4 stages :
 
 ```
-data/raw  →  augment  →  data/augmented/  →  preprocess  →  data/processed/  →  train  →  data/models/covid_model.keras
+data/raw  →  augment  →  data/augmented/  →  preprocess  →  data/processed/  →  train  →  data/models/classification.keras
                                                                                                ↓
                                                                                            evaluate  →  outputs/evaluation_report.json
 ```

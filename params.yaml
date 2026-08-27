@@ -11,9 +11,7 @@ augment:
 
 preprocess:
   img_size: [256, 256]
-  max_samples_per_class: 1500  # limite par classe sur les images BRUTES (null = toutes) — utilisé par augment.py
-                                # valeur intermédiaire (TODO.md #1, option C) : valide le pipeline complet
-                                # + les fixes #9/#10/#12 sur un vrai run avant le run final (null) pré-soutenance
+  max_samples_per_class: null  # limite par classe sur les images BRUTES (null = toutes) — utilisé par augment.py
   test_split: 0.2                # part réservée au test, prélevée avant augmentation — utilisé par augment.py
   random_seed: 42                # seed du split train/test (augment.py) ET du split train/val (train.py)
   masking: true                 # applique le mask de segmentation des poumons
@@ -58,8 +56,8 @@ segmentation:
                                     # volontairement hors scope, cf. CHANTIER_INFRA_SERVICES.md #4)
 
 mlflow:
-  experiment_name: ds_covid_cnn
+  experiment_name: classification
   tracking_uri: http://mlflow:5000
-  model_name: covid_xray_cnn
-  segmentation_experiment_name: ds_covid_unet_segmentation
-  segmentation_model_name: lung_segmentation_unet
+  model_name: classification
+  segmentation_experiment_name: segmentation
+  segmentation_model_name: segmentation

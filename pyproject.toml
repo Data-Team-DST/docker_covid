@@ -11,7 +11,8 @@ license = {file = "LICENSE"}
 requires-python = ">=3.11"
 
 [tool.setuptools.packages.find]
-where = ["backend/src", "trainer/src"]
+where = [".", "trainer/src"]
+include = ["baseline*", "ds_covid*"]
 
 # ── Ruff : linting + formatage ────────────────────────────────────────────────
 [tool.ruff]
@@ -50,10 +51,9 @@ ignore = [
 # Pages Streamlit : trailing whitespace dans CSS strings, loop vars de déstructuration
 "frontend/page/*.py" = ["W291", "W293", "B007"]
 "frontend/streamlit_app.py" = ["W291", "W293"]
-# Notebooks et code ML exploratoire — pas soumis au lint CI
-"backend/src/**" = ["ALL"]
-"backend/src/notebooks/**" = ["ALL"]
+# Pipeline ML exploratoire — pas soumis au lint CI
 "trainer/src/**" = ["ALL"]
+"baseline/**" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
@@ -73,7 +73,7 @@ known_first_party = ["app"]
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 python_files = ["test_*.py", "*_test.py"]
-pythonpath = ["backend"]
+pythonpath = ["backend", "."]
 addopts = [
     "--strict-markers",
 ]

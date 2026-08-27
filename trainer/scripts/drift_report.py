@@ -1,6 +1,6 @@
 """US-20 — Rapport Evidently de dérive (PSI + Jensen-Shannon).
 
-Lit  : data/models/covid_model.keras + data/processed/X_train.npy (référence)
+Lit  : data/models/classification.keras + data/processed/X_train.npy (référence)
        + log-service GET /v1/logs (scores de prédiction "production" loggés
        par backend/app/api/predict.py via le logger TELEMETRY_LOGGER_NAME)
 Écrit: outputs/drift/report.html
@@ -61,7 +61,7 @@ def _fetch_production_scores() -> pd.DataFrame:
 
 def _reference_scores() -> pd.DataFrame:
     """Distribution de référence : scores du modèle sur un échantillon de train."""
-    model = tf.keras.models.load_model(MODELS_DIR / "covid_model.keras")
+    model = tf.keras.models.load_model(MODELS_DIR / "classification.keras")
     x_train = np.load(PROCESSED / "X_train.npy")
     sample = x_train[:REFERENCE_SAMPLE_SIZE]
     predictions = model.predict(sample, verbose=0)

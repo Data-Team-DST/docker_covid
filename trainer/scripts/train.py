@@ -1,7 +1,7 @@
 """Stage DVC 3/4 — Entraînement CNN + tracking MLflow.
 
 Lit  : data/processed/{X,y}_train.npy (re-split en train/val en interne)
-Écrit: data/models/covid_model.keras  +  outputs/metrics.json
+Écrit: data/models/classification.keras  +  outputs/metrics.json
 """
 import json
 import os
@@ -29,6 +29,7 @@ sys.path.insert(0, str(TRAINER_ROOT / "src"))
 load_dotenv(REPO_ROOT / ".env")
 
 from ds_covid.data import MemmapSequence  # noqa: E402
+from ds_covid.mlflow_utils import MlflowEpochLogger  # noqa: E402
 from ds_covid.models import build_cnn  # noqa: E402
 
 PARAMS_FILE  = REPO_ROOT / "params.yaml"
@@ -102,6 +103,7 @@ def main() -> None:
             tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True),
             tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6),
             TqdmCallback(verbose=2),  # 1 barre epoch/epoch (temps écoulé/restant), pas de reset par batch
+            MlflowEpochLogger(),  # métriques loguées epoch par epoch (visibilité temps réel dans MLflow)
         ]
 
         history = model.fit(
@@ -114,10 +116,9 @@ def main() -> None:
 
         val_acc  = float(history.history["val_accuracy"][-1])
         val_loss = float(history.history["val_loss"][-1])
-        mlflow.log_metrics({"val_accuracy": val_acc, "val_loss": val_loss})
 
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
-        model_path = MODELS_DIR / "covid_model.keras"
+        model_path = MODELS_DIR / "classification.keras"
         model.save(model_path)
         mlflow.keras.log_model(model, artifact_path="model",
                                registered_model_name=mlp["model_name"])

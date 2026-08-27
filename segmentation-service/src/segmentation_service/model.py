@@ -27,13 +27,19 @@ class ModelLoader:
 
         if not path.exists():
             logger.warning("Fichier modèle introuvable : %s", path)
-            logger.warning("→ Mets lung_unet.keras dans data/models/ et redémarre")
+            logger.warning("→ Mets segmentation.keras dans data/models/ et redémarre")
             return
 
         try:
             import tensorflow as tf
 
-            self._model = tf.keras.models.load_model(str(path))
+            # compile=False : ce service ne fait que de l'inférence, jamais de
+            # ré-entraînement/évaluation — inutile de désérialiser l'optimizer/loss/
+            # metrics (combined_loss, dice_coef, iou_metric), qui vivent dans
+            # trainer/src/ds_covid/segmentation.py et ne sont pas importés ici
+            # (frontières de service). Sans ce flag, le chargement échoue avec
+            # "Could not locate function 'combined_loss'".
+            self._model = tf.keras.models.load_model(str(path), compile=False)
             self.is_loaded = True
             logger.info(
                 "Modèle chargé : %s (%.1f Mo)", path, path.stat().st_size / 1e6
