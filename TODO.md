@@ -7,6 +7,17 @@ fixes GPU/MLflow/DagsHub). Chaque point ci-dessous a été identifié en session
 volontairement laissé de côté (décision à prendre, hors périmètre du moment, ou correction
 non triviale).
 
+## Urgent — avant tout nouveau push/merge
+
+### 0. Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`
+
+Ouvert le 2026-08-27. `main` et cette branche ont divergé indépendamment (~30 commits
+chacune) depuis le merge de la PR #26, avec du recoupement réel sur le nommage des modèles
+(`classification.keras`/`segmentation.keras` sur main vs `covid_model.keras`/`lung_unet.keras`
+ici) et sur `max_samples_per_class`/`dvc.lock`. Détail complet, constat vérifié et stratégie
+proposée dans `CHANTIER_RECONCILIATION_GIT.md` — **à traiter en premier**, contrairement au
+chantier post-soutenance ci-dessous.
+
 ## Décisions en attente
 
 ### 1. `params.yaml` — `max_samples_per_class: 500` restreint le dataset d'entraînement
@@ -17,18 +28,29 @@ Cap le dataset brut à 500 images/classe avant augmentation — utile pour itér
 soutenance**, sous peine de modèle sous-entraîné par rapport aux résultats déjà présentés
 (cf. `frontend/page/04_Machine_learning_et_optimisation`).
 
-### 2. `trainer/requirements.txt` — hash-lock abandonné
+### 2. `trainer/requirements.txt` — hash-lock ~~abandonné~~ **régénéré avec succès le 2026-08-26**
 
-`pip-compile --generate-hashes` sur `trainer/requirements.in` (mlflow 3.15.1 + dvc[s3] +
-jupyterlab + albumentations + seaborn + wheels CUDA nvidia-cudnn/cublas/cufft) a été
-interrompu après 15+ Go téléchargés et 12+ minutes sans converger — coût disproportionné
-vu que `trainer/Dockerfile` n'utilise pas `--require-hashes` (le lock n'était donc qu'un
-"bonus" reproductibilité, pas un besoin fonctionnel). `trainer/requirements.txt` est
-maintenant une liste de versions à plat (validée par Rafael sur son vrai GPU RTX 3060),
-pas un lockfile pip-compile. Si le hash-lock redevient souhaité : relancer
-`pip-compile --generate-hashes` en conteneur Linux avec beaucoup de temps/bande passante
-disponibles, ou épingler manuellement chaque wheel nvidia à une version précise pour
-réduire l'espace de résolution.
+~~`pip-compile --generate-hashes` sur `trainer/requirements.in` avait été interrompu après
+15+ Go téléchargés et 12+ minutes sans converger.~~ Cause probable identifiée : les 3
+wheels CUDA (`nvidia-cudnn-cu12`, `nvidia-cublas-cu12`, `nvidia-cufft-cu12`) n'avaient
+**aucune version fixée** dans `requirements.in`, forçant le résolveur à explorer un espace
+combinatoire énorme sur des wheels de plusieurs centaines de Mo chacune. Fix : épinglés aux
+versions confirmées par le rebuild réel du #3 (`nvidia-cublas-cu12==12.9.2.10`,
+`nvidia-cudnn-cu12==9.24.0.43`, `nvidia-cufft-cu12==11.4.1.4`), puis
+`pip-compile --generate-hashes --allow-unsafe` relancé en conteneur Linux (`python:3.11-slim`,
+jamais sur cette machine Windows) → **converge en ~19 min** (vs. jamais avant).
+
+Validé de bout en bout :
+- `pip install --require-hashes -r trainer/requirements.txt` (conteneur Linux propre) → OK
+- Aucune trace `pywin32`/Windows dans le lock (piège déjà rencontré sur `data-service`, cf.
+  [feedback-pip-compile-linux-lockfiles] en mémoire) → vérifié absent
+- `docker build trainer` avec ce nouveau fichier → OK, GPU RTX 3060 toujours détecté
+  (`TF 2.21.0` / `MLflow 3.15.1`), image `covid-xray-trainer:hashlock-verify`
+
+`trainer/requirements.txt` est donc de nouveau un vrai lockfile `pip-compile`, cohérent
+avec `backend`/`data-service`/`segmentation-service`. `trainer/Dockerfile` n'a pas besoin
+d'ajouter `--require-hashes` explicitement — dès qu'une ligne du fichier a un hash, pip
+bascule automatiquement en mode vérification pour tout le fichier (protection gratuite).
 
 ## Vérifications non faites
 
@@ -93,8 +115,16 @@ coût).
     actuel (liste à plat post-abandon hash-lock, cf. #2) sur le nouveau `base`
   - `docker run --gpus all covid-xray-trainer:bump-verify python -c "..."` →
     `TF 2.21.0` / `MLflow 3.15.1` / `GPUs detected: [PhysicalDevice(... GPU:0 ...)]`
-  - Images taguées `:bump-verify` laissées en local (pas nettoyées, faible coût) ; un
-    conteneur mlflow différent tournait déjà (sain, 4h+ d'uptime) — non touché.
+  - Images taguées `:bump-verify` laissées en local (pas nettoyées, faible coût).
+  - **[ERREUR corrigée le 2026-08-26]** Un conteneur mlflow différent tournait déjà (sain,
+    4h+ d'uptime) au moment du nettoyage du conteneur accidentellement lancé par
+    `docker run --rm ghcr.io/.../covid-xray-mlflow:latest mlflow --version` (entrypoint
+    `/start.sh` ignore l'argument et démarre le vrai serveur). Le cleanup a utilisé
+    `docker ps -a --filter ancestor=<image> -q | xargs docker rm -f` — ce filtre matche
+    **tous** les conteneurs de cette image, pas seulement celui qu'on vient de créer, et a
+    donc supprimé les deux, y compris le serveur sain. Postgres/MinIO (le vrai stockage
+    des runs/métriques/artefacts) n'ont pas été touchés → aucune perte de données, juste
+    une coupure du serveur API/UI le temps de le relancer.
 - **2026-08-26, traitement des points #4/6/7/8/9/10/11/12/13 (non committé)** — tout
   vérifié en sandbox jetable (conteneur Docker, mounts en lecture seule, CLAUDE.md #9),
   jamais en écrivant dans un venv réel :
