@@ -4,7 +4,7 @@ Lit  : data/augmented/{train,test}/{classe}/{images,masks}/  (sortie du stage au
        déjà splittée — le split train/test est fait dans augment.py, avant augmentation)
 Écrit: data/processed/{X,y}_{train,test}.npy
 
-Pipeline par image (voir deep_learning.preprocessing.process_single_image) :
+Pipeline par image (voir ds_covid.preprocessing.process_single_image) :
   denoising (optionnel) → masking + crop poumons (optionnel) → CLAHE (optionnel) → resize
 """
 import json
@@ -17,15 +17,16 @@ import yaml
 from numpy.lib.format import open_memmap
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
+TRAINER_ROOT = Path(__file__).parent.parent
+REPO_ROOT = TRAINER_ROOT.parent
+sys.path.insert(0, str(TRAINER_ROOT / "src"))
 
-from deep_learning.preprocessing import process_single_image  # noqa: E402
+from ds_covid.preprocessing import process_single_image  # noqa: E402
 
-PARAMS_FILE = PROJECT_ROOT / "params.yaml"
-AUGMENTED_DIR = PROJECT_ROOT / "data" / "augmented"
-OUT_DIR = PROJECT_ROOT / "data" / "processed"
-STATS_FILE = PROJECT_ROOT / "outputs" / "preprocess_stats.json"
+PARAMS_FILE = REPO_ROOT / "params.yaml"
+AUGMENTED_DIR = REPO_ROOT / "data" / "augmented"
+OUT_DIR = REPO_ROOT / "data" / "processed"
+STATS_FILE = REPO_ROOT / "outputs" / "preprocess_stats.json"
 
 
 def load_params() -> dict:
@@ -93,6 +94,10 @@ def write_split(
                 target_size=img_w,
             )
             arr = arr.astype("float32")
+            # [-1, 1] plutôt que minmax [0, 1] (exploré dans train.ipynb) : doit
+            # rester identique à backend/app/features/preprocessing.py::preprocess_image,
+            # qui applique exactement (arr / 127.5) - 1.0 à l'inférence — un écart ici
+            # provoquerait un train/serving skew (déjà rencontré une fois sur ce projet).
             arr = (arr / 127.5) - 1.0          # normalise vers [-1, 1]
             X[i] = arr.reshape(img_h, img_w, 1)
         except Exception as e:

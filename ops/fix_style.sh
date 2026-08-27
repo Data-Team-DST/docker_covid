@@ -6,10 +6,10 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-TARGETS="backend/app frontend backend/src"
+TARGETS="backend/app frontend backend/src trainer/src"
 
 echo -e "${YELLOW}🎨 Correction automatique du style Python...${NC}"
 echo ""

@@ -55,6 +55,15 @@ les répertoires réels du repo. Retour d'expérience : une validation a partiel
 `backend/.venv` réel préexistant en montant le repo en écriture directe dans un conteneur
 Docker.
 
+La copie doit lister explicitement les dossiers nécessaires (ex. `Makefile`, `pyproject.toml`,
+`backend/`, `data-service/`, `ops/`…), jamais copier l'arbre complet avec des exclusions
+(`tar --exclude=...`). Retour d'expérience : une copie par exclusion doit quand même parcourir
+tout l'arbre pour décider quoi exclure — sur cette machine, les `.venv` locaux de chaque
+service (backend/.venv, data-service/.venv, frontend/.venv, dashboard/.venv, chacun des
+dizaines de milliers de petits fichiers) et `data/` (plusieurs Go) rendent ce parcours
+extrêmement lent (plus de 10 minutes, bloqué). Une copie ciblée du même contenu utile a pris
+quelques secondes.
+
 **10 — Une erreur qui révèle un risque récurrent appelle une proposition de règle.**
 Quand une erreur commise en session coûte du temps, risque une régression ou trompe
 l'utilisateur (hypothèse fausse, vérification qui ne vérifie rien, effet de bord non anticipé)
@@ -103,31 +112,54 @@ réelle avec l'utilisateur avant toute action de nettoyage de grande ampleur.
 
 ```
 backend/                    FastAPI — port 8000 — inférence ML
-├── app/main.py              point d'entrée
-├── app/config.py            configuration centralisée
-├── app/api/                 health.py, predict.py, security.py, metrics.py
-├── app/models/loader.py     chargement modèle Keras
-├── app/features/            preprocessing image
-└── app/schemas/              schémas Pydantic (réponses)
+├── Dockerfile                colocalisé mais contexte de build = racine du repo (pas backend/) :
+                               COPY trainer/src ./src, requis par app/features/preprocessing.py
+                               (réutilise ds_covid.preprocessing + ds_covid.segmentation pour un
+                               preprocessing d'inférence identique à celui de l'entraînement)
+├── app/main.py                point d'entrée
+├── app/config.py               configuration centralisée
+├── app/api/                    health.py, predict.py, security.py, metrics.py
+├── app/models/loader.py        chargement modèle Keras
+├── app/features/                preprocessing image — dépend de trainer/src/ds_covid (copié au
+                                 build, pas d'import cross-service à l'exécution)
+├── app/schemas/                  schémas Pydantic (réponses)
+└── src/ml/                     baseline sklearn — utilisé uniquement par backend/tests/,
+                                 hors périmètre de trainer/ (ne dépend pas de ds_covid)
 
 data-service/                FastAPI — port 5001 — DVC pull/push/status, stats données
 └── src/data_service/         main.py, api/v1/router.py
 
 log-service/                 FastAPI — port 5002 — agrégateur logs JSON centralisé
 frontend/                    Streamlit — port 8501 — multi-pages (01_accueil … 07_conclusion)
+├── Dockerfile                colocalisé (contexte frontend/)
 dashboard/                   Flask — port 5050 — backlog agile + data explorer
 shared/                      logging_config.py — JSON structuré, importé par tous les services
 
-infrastructure/
-├── docker/                  Dockerfiles par service (backend, streamlit, mlflow, trainer, base)
-├── kubernetes/               manifests K8s (Phase 3)
-├── scripts/                  setup.sh, check_quality.sh, fix_style.sh, start_local.sh
-└── docker-compose.yml        stack complète (9 services : backend, data-service, log-service,
-                               frontend, dashboard, mlflow, minio, postgres, ...)
+trainer/                     Pipeline d'entraînement — service dédié (ex-scripts/ + backend/src/ds_covid/)
+├── Dockerfile                colocalisé (contexte trainer/), image de base partagée avec frontend/
+├── requirements.txt           extras trainer (mlflow, dvc[s3], jupyterlab, albumentations…)
+├── src/ds_covid/               augmentation.py, features.py, models.py, preprocessing.py,
+                                 segmentation.py (U-Net poumons), data.py (MemmapSequence)…
+                                 réutilisé par backend/ au build (COPY trainer/src, pas d'import
+                                 Python cross-service — voir backend/Dockerfile ci-dessus)
+└── scripts/                    preprocess.py, train.py, evaluate.py, augment.py +
+                                 preprocess_segmentation.py, train_segmentation.py,
+                                 evaluate_segmentation.py (stages DVC)
 
-scripts/                     Pipeline DVC : preprocess.py, train.py, evaluate.py, augment.py, evaluate.py
+infrastructure/
+├── docker/                  Dockerfiles restants : mlflow, base (backend/frontend/trainer colocalisés)
+└── docker-compose.yml        stack complète (9 services : backend, data-service, streamlit,
+                               trainer, mlflow, log-service, postgres, minio, minio-init).
+                               `dashboard` (Flask) n'est pas dans ce compose, lancé à part.
+
+kubernetes/                  manifests K8s (Phase 3, non déployé) — racine, hors infrastructure/
+ops/                          setup.sh, check_quality.sh, fix_style.sh, start_local.sh
+                               (ex-infrastructure/scripts/, renommé pour éviter la collision
+                               avec scripts/load_test/)
+
+scripts/load_test/           Locust — test de charge sur /predict
 data/raw.dvc                 42 330 images, versionné DVC (806 MB), remote MinIO
-dvc.yaml / params.yaml       Pipeline reproductible (dvc repro)
+dvc.yaml / params.yaml       Pipeline reproductible (dvc repro) — stages dans trainer/scripts/
 ```
 
 **Isolation de service** : `backend/.venv` et `data-service/.venv` sont deux venvs distincts

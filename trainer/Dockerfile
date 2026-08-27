@@ -9,7 +9,7 @@ RUN python -m pip install --upgrade pip setuptools wheel \
  && python -m pip install --ignore-installed blinker \
  && python -m pip install -r /tmp/trainer.txt
 
-COPY deep_learning/ /workspace/deep_learning/
+COPY src/ /workspace/src/
 
 COPY gpu-entrypoint.sh /usr/local/bin/gpu-entrypoint.sh
 RUN chmod +x /usr/local/bin/gpu-entrypoint.sh

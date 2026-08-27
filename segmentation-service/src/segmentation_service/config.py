@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     service_port: int = 8001
 
     # Modèle — DOIT correspondre à params.yaml (mlflow.segmentation_model_name /
-    # entraîné par le stage DVC train_segmentation, cf. trainer/deep_learning/segmentation.py)
+    # entraîné par le stage DVC train_segmentation, cf. trainer/src/ds_covid/segmentation.py)
     model_path: str = "data/models/segmentation.keras"
     model_version: str = "1.0.0"
 

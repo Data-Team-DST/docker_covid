@@ -4,7 +4,7 @@ Lit  : data/models/segmentation.keras + data/processed/segmentation/{X,M}_test.n
 Écrit: outputs/segmentation_evaluation_report.json
 
 Métriques calculées sur le mask brut (seuillage à 0.5) ET sur le mask nettoyé
-(cf. deep_learning.segmentation.clean_mask), pour vérifier l'apport du post-traitement.
+(cf. ds_covid.segmentation.clean_mask), pour vérifier l'apport du post-traitement.
 """
 import json
 import sys
@@ -14,15 +14,15 @@ import numpy as np
 import tensorflow as tf
 import yaml
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
+REPO_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "trainer" / "src"))
 
-from deep_learning.segmentation import clean_mask, dice_coef, iou_metric  # noqa: E402
+from ds_covid.segmentation import clean_mask, dice_coef, iou_metric  # noqa: E402
 
-PARAMS_FILE = PROJECT_ROOT / "params.yaml"
-MODELS_DIR  = PROJECT_ROOT / "data" / "models"
-PROCESSED   = PROJECT_ROOT / "data" / "processed" / "segmentation"
-EVAL_FILE   = PROJECT_ROOT / "outputs" / "segmentation_evaluation_report.json"
+PARAMS_FILE = REPO_ROOT / "params.yaml"
+MODELS_DIR  = REPO_ROOT / "data" / "models"
+PROCESSED   = REPO_ROOT / "data" / "processed" / "segmentation"
+EVAL_FILE   = REPO_ROOT / "outputs" / "segmentation_evaluation_report.json"
 
 
 def load_params() -> dict:

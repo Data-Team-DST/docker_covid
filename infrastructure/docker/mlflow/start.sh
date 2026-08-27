@@ -4,7 +4,10 @@ set -e
 DB_URI="postgresql://${POSTGRES_USER:-mlflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mlflow}"
 
 echo "[mlflow-start] Running db upgrade..."
-mlflow db upgrade "$DB_URI" || true
+if ! mlflow db upgrade "$DB_URI"; then
+  echo "[mlflow-start] ERREUR : migration DB échouée, arrêt (schéma potentiellement incompatible)" >&2
+  exit 1
+fi
 
 echo "[mlflow-start] Starting server..."
 exec mlflow server \

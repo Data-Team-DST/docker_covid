@@ -16,31 +16,27 @@ on:
       - "dashboard/**"
       - ".github/workflows/dashboard.yml"
 
+# Deny-all au niveau workflow : chaque job déclare son propre bloc `permissions`
+# minimal (voir .claude/rules/common/github-actions-security.md).
+permissions: {}
+
 jobs:
   lint_dashboard:
     name: "Lint Dashboard"
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
 
       - name: Install lint deps
-        run: pip install -q ruff
+        run: pip install -q --only-binary=":all:" ruff==0.8.6
 
       - name: Ruff check (dashboard)
         run: ruff check dashboard/
-
-apiVersion: 1
-
-providers:
-  - name: "ds-covid-dashboards"
-    orgId: 1
-    folder: "DS_COVID"
-    type: file
-    disableDeletion: false
-    updateIntervalSeconds: 30
-    options:
-      path: /etc/grafana/provisioning/dashboards

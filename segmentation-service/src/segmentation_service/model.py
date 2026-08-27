@@ -36,7 +36,7 @@ class ModelLoader:
             # compile=False : ce service ne fait que de l'inférence, jamais de
             # ré-entraînement/évaluation — inutile de désérialiser l'optimizer/loss/
             # metrics (combined_loss, dice_coef, iou_metric), qui vivent dans
-            # trainer/deep_learning/segmentation.py et ne sont pas importés ici
+            # trainer/src/ds_covid/segmentation.py et ne sont pas importés ici
             # (frontières de service). Sans ce flag, le chargement échoue avec
             # "Could not locate function 'combined_loss'".
             self._model = tf.keras.models.load_model(str(path), compile=False)

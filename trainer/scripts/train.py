@@ -18,23 +18,24 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm.keras import TqdmCallback
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
+TRAINER_ROOT = Path(__file__).parent.parent
+REPO_ROOT = TRAINER_ROOT.parent
+sys.path.insert(0, str(TRAINER_ROOT / "src"))
 
 # En local (hors Docker), MLFLOW_TRACKING_URI="http://mlflow:5000" (params.yaml)
 # ne se résout pas — .env fournit l'override http://localhost:5000. load_dotenv()
 # ne touche pas les variables déjà définies dans l'environnement (donc sans effet
 # en conteneur, où docker-compose fixe MLFLOW_TRACKING_URI directement).
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(REPO_ROOT / ".env")
 
-from deep_learning.data import MemmapSequence  # noqa: E402
-from deep_learning.mlflow_utils import MlflowEpochLogger  # noqa: E402
-from deep_learning.models import build_cnn  # noqa: E402
+from ds_covid.data import MemmapSequence  # noqa: E402
+from ds_covid.mlflow_utils import MlflowEpochLogger  # noqa: E402
+from ds_covid.models import build_cnn  # noqa: E402
 
-PARAMS_FILE  = PROJECT_ROOT / "params.yaml"
-PROCESSED    = PROJECT_ROOT / "data" / "processed"
-MODELS_DIR   = PROJECT_ROOT / "data" / "models"
-METRICS_FILE = PROJECT_ROOT / "outputs" / "metrics.json"
+PARAMS_FILE  = REPO_ROOT / "params.yaml"
+PROCESSED    = REPO_ROOT / "data" / "processed"
+MODELS_DIR   = REPO_ROOT / "data" / "models"
+METRICS_FILE = REPO_ROOT / "outputs" / "metrics.json"
 
 
 def load_params() -> dict:
@@ -72,7 +73,7 @@ def main() -> None:
 
     # class_weight appliqué via sample_weight dans MemmapSequence (pas via l'argument
     # class_weight de model.fit(), incompatible avec un Sequence custom sous Keras 3 —
-    # voir deep_learning.data.MemmapSequence). Le split val ne doit pas être pondéré : la
+    # voir ds_covid.data.MemmapSequence). Le split val ne doit pas être pondéré : la
     # pondération ne doit affecter que la loss d'entraînement, pas val_loss (monitorée
     # par EarlyStopping/ReduceLROnPlateau).
     train_seq = MemmapSequence(

@@ -1,0 +1,27 @@
+mlflow==3.15.1
+boto3
+dvc[s3]
+jupyterlab
+albumentations
+seaborn
+tqdm
+# API classique (Report + DataDriftPreset) figée après 0.4.x — 0.5+ restructure
+# l'API autour d'un nouveau Dataset/Report (cf. US-20). Vérifié le 2026-08-27 :
+# 0.4.40 supporte stattest="psi"/"jensenshannon" sur des colonnes numériques.
+evidently==0.4.40
+# tensorflow 2.21 exige protobuf>=6.31.1,<8 ; mlflow/opentelemetry-proto/databricks-sdk
+# acceptent une plage plus large — on épingle dans l'intersection valide pour éviter que
+# pip ne remonte au-delà de ce que tensorflow supporte (voir historique : avec TF 2.18 et
+# protobuf 6.x non épinglé, ça cassait les stubs tensorboard — MessageFactory.GetPrototype).
+protobuf<7,>=6.31.1
+# tensorflow[and-cuda] pip wheels — l'image tensorflow/tensorflow:*-gpu embarque un cuDNN
+# apt (8.x) plus vieux que ce que le binaire TF 2.21 attend (9.x), ce qui casse la
+# détection GPU (CUDNN_STATUS_INTERNAL_ERROR). TF trouve automatiquement ces wheels via
+# leur propre RPATH, sans configuration LD_LIBRARY_PATH supplémentaire.
+# Versions épinglées (au lieu de laisser pip choisir) : validées par un vrai build +
+# détection GPU réussie le 2026-08-26 (RTX 3060) — épingler réduit aussi drastiquement
+# l'espace de résolution pour pip-compile --generate-hashes (cf. TODO.md #2 : la première
+# tentative sans version fixée sur ces 3 wheels n'avait jamais convergé).
+nvidia-cudnn-cu12==9.24.0.43
+nvidia-cublas-cu12==12.9.2.10
+nvidia-cufft-cu12==11.4.1.4
