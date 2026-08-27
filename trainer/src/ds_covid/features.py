@@ -84,6 +84,9 @@ def prepare_covid_data(
     X = []  # Image vectors
     y = []  # Labels
 
+    if max_samples_per_class is not None and max_samples_per_class <= 0:
+        raise ValueError("max_samples_per_class must be None or a positive integer")
+
     for i, category in enumerate(categories):
         images_path = Path(dataset_path) / category / "images"
 
@@ -93,7 +96,7 @@ def prepare_covid_data(
 
         image_files = list(images_path.glob("*.png"))
 
-        if max_samples_per_class:
+        if max_samples_per_class is not None:
             image_files = image_files[:max_samples_per_class]
 
         print(f"[INFO] Processing {len(image_files)} images for {category}")
