@@ -25,7 +25,9 @@ class MemmapSequence(tf.keras.utils.Sequence):
         shuffle: bool,
         indices: Optional[np.ndarray] = None,
         class_weight: Optional[dict] = None,
+        **kwargs,
     ):
+        super().__init__(**kwargs)
         self.X = X
         self.y = y
         self.batch_size = batch_size

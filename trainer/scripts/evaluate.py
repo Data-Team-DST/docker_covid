@@ -19,15 +19,18 @@ CLASS_NAMES = ["COVID", "Normal", "Viral Pneumonia", "Lung_Opacity"]
 
 
 def main() -> None:
+    for gpu in tf.config.list_physical_devices("GPU"):
+        tf.config.experimental.set_memory_growth(gpu, True)
+
     model_path = MODELS_DIR / "classification.keras"
     print(f"[INFO] Chargement modèle : {model_path}", flush=True)
     model = tf.keras.models.load_model(model_path)
 
-    X_test = np.load(PROCESSED / "X_test.npy")
+    X_test = np.load(PROCESSED / "X_test.npy", mmap_mode="r")
     y_test = np.load(PROCESSED / "y_test.npy")
     print(f"[INFO] Évaluation sur {len(X_test)} images", flush=True)
 
-    y_pred_proba = model.predict(X_test, verbose=0)
+    y_pred_proba = model.predict(X_test, batch_size=32, verbose=0)
     y_pred = np.argmax(y_pred_proba, axis=1)
 
     accuracy = float(np.mean(y_pred == y_test))
