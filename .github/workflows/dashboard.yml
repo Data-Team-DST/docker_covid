@@ -32,3 +32,15 @@ jobs:
 
       - name: Ruff check (dashboard)
         run: ruff check dashboard/
+
+apiVersion: 1
+
+providers:
+  - name: "ds-covid-dashboards"
+    orgId: 1
+    folder: "DS_COVID"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards

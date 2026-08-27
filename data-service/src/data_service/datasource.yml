@@ -6,7 +6,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: infrastructure/docker/backend/Dockerfile
     image: ${REGISTRY}/${GITHUB_USER}/covid-xray-backend:${IMAGE_TAG:-latest}
     container_name: covid-xray-backend
     ports:
@@ -14,52 +14,16 @@ services:
     volumes:
       - ./data:/app/data:ro
       - ./backend/app:/app/app
+      - ./shared:/app/shared:ro
       - ./tmp/logs:/app/tmp/logs
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
       - API_ENV=${API_ENV:-development}
-      - MODEL_PATH=${MODEL_PATH:-data/models/classification.keras}
+      - MODEL_PATH=${MODEL_PATH:-data/models/best_model.keras}
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
-      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-100}
-      - SEGMENTATION_SERVICE_URL=http://segmentation-service:8001
-    depends_on:
-      segmentation-service:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: "1.0"
-    networks:
-      - covid-net
-
-  # ── Segmentation Service (U-Net : mask pulmonaire pour l'inférence) ────────
-  segmentation-service:
-    build:
-      context: segmentation-service
-      dockerfile: Dockerfile
-    image: ${REGISTRY}/${GITHUB_USER}/covid-xray-segmentation-service:${IMAGE_TAG:-latest}
-    container_name: covid-xray-segmentation-service
-    ports:
-      - "8001:8001"
-    volumes:
-      - ./data:/app/data:ro
-      - ./tmp/logs:/app/tmp/logs
-    env_file: .env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - LOG_SERVICE_URL=http://log-service:5002/v1/log
-      - MODEL_PATH=${SEGMENTATION_MODEL_PATH:-data/models/segmentation.keras}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -88,6 +52,7 @@ services:
       - ./.git:/app/.git:ro
       - ./tmp/logs:/app/tmp/logs
       - ./infrastructure/dvc_container_config.local:/app/.dvc/config.local:ro
+      - ./shared:/app/shared:ro
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
@@ -115,14 +80,14 @@ services:
   # ── Frontend Streamlit ─────────────────────────────────────────────────────
   streamlit:
     build:
-      context: frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: infrastructure/${STREAMLIT_DOCKERFILE}
     image: ${STREAMLIT_IMAGE}:${IMAGE_TAG:-latest}
     container_name: ${STREAMLIT_CONTAINER_NAME:-covid-xray-streamlit}
     ports:
       - "${STREAMLIT_PORT:-8501}:8501"
     volumes:
-      - ./frontend:/workspace/frontend
+      - ./frontend:/app/frontend
     env_file: .env
     environment:
       - BACKEND_URL=http://backend:8000
@@ -150,25 +115,20 @@ services:
   # ── Trainer (entraînement + MLflow logging) ────────────────────────────────
   trainer:
     build:
-      context: trainer
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: infrastructure/${TRAINER_DOCKERFILE}
     image: ${TRAINER_IMAGE}:${IMAGE_TAG:-latest}
     container_name: ${TRAINER_CONTAINER_NAME:-covid-xray-trainer}
     ports:
       - "${TRAINER_PORT:-8888}:8888"
     volumes:
       - ./data:/app/data
-      - ./trainer/src:/app/src
+      - ./backend/src:/app/src
       - ./models:/app/models
       - ./outputs:/app/outputs
     env_file: .env
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - LOG_SERVICE_BASE_URL=http://log-service:5002
     depends_on:
       mlflow:
         condition: service_healthy
@@ -178,11 +138,6 @@ services:
         limits:
           memory: 2g
           cpus: "2.0"
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     networks:
       - covid-net
     profiles:
@@ -221,7 +176,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: 512m
           cpus: "0.5"
     networks:
       - covid-net
@@ -314,16 +269,11 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - MLFLOW_BUCKET=${MLFLOW_BUCKET:-mlflow}
-      - DVC_BUCKET=${DVC_BUCKET:-dvcstore}
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\";
-      mc mb --ignore-existing \"local/$$MLFLOW_BUCKET\";
-      mc mb --ignore-existing \"local/$$DVC_BUCKET\";
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      mc mb --ignore-existing local/${MLFLOW_BUCKET:-mlflow};
+      mc mb --ignore-existing local/${DVC_BUCKET:-dvcstore};
       exit 0;
       "
     deploy:
