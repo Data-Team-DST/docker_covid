@@ -14,9 +14,17 @@ class Settings(BaseSettings):
     api_env: str = "development"
     api_version: str = "0.1.0"
 
-    # Modèle — ADAPTER CE PATH selon le vrai nom du fichier .keras
+    # Modèle — fallback local si MLflow Registry est indisponible (voir ci-dessous)
     model_path: str = "data/models/classification.keras"
     model_version: str = "1.0.0"
+
+    # MLflow Model Registry — chargement prioritaire du modèle taggé mlflow_model_stage.
+    # Si vide, indisponible, ou aucun modèle à ce stage : fallback silencieux sur
+    # model_path (voir app/models/loader.py). Jamais bloquant au démarrage.
+    mlflow_tracking_uri: str = "http://mlflow:5000"
+    mlflow_model_name: str = "classification"
+    mlflow_model_stage: str = "Production"
+    mlflow_lookup_timeout_s: float = 5.0
 
     # Segmentation Service — génère le mask des images de predict/, qui n'en ont pas
     # contrairement au dataset d'entraînement. Service séparé (U-Net + TensorFlow),

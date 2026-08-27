@@ -252,6 +252,23 @@ def predict():
     return render_template("predict.html", result=r.json(), error=None)
 
 
+@app.route("/modeles")
+def model_status():
+    """Provenance des modèles chargés (MLflow Registry vs fichier local, cf. US
+    chantier infra #17) — interroge /health du backend, qui interroge lui-même
+    celui du segmentation-service."""
+    try:
+        r = requests.get(f"{BACKEND_URL}/health", timeout=5)
+        r.raise_for_status()
+        health = r.json()
+        error = None
+    except requests.exceptions.RequestException as e:
+        health = None
+        error = f"Backend inaccessible ({BACKEND_URL}) — {e}"
+
+    return render_template("model_status.html", health=health, error=error)
+
+
 @app.route("/data")
 def data_explorer():
     try:

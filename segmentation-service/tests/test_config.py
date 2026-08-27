@@ -32,3 +32,13 @@ def test_defaults_match_params_yaml():
     assert settings.img_size == img_h
     assert settings.clean_mask_components == seg["clean_mask_components"]
     assert settings.clean_mask_closing_kernel == seg["clean_mask_closing_kernel"]
+
+
+def test_mlflow_model_name_matches_params_yaml():
+    """mlflow_model_name DOIT rester synchronisé avec params.yaml
+    (mlflow.segmentation_model_name) — sinon la Registry est interrogée sous un nom
+    que rien n'y enregistre jamais."""
+    mlflow_params = _load_params()["mlflow"]
+    settings = Settings()
+
+    assert settings.mlflow_model_name == mlflow_params["segmentation_model_name"]

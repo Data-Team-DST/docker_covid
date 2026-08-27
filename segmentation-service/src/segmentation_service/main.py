@@ -36,10 +36,15 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def _startup():
-    logger.info("segmentation-service démarrage, chargement depuis %s", settings.model_path)
+    logger.info(
+        "segmentation-service démarrage : MLflow Registry (%s@%s) puis fallback %s",
+        settings.mlflow_model_name,
+        settings.mlflow_model_stage,
+        settings.model_path,
+    )
     model_loader.load(settings.model_path)
     if model_loader.is_loaded:
-        logger.info("U-Net chargé avec succès")
+        logger.info("U-Net chargé avec succès (source: %s)", model_loader.source)
     else:
         logger.warning("U-Net non chargé — /v1/segment retournera 503")
 
@@ -51,6 +56,7 @@ def health():
         "service": "segmentation-service",
         "version": settings.model_version,
         "model_loaded": model_loader.is_loaded,
+        "model_source": model_loader.source,
     }
 
 
