@@ -13,7 +13,6 @@ service à part, déployable/scalable indépendamment (cf. `predict_lung_mask`).
 """
 
 import logging
-from typing import Optional
 
 import cv2
 import httpx
@@ -65,10 +64,10 @@ def squared_crop_to_lungs(masked_img: np.ndarray) -> np.ndarray:
 
 def apply_pipeline(
     img_array: np.ndarray,
-    mask_array: Optional[np.ndarray],
+    mask_array: np.ndarray | None,
     cropping: bool,
-    denoising_method: Optional[str],
-    clahe_processor: Optional[cv2.CLAHE],
+    denoising_method: str | None,
+    clahe_processor: cv2.CLAHE | None,
     target_size: int,
 ) -> np.ndarray:
     """Applique masking + crop + CLAHE + resize à une image en niveaux de gris déjà
@@ -99,7 +98,7 @@ def predict_lung_mask(
     image_bytes: bytes,
     segmentation_service_url: str,
     timeout: float,
-    client: Optional[httpx.Client] = None,
+    client: httpx.Client | None = None,
 ) -> np.ndarray:
     """Appelle le segmentation-service pour obtenir le mask des poumons.
 
@@ -134,10 +133,10 @@ def preprocess_image(
     clahe: bool = True,
     clahe_clip_limit: float = 2.0,
     clahe_tile_grid_size: tuple[int, int] = (8, 8),
-    denoising_method: Optional[str] = None,
+    denoising_method: str | None = None,
     segmentation_service_url: str = "",
     segmentation_service_timeout_s: float = 10.0,
-    segmentation_client: Optional[httpx.Client] = None,
+    segmentation_client: httpx.Client | None = None,
 ) -> np.ndarray:
     """
     Prépare une image brute pour l'inférence.
