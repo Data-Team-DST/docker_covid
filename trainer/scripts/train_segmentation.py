@@ -100,6 +100,9 @@ def main() -> None:
             epochs=sp["freeze_epochs"],
             callbacks=[
                 tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True),
+                # Le decoder seul (encoder gelé) peut quand même déstabiliser à LR constant
+                # une fois qu'il a bien convergé (chute brutale observée en pratique après
+                # ~6 epochs à ce LR) ; ce ReduceLROnPlateau baisse le LR avant que ça arrive.
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=1, min_lr=1e-5),
                 tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
                 TqdmCallback(desc="Phase 1/2 (decoder)", verbose=2),
@@ -112,6 +115,10 @@ def main() -> None:
         for layer in encoder.layers:
             layer.trainable = True
 
+        # LR très inférieur à celui de la phase 1 (cf. params.yaml segmentation.fine_tune_lr
+        # vs freeze_lr) : l'objectif est d'affiner les features ImageNet à la marge, pas de
+        # les réapprendre — un LR aussi haut qu'en phase 1 les détruirait (effondrement du
+        # val_dice observé en pratique en fine-tunant tout d'un coup à un LR élevé).
         model.compile(
             optimizer=tf.keras.optimizers.Adam(sp["fine_tune_lr"]),
             loss=combined_loss, metrics=[dice_coef, iou_metric],
