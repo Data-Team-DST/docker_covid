@@ -20,7 +20,8 @@ class Settings(BaseSettings):
 
     # Segmentation Service — génère le mask des images de predict/, qui n'en ont pas
     # contrairement au dataset d'entraînement. Service séparé (U-Net + TensorFlow),
-    # appelé en HTTP plutôt qu'embarqué dans le backend (cf. app/features/preprocessing.py).
+    # appelé en HTTP plutôt qu'embarqué dans le backend
+    # (cf. app/features/preprocessing.py).
     segmentation_service_url: str = "http://segmentation-service:8001"
     segmentation_service_timeout_s: float = 10.0
 
@@ -38,7 +39,8 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 10
 
     # Image preprocessing — DOIT correspondre à params.yaml (paramètres utilisés à
-    # l'entraînement, section `preprocess` / `segmentation`) sous peine de train/serving skew.
+    # l'entraînement, section `preprocess` / `segmentation`) sous peine de
+    # train/serving skew.
     img_size: tuple[int, int] = (256, 256)
     masking: bool = True
     cropping: bool = True
@@ -56,7 +58,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _require_api_key_in_production(self) -> "Settings":
-        """Fail-fast : refuse de démarrer en prod sans clé API (pas de fail-open silencieux)."""
+        """Fail-fast : refuse de démarrer en prod sans clé API (pas de fail-open
+        silencieux)."""
         if self.api_env == "production" and not self.api_key:
             raise ValueError(
                 "API_KEY ne peut pas être vide quand API_ENV=production "

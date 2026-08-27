@@ -1,4 +1,4 @@
-# code-smell: max-lines=145 reason="Doc OpenAPI (responses=) + gestion d'erreurs multi-services (classifieur + segmentation-service) + télémétrie US-20"
+# code-smell: max-lines=145 reason="Doc OpenAPI + erreurs multi-services + télémétrie"
 """Endpoint /predict — DS_COVID Backend"""
 
 import logging
@@ -15,10 +15,10 @@ from app.api.metrics import (
 )
 from app.api.security import verify_api_key
 from app.config import settings
-from app.features.preprocessing import preprocess_image
+from app.features.preprocessing import PreprocessOptions, preprocess_image
 from app.logging_config import TELEMETRY_LOGGER_NAME
 from app.models.loader import model_loader
-from app.rate_limit import limiter, predict_rate_limit
+from app.rate_limit import PREDICT_RATE_LIMIT, limiter
 from app.schemas.response import PredictionResponse
 
 logger = logging.getLogger(__name__)
@@ -46,9 +46,9 @@ router = APIRouter()
         503: {"description": "Modèle non chargé"},
     },
 )
-@limiter.limit(predict_rate_limit)
+@limiter.limit(PREDICT_RATE_LIMIT)
 async def predict(
-    request: Request,
+    request: Request,  # pylint: disable=unused-argument
     file: UploadFile = File(
         ..., description="Radiographie thoracique au format JPEG ou PNG"
     ),
@@ -59,7 +59,8 @@ async def predict(
     **COVID**, **Normal**, **Viral Pneumonia**, **Lung Opacity**.
 
     **Authentification** : header `X-API-Key` obligatoire.
-    **Limite** : 100 requêtes/minute par client (configurable via `RATE_LIMIT_PER_MINUTE`).
+    **Limite** : 100 requêtes/minute par client (configurable via
+    `RATE_LIMIT_PER_MINUTE`).
     """
     # `request` est inutilisé ici mais requis par le décorateur @limiter.limit
     if not model_loader.is_loaded:
@@ -88,15 +89,17 @@ async def predict(
         t0 = time.time()
         img_array = preprocess_image(
             image_bytes,
-            img_size=settings.img_size,
-            masking=settings.masking,
-            cropping=settings.cropping,
-            clahe=settings.clahe,
-            clahe_clip_limit=settings.clahe_clip_limit,
-            clahe_tile_grid_size=settings.clahe_tile_grid_size,
-            denoising_method=settings.denoising_method,
-            segmentation_service_url=settings.segmentation_service_url,
-            segmentation_service_timeout_s=settings.segmentation_service_timeout_s,
+            PreprocessOptions(
+                img_size=settings.img_size,
+                masking=settings.masking,
+                cropping=settings.cropping,
+                clahe=settings.clahe,
+                clahe_clip_limit=settings.clahe_clip_limit,
+                clahe_tile_grid_size=settings.clahe_tile_grid_size,
+                denoising_method=settings.denoising_method,
+                segmentation_service_url=settings.segmentation_service_url,
+                segmentation_service_timeout_s=settings.segmentation_service_timeout_s,
+            ),
         )
         predictions = model_loader.predict(img_array)
         elapsed_s = time.time() - t0

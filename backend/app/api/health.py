@@ -14,10 +14,14 @@ router = APIRouter()
 
 def _segmentation_service_reachable() -> bool:
     """Ping rapide du segmentation-service (non bloquant longtemps : timeout court,
-    échec silencieux — /health ne doit pas dépendre de la latence d'un autre service)."""
+    échec silencieux — /health ne doit pas dépendre de la latence d'un autre
+    service)."""
     try:
-        response = httpx.get(f"{settings.segmentation_service_url}/health", timeout=2.0)
-        return response.status_code == 200 and response.json().get("model_loaded", False)
+        response = httpx.get(
+            f"{settings.segmentation_service_url}/health", timeout=2.0
+        )
+        healthy = response.status_code == 200
+        return healthy and response.json().get("model_loaded", False)
     except httpx.HTTPError as e:
         logger.warning("segmentation-service injoignable : %s", e)
         return False
@@ -27,7 +31,9 @@ def _segmentation_service_reachable() -> bool:
     "/health",
     summary="État du service",
     responses={200: {"content": {"application/json": {"example": {
-        "status": "healthy", "model_loaded": True, "segmentation_service_available": True,
+        "status": "healthy",
+        "model_loaded": True,
+        "segmentation_service_available": True,
         "model_version": "1.0.0", "api_version": "1.0.0",
         "classes": ["COVID", "Lung_Opacity", "Normal", "Viral_Pneumonia"],
     }}}}},

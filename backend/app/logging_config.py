@@ -94,7 +94,8 @@ class _AsyncHTTPHandler(logging.Handler):
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            urllib.request.urlopen(req, timeout=2)
+            with urllib.request.urlopen(req, timeout=2):
+                pass
         except Exception:  # noqa: BLE001
             pass  # log-service indisponible → on ignore silencieusement
 

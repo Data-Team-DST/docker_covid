@@ -54,4 +54,5 @@ app.include_router(metrics_router, tags=["Monitoring"])
 
 @app.get("/", include_in_schema=False)
 async def root():
+    """Racine de l'API — pointeurs vers la doc Swagger et le healthcheck."""
     return {"message": "DS_COVID API", "docs": "/docs", "health": "/health"}
