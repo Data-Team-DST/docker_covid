@@ -28,7 +28,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
 load_dotenv(PROJECT_ROOT / ".env")
 
 from deep_learning.data import MemmapSequence  # noqa: E402
-from deep_learning.mlflow_utils import MlflowEpochLogger  # noqa: E402
+from deep_learning.mlflow_utils import DualMlflowRun, MlflowEpochLogger  # noqa: E402
 from deep_learning.models import build_cnn  # noqa: E402
 
 PARAMS_FILE  = PROJECT_ROOT / "params.yaml"
@@ -85,8 +85,8 @@ def main() -> None:
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(mlp["experiment_name"])
 
-    with mlflow.start_run():
-        mlflow.log_params({
+    with DualMlflowRun(mlp["experiment_name"]) as tracking:
+        tracking.log_params({
             "epochs":        tp["epochs"],
             "batch_size":    tp["batch_size"],
             "learning_rate": tp["learning_rate"],
@@ -102,7 +102,7 @@ def main() -> None:
             tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True),
             tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6),
             TqdmCallback(verbose=2),  # 1 barre epoch/epoch (temps écoulé/restant), pas de reset par batch
-            MlflowEpochLogger(),  # métriques loguées epoch par epoch (visibilité temps réel dans MLflow)
+            MlflowEpochLogger(mirror=tracking),  # métriques loguées dans les deux MLflow
         ]
 
         history = model.fit(
@@ -119,8 +119,9 @@ def main() -> None:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         model_path = MODELS_DIR / "classification.keras"
         model.save(model_path)
-        mlflow.keras.log_model(model, artifact_path="model",
+        mlflow.keras.log_model(model, name="model",
                                registered_model_name=mlp["model_name"])
+        tracking.log_model(model, "model")
 
         metrics = {
             "val_accuracy": val_acc,

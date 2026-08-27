@@ -64,6 +64,12 @@ make logs           # logs backend en temps réel
 | MinIO        | http://localhost:9001        | Object storage DVC + MLflow artifacts    |
 | Dashboard    | http://localhost:5050        | Backlog agile + data explorer            |
 
+Les entraînements du trainer sont enregistrés dans MLflow local (`:5000`). Pour
+les dupliquer dans l'expérience DagsHub associée, renseigner dans `.env`
+`DAGSHUB_MLFLOW_TRACKING_URI`, `DAGSHUB_USERNAME` et `DAGSHUB_TOKEN`. Le même
+run est alors créé sur DagsHub avec ses paramètres, métriques d'epochs et
+artefact de modèle. Sans ces trois variables, seul le tracking local est actif.
+
 ### Commandes data-service
 
 ```bash

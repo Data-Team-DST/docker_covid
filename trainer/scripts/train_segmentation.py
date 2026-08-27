@@ -27,7 +27,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "trainer"))
 load_dotenv(PROJECT_ROOT / ".env")
 
 from deep_learning.data import MemmapSequence  # noqa: E402
-from deep_learning.mlflow_utils import MlflowEpochLogger  # noqa: E402
+from deep_learning.mlflow_utils import DualMlflowRun, MlflowEpochLogger  # noqa: E402
 from deep_learning.segmentation import build_unet, combined_loss, dice_coef, iou_metric  # noqa: E402
 
 PARAMS_FILE  = PROJECT_ROOT / "params.yaml"
@@ -70,8 +70,8 @@ def main() -> None:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     model_path = MODELS_DIR / "segmentation.keras"
 
-    with mlflow.start_run():
-        mlflow.log_params({
+    with DualMlflowRun(mlp["segmentation_experiment_name"]) as tracking:
+        tracking.log_params({
             "freeze_epochs":       sp["freeze_epochs"],
             "freeze_lr":           sp["freeze_lr"],
             "fine_tune_epochs":    sp["fine_tune_epochs"],
@@ -103,7 +103,7 @@ def main() -> None:
                 tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=1, min_lr=1e-5),
                 tf.keras.callbacks.ModelCheckpoint(model_path, monitor="val_loss", save_best_only=True),
                 TqdmCallback(desc="Phase 1/2 (decoder)", verbose=2),
-                MlflowEpochLogger(),  # métriques loguées epoch par epoch (visibilité temps réel dans MLflow)
+                MlflowEpochLogger(mirror=tracking),  # métriques loguées dans les deux MLflow
             ],
             verbose=0,
         )
@@ -134,7 +134,7 @@ def main() -> None:
                 TqdmCallback(desc="Phase 2/2 (fine-tune)", verbose=2),
                 # step_offset = épochs réellement écoulées en phase 1 (peut être < freeze_epochs
                 # si EarlyStopping a coupé court) : la timeline MLflow reste continue entre les 2 phases.
-                MlflowEpochLogger(step_offset=len(history_freeze.epoch)),
+                MlflowEpochLogger(step_offset=len(history_freeze.epoch), mirror=tracking),
             ],
             verbose=0,
         )
@@ -148,7 +148,8 @@ def main() -> None:
         # epoch de la phase 2 ne serait pas la meilleure (restore_best_weights ne couvre
         # que la phase où il est actif).
         model.load_weights(model_path)
-        mlflow.keras.log_model(model, artifact_path="model", registered_model_name=mlp["segmentation_model_name"])
+        mlflow.keras.log_model(model, name="model", registered_model_name=mlp["segmentation_model_name"])
+        tracking.log_model(model, "model")
 
         metrics = {
             "val_dice":  val_dice,
