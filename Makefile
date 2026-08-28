@@ -15,8 +15,8 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 #   make dvc-repro  → lance `dvc repro` dans le container trainer (GPU, sans dvc local)
 
-.PHONY: all setup setup-check setup-be setup-ds setup-dvc setup-fe setup-dashboard setup-segmentation start start-local start-docker start-all \
-        stop restart logs logs-all test test-be test-ds test-dvc test-segmentation verify lint fix clean build shell help dashboard \
+.PHONY: all setup setup-check setup-be setup-ds setup-dvc setup-fe setup-dashboard setup-demonstration setup-segmentation start start-local start-docker start-all \
+        stop restart logs logs-all test test-be test-ds test-dvc test-segmentation verify lint fix clean build shell help dashboard demonstration \
         data-build data-start data-stop data-logs data-test data-shell \
         dvc-build dvc-start dvc-stop dvc-logs dvc-shell \
         dvc-setup dvc-setup-dagshub dvc-push dvc-pull dvc-push-dagshub dvc-pull-dagshub dvc-repro load-test setup-load-test
@@ -232,6 +232,19 @@ setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
 	@dashboard/.venv/bin/pip install -q --require-hashes -r dashboard/requirements.txt
 	@echo "$(GREEN)✅ dashboard/.venv prêt$(NC)"
 
+setup-demonstration: ## Crée/met à jour le venv demonstration (demonstration/.venv)
+	@if [ -d demonstration/.venv/Scripts ] && [ ! -f demonstration/.venv/bin/python ]; then \
+		echo "$(RED)⚠ venv Windows détecté — suppression et recréation depuis WSL$(NC)"; \
+		rm -rf demonstration/.venv; \
+	fi
+	@if [ ! -f demonstration/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv demonstration...$(NC)"; \
+		$(PYTHON) -m venv demonstration/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps demonstration...$(NC)"
+	@demonstration/.venv/bin/pip install -q --require-hashes -r demonstration/requirements.txt
+	@echo "$(GREEN)✅ demonstration/.venv prêt$(NC)"
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test: test-be test-ds test-dvc test-segmentation ## Lance les tests de tous les microservices (venvs isolés)
 
@@ -406,6 +419,12 @@ dashboard: setup-dashboard ## Lance le dashboard agile + data-service/dvc-servic
 	@echo "$(YELLOW)(Ctrl+C pour tout arrêter)$(NC)"
 	@trap '$(COMPOSE) stop data-service dvc-service minio 2>/dev/null; exit 0' INT; \
 	 cd dashboard && .venv/bin/python app.py
+
+# ── Demonstration ─────────────────────────────────────────────────────────────
+demonstration: setup-demonstration ## Lance la démo produit (contexte/prédicteur/modèles) sur :5051 — nécessite le backend (make start)
+	@echo "$(YELLOW)Démonstration DS_COVID → http://localhost:5051$(NC)"
+	@echo "$(YELLOW)(Ctrl+C pour arrêter — nécessite le backend démarré séparément : make start)$(NC)"
+	@cd demonstration && .venv/bin/python app.py
 
 clean-docker: ## Supprime les images et volumes Docker du projet
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true

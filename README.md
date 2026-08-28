@@ -63,6 +63,7 @@ make logs           # logs backend en temps réel
 | MLflow       | http://localhost:5000        | Tracking expériences ML                  |
 | MinIO        | http://localhost:9001        | Object storage DVC + MLflow artifacts    |
 | Dashboard    | http://localhost:5050        | Backlog agile + data explorer            |
+| Demonstration| http://localhost:5051        | Façade démo produit (contexte, prédicteur, modèles) |
 
 Les entraînements du trainer sont enregistrés dans MLflow local (`:5000`). Pour
 les dupliquer dans l'expérience DagsHub associée, renseigner dans `.env`
@@ -111,6 +112,9 @@ docker_covid/
 │   ├── app.py               # Flask — http://localhost:5050
 │   ├── backlog.yaml         # Sprints DS_COVID (phases 1→4)
 │   └── templates/
+├── demonstration/           # Façade démo produit Flask (contexte, prédicteur, modèles)
+│   ├── app.py               # Flask — http://localhost:5051 (appelle backend/ directement)
+│   └── templates/           # contexte, préprocessing, prédicteur, modèles, conclusion
 ├── shared/                  # Code partagé entre services
 │   └── logging_config.py    # Logging JSON structuré (importé par tous les services)
 ├── infrastructure/

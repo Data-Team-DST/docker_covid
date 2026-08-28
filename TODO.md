@@ -63,11 +63,18 @@ temps avant la soutenance. Contenu migré page par page vers `dashboard` : 07 (c
 images matrices/LIME/InceptionV3, 02_données (échantillonnage + métriques portées côté
 `data-service`, pas `dashboard`, pour respecter la frontière de service), 03 (préprocessing).
 Non fait volontairement : 06 (CI/CD, contenu périmé). `frontend/` reste tant que 06 n'est pas
-tranché. **Le mélange de responsabilités que Option C n'a explicitement pas résolu** (backlog
-agile interne + façade produit demo) reste un sujet ouvert — voir échange du 2026-08-28 :
-Steven a demandé si `dashboard` devrait être scindé maintenant qu'il porte tout le contenu
-demo (Contexte/Prédicteur/Préprocessing/Modèles/Conclusion/Data Explorer) en plus du backlog ;
-pas encore tranché, à reprendre après la soutenance.
+tranché.
+
+**Mélange de responsabilités résolu le 2026-08-28** (`CHANTIER_DASHBOARD_SPLIT.md`, Option B) :
+`dashboard/` reste backlog agile + data explorer ; nouveau service `demonstration/` (Flask,
+port 5051) porte Contexte/Prédicteur/Préprocessing/Modèles/Conclusion. Split mécanique
+(Phase 1) vérifié en bac à sable réel (conteneur Docker, copie ciblée des deux services,
+sans écrire dans le repo) : les deux services démarrent, les 7 pages rendent 200, liens
+croisés inter-services résolus (`demonstration_url`/`dashboard_url` injectés via
+`context_processor`), assets statiques (style.css, images) accessibles, `/predict` retombe
+bien sur le message "Backend inaccessible" attendu sans backend démarré. Phase 2 (nav fluide
+htmx, indépendante) **pas encore faite** — reste à traiter, cf. `CHANTIER_DASHBOARD_SPLIT.md`
+avant sa clôture définitive.
 
 ### 16. `data-service` — mélange lecture (stats/recherche) et opérations DVC (pull/push/repro)
 

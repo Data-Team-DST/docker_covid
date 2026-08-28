@@ -22,10 +22,15 @@ MODELS_DIR = ROOT / "data" / "models"
 
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
 DVC_SERVICE_URL = os.getenv("DVC_SERVICE_URL", "http://localhost:5003")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-API_KEY = os.getenv("API_KEY", "")
+DEMONSTRATION_URL = os.getenv("DEMONSTRATION_URL", "http://localhost:5051")
 REPO_URL = "https://github.com/Data-Team-DST/docker_covid"
 _SAFE_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+@app.context_processor
+def inject_demonstration_url():
+    """Rend demonstration_url disponible dans tous les templates (lien croisé vers demonstration/)."""
+    return {"demonstration_url": DEMONSTRATION_URL}
 
 
 def find_commits_for_story(story_id: str, limit: int = 5) -> list:
@@ -188,25 +193,6 @@ def index():
     return render_template("index.html", backlog=backlog, stats=stats)
 
 
-@app.route("/contexte")
-def contexte():
-    return render_template("contexte.html")
-
-
-@app.route("/conclusion")
-def conclusion():
-    """Conclusion critique et perspectives — condensé depuis
-    frontend/page/07_conclusion_critique_perspective.py (chantier point 15)."""
-    return render_template("conclusion.html")
-
-
-@app.route("/preprocessing")
-def preprocessing():
-    """Environnements/masking/déséquilibre/augmentation — condensé depuis
-    frontend/page/03_preprocessing (chantier point 15)."""
-    return render_template("preprocessing.html")
-
-
 @app.route("/sprint/<sprint_id>")
 def sprint_detail(sprint_id: str):
     backlog = load_backlog()
@@ -228,60 +214,6 @@ def sprint_detail(sprint_id: str):
         for story in sprint["stories"]
     ]
     return render_template("sprint_detail.html", sprint=sprint, stories=stories)
-
-
-@app.route("/predict", methods=["GET", "POST"])
-def predict():
-    if request.method == "GET":
-        return render_template("predict.html", result=None, error=None)
-
-    file = request.files.get("file")
-    if not file or not file.filename:
-        return render_template(
-            "predict.html", result=None, error="Aucun fichier sélectionné."
-        )
-
-    try:
-        r = requests.post(
-            f"{BACKEND_URL}/api/v1/predict",
-            files={"file": (file.filename, file.stream, file.mimetype)},
-            headers={"X-API-Key": API_KEY},
-            timeout=30,
-        )
-    except requests.exceptions.ConnectionError:
-        return render_template(
-            "predict.html",
-            result=None,
-            error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
-        )
-
-    if r.status_code != 200:
-        try:
-            detail = r.json().get("detail", r.text)
-        except ValueError:
-            detail = r.text
-        return render_template(
-            "predict.html", result=None, error=f"Erreur {r.status_code} : {detail}"
-        )
-
-    return render_template("predict.html", result=r.json(), error=None)
-
-
-@app.route("/modeles")
-def model_status():
-    """Provenance des modèles chargés (MLflow Registry vs fichier local, cf. US
-    chantier infra #17) — interroge /health du backend, qui interroge lui-même
-    celui du segmentation-service."""
-    try:
-        r = requests.get(f"{BACKEND_URL}/health", timeout=5)
-        r.raise_for_status()
-        health = r.json()
-        error = None
-    except requests.exceptions.RequestException as e:
-        health = None
-        error = f"Backend inaccessible ({BACKEND_URL}) — {e}"
-
-    return render_template("model_status.html", health=health, error=error)
 
 
 @app.route("/data")

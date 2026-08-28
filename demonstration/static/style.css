@@ -1,0 +1,5 @@
+body { background: #f5f6fa; font-size: 0.9rem; }
+.sprint-card { border-left: 4px solid #6c757d; }
+.sprint-card .card-header { background: #fff; }
+.story-row td { vertical-align: middle; }
+.navbar { margin-bottom: 0; }

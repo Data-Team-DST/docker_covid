@@ -6,8 +6,8 @@ avant la soutenance du 04/09/2026, pas après** : Steven a précisé qu'il n'y a
 de reprise post-soutenance (voir mémoire projet), contrairement à l'hypothèse initiale du
 chantier précédent.
 
-**Exécution prévue dans une autre conversation** — ce fichier documente le plan validé, cette
-session-ci servira à vérifier le livrable une fois fait.
+**Phase 1 exécutée et vérifiée le 2026-08-28** (cette même session, sur demande explicite de
+Steven — "go !"). **Phase 2 (nav fluide htmx) reste à faire.**
 
 ---
 
@@ -93,9 +93,43 @@ sein de `dashboard`, nav fluide au sein de `demonstration/`) — pas de pont int
 prévu pour l'instant (pas demandé, ajouterait un reverse-proxy unifiant les deux origines,
 sujet séparé si besoin plus tard).
 
-## Pas fait dans ce chantier (à date du 2026-08-28)
+## État — Phase 1 faite le 2026-08-28
 
-Aucune modification appliquée — ce fichier documente le plan validé par Steven en session,
-avant exécution dans une autre conversation. Une fois fait : mettre à jour `CLAUDE.md`
-(architecture réelle, section `dashboard/` + nouveau `demonstration/`), `TODO.md`, et
-supprimer ou clore ce fichier selon le même principe que les chantiers précédents.
+- Nouveau service `demonstration/` créé (`app.py`, `requirements.in`/`requirements.txt`
+  hash-locké généré en conteneur Linux `python:3.11-slim`, `templates/`, `static/`) — port
+  5051, choisi libre (5050 dashboard, 5051 suite logique, non catalogué ailleurs).
+- 5 routes + templates + les 20 images associées (`contexte`, `preprocessing`) déplacées
+  depuis `dashboard/` vers `demonstration/` (suppression des originaux confirmée par Steven,
+  copies vérifiées identiques par `diff` avant suppression). `style.css` dupliqué (5 lignes,
+  utilisé des deux côtés) ; `static/img/anomalies/*` (8 fichiers, `data_explorer.html`) et
+  `style.css` restent dans `dashboard/`.
+- Liens croisés inter-services : `dashboard/app.py` et `demonstration/app.py` injectent
+  respectivement `demonstration_url`/`dashboard_url` via `@app.context_processor`
+  (`DEMONSTRATION_URL`/`DASHBOARD_URL`, env vars, défaut `localhost:5051`/`:5050`) — tous les
+  `href="/xxx"` qui traversaient la frontière de service mis à jour dans les templates des
+  deux services ; les liens same-service restent relatifs.
+- `API_KEY` retiré de `dashboard/app.py` (mort après le départ de `/predict`, seul
+  consommateur).
+- `Makefile` : cibles `setup-demonstration`/`demonstration` ajoutées (miroir de
+  `setup-dashboard`/`dashboard`, sans MinIO/data-service/dvc-service — `demonstration/` ne
+  dépend que du backend). `.PHONY` mis à jour.
+- `README.md` (arborescence + tableau des services), `CLAUDE.md` (architecture réelle),
+  `TODO.md` (point #15 clos avec résumé) mis à jour.
+- **Vérifié en bac à sable réel** (CLAUDE.md règle #9) : copie ciblée `dashboard/` +
+  `demonstration/` (sans `.venv`) dans un dossier scratch, conteneur `python:3.11-slim`,
+  deps installées `--require-hashes`, les deux Flask lancés en même temps avec les bonnes
+  env vars croisées. Résultat : 7/7 pages 200, liens croisés résolus (`http://localhost:5051/...`
+  et `http://localhost:5050/...` bien injectés, zéro `{{`/`}}` non résolu), assets statiques
+  (CSS + images des deux services) accessibles, `POST /predict` retombe correctement sur
+  "Backend inaccessible" (pas de backend dans ce bac à sable — chemin d'erreur testé, pas
+  l'inférence réelle). `ruff check --line-length 88` propre sur les deux `app.py`.
+- Pas exécuté dans ce bac à sable (hors périmètre de la vérification mécanique) :
+  `make lint-full`/`make test` sur l'ensemble du repo, et un test `/predict` avec un vrai
+  backend + modèle chargé.
+
+## Reste à faire
+
+- **Phase 2 (nav fluide htmx)** — pas commencée. À reprendre dans une session dédiée une
+  fois Phase 1 confirmée stable par Steven.
+- Fermer ce fichier (suppression, résumé dans `TODO.md`) une fois Phase 2 faite — pas avant,
+  suivant le même principe que les chantiers précédents.

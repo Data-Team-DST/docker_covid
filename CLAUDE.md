@@ -133,6 +133,10 @@ log-service/                 FastAPI — port 5002 — agrégateur logs JSON cen
 frontend/                    Streamlit — port 8501 — multi-pages (01_accueil … 07_conclusion)
 ├── Dockerfile                colocalisé (contexte frontend/)
 dashboard/                   Flask — port 5050 — backlog agile + data explorer
+demonstration/                Flask — port 5051 — façade démo produit (contexte, préprocessing,
+                               prédicteur live, modèles, conclusion) ; appelle backend/ directement,
+                               pas de dépendance à dashboard/ (scindé de dashboard/ le 2026-08-28,
+                               voir CHANTIER_DASHBOARD_SPLIT.md)
 shared/                      logging_config.py — JSON structuré, importé par tous les services
 
 trainer/                     Pipeline d'entraînement — service dédié (ex-scripts/ + backend/src/ds_covid/)
