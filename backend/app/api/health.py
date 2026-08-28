@@ -43,7 +43,7 @@ def _segmentation_service_status() -> dict:
         "segmentation_service_available": True,
         "segmentation_service_model_source": "local",
         "model_version": "1.0.0", "api_version": "1.0.0",
-        "classes": ["COVID", "Lung_Opacity", "Normal", "Viral_Pneumonia"],
+        "classes": ["COVID", "Normal", "Viral_Pneumonia", "Lung_Opacity"],
     }}}}},
 )
 async def health():

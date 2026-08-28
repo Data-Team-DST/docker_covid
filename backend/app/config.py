@@ -33,12 +33,20 @@ class Settings(BaseSettings):
     segmentation_service_url: str = "http://segmentation-service:8001"
     segmentation_service_timeout_s: float = 10.0
 
-    # Classes (ordre doit correspondre à l'entraînement)
+    # Classes — ordre = params.yaml § preprocess.classes (figé par dvc.lock), PAS
+    # l'ordre alphabétique. Bug réel trouvé le 2026-08-28 : cette liste était en
+    # ordre alphabétique (COVID/Lung_Opacity/Normal/Viral_Pneumonia) alors que
+    # l'entraînement utilise COVID=0/Normal=1/Viral Pneumonia=2/Lung_Opacity=3 —
+    # seul l'index 0 coïncidait par hasard entre les deux ordres, les index 1-3
+    # étaient décalés (Normal→Lung_Opacity, Lung_Opacity→Viral_Pneumonia en sortie
+    # de predict.py::predicted_class = class_names[predicted_idx]). Confirmé par un
+    # test batch réel (60 images via l'API) : accuracy globale 35% au lieu des 92%
+    # de validation loggés sur MLflow pour ce modèle (run legendary-shoat-287).
     class_names: list[str] = [
         "COVID",
-        "Lung_Opacity",
         "Normal",
         "Viral_Pneumonia",
+        "Lung_Opacity",
     ]
 
     # Sécurité (Phase 3) — vide = mode dev sans restriction
