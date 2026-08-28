@@ -157,7 +157,7 @@ def test_load_from_registry_success(monkeypatch):
     assert loader.is_loaded is True
     assert loader.source == "registry"
     fake_mlflow.keras.load_model.assert_called_once_with(
-        "models:/segmentation/Production"
+        "models:/segmentation/Production", load_model_kwargs={"compile": False}
     )
 
 

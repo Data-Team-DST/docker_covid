@@ -191,43 +191,54 @@ dessus.
 
 ## 4. `mlflow` — câblé, mais à sens unique ; la question du "où le ranger" mal posée au départ
 
-**Constat vérifié le 2026-08-26** : le seul code Python qui importe `mlflow` dans tout le
-repo est `trainer/scripts/train.py` et `trainer/scripts/train_segmentation.py` (`import
-mlflow`, `mlflow.set_tracking_uri`, `mlflow.start_run`, `mlflow.log_params/metrics`,
-`mlflow.keras.log_model`). **`backend` ne lit jamais depuis mlflow** — il charge son modèle
-directement depuis un fichier `.keras` local (`backend/app/config.py:
-model_path = "data/models/best_model.keras"`), pas via le Model Registry mlflow.
+**Résolu le 2026-08-28.** Le constat original ci-dessous ("`backend` ne lit jamais depuis
+mlflow") était déjà obsolète avant même cette clôture — le code du flux retour (chargement
+Model Registry avec fallback local, commit `5cdbaac`, 2026-08-27) existait, mais n'avait
+**jamais été exercé avec succès** : aucun modèle n'était promu au stage `Production`, et deux
+dépendances manquaient pour le rendre réellement fonctionnel. Trois correctifs, chacun
+vérifié en conteneur réel :
 
-**Ce que ça veut dire** : mlflow est câblé en écriture (trainer y logue systématiquement) et
-dispose d'une vraie infra dédiée (Postgres backend store, S3/MinIO artifact store, service
-séparé port 5000) — ce n'est pas un vestige mort. Mais sa valeur aujourd'hui est purement
-l'observation humaine via l'UI web, pas un maillon d'un flux automatisé (rien ne "pull" le
-meilleur modèle du registry pour le déployer, par exemple). C'est cohérent avec un stade de
-maturité MLOps donné (Phase 4 du calendrier — Monitoring/Evidently/Drift — pas encore
-atteinte), pas une erreur en soi.
+1. **Promotion registry** : `covid_xray_cnn` v2 / `lung_segmentation_unet` v4 (noms hérités
+   d'avant le commit `7468cc3` qui a aligné `params.yaml` sur `classification`/`segmentation`)
+   re-enregistrés sous ces nouveaux noms via l'API MLflow (`create_model_version` pointant
+   vers les mêmes artefacts, sans réentraînement), puis promus `Production`.
+2. **`boto3` manquant** : `backend`/`segmentation-service` ne pouvaient pas télécharger les
+   artefacts S3/MinIO du registry (`No module named 'botocore'`) — jamais détecté avant car
+   aucun modèle n'avait jamais atteint le stage `Production`. Ajouté aux deux services
+   (`boto3==1.43.82`, lockfile régénéré en conteneur Linux pour segmentation-service).
+3. **`combined_loss` non désérialisable** : le U-Net utilise une loss custom non décorée
+   `@keras.saving.register_keras_serializable()` — `mlflow.keras.load_model()` échouait à la
+   compiler. Déjà contourné pour le chargement local (`compile=False`,
+   `segmentation_service/model.py::_load_from_local_file`) mais pas pour le chargement
+   registry — même fix appliqué (`load_model_kwargs={"compile": False}`), inutile pour
+   l'inférence seule.
 
-**Sur "où ranger le Dockerfile"** — l'option "mlflow à la racine" évoquée en session est
-retirée (mlflow n'a ni app ni code à lui, juste un Dockerfile de 14 lignes + un `start.sh` —
-le déplacer ne gagnerait que de la symétrie visuelle). La vraie question, si elle doit être
-retravaillée, n'est pas "dans quel dossier" mais "est-ce que mlflow doit rester write-only
-(trainer logue, personne ne lit) ou est-ce qu'on câble un vrai flux retour (ex: backend/
-data-service interroge le Model Registry pour savoir quel modèle est `Production`, au lieu
-d'un chemin de fichier codé en dur)" — ça, c'est un vrai sujet MLOps, pas un sujet de
-rangement de dossier.
+**Vérifié en conteneur réel** : `backend` et `segmentation-service` répondent tous les deux
+`model_source: "registry"` sur `/health`. Non-régression : backend 88/88 tests (94,42 %),
+segmentation-service 19/19 (94,95 %), `ruff check` propre sur les deux (un test unitaire mis à
+jour pour refléter le nouvel argument `load_model_kwargs`).
 
-## Ordre suggéré (à confirmer avec Steven une fois la soutenance passée)
+**Constat d'origine (2026-08-26, obsolète — gardé pour traçabilité)** : le seul code Python
+qui importait `mlflow` dans tout le repo était `trainer/scripts/train.py` et
+`trainer/scripts/train_segmentation.py`. `backend` ne lisait jamais depuis mlflow — il
+chargeait son modèle directement depuis un fichier `.keras` local, pas via le Model Registry.
 
-Points 1, 2 et 3 sont résolus (voir sections ci-dessus). Reste :
+**Ce que ça voulait dire** : mlflow était câblé en écriture (trainer y logue systématiquement)
+et dispose d'une vraie infra dédiée (Postgres backend store, S3/MinIO artifact store, service
+séparé port 5000) — ce n'était pas un vestige mort, mais sa valeur était purement
+l'observation humaine via l'UI web, pas un maillon d'un flux automatisé.
 
-1. **Point 4 (mlflow)** — clarifier d'abord l'intention : reste-t-il un outil d'observation
-   pure, ou veut-on un vrai flux retour (registry → déploiement) ? Ça conditionne si ça vaut
-   la peine d'y toucher du tout. **Note** : le Model Registry mlflow (chargement backend +
-   segmentation-service avec fallback local) a été implémenté depuis la rédaction de la
-   section 4 — le constat "`backend` ne lit jamais depuis mlflow" y est obsolète, à
-   recroiser avec le code courant avant d'y retravailler (CLAUDE.md règle 5).
+**Sur "où ranger le Dockerfile"** — l'option "mlflow à la racine" évoquée en session avait
+été retirée (mlflow n'a ni app ni code à lui, juste un Dockerfile de 14 lignes + un
+`start.sh` — le déplacer n'aurait gagné que de la symétrie visuelle) ; sans objet maintenant
+que le flux retour est résolu.
+
+## Ordre suggéré
+
+Les 4 points sont résolus (voir sections ci-dessus).
 
 ## Non traité ici
 
-Points 1-3 résolus (voir sections dédiées). Point 4 (mlflow) reste audit/options seulement.
-Toute correction repasse par la Validation humaine obligatoire (CLAUDE.md) et une confirmation
-explicite du périmètre avant chaque étape.
+Les 4 points sont résolus (voir sections dédiées) — ce chantier est clos. Toute reprise future
+(ex. nouvelle question d'architecture) repasse par la Validation humaine obligatoire
+(CLAUDE.md) et une confirmation explicite du périmètre avant chaque étape.

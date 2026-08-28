@@ -34,9 +34,10 @@ class ModelLoader:
 
     def _load_from_registry(self, settings) -> bool:
         """Tente MLflow Model Registry. Ne laisse jamais remonter d'exception — retourne
-        False si indisponible (ou si le modèle nécessite compile=True et des custom
-        objects hors-frontière, cf. docstring de module) : le caller retombe alors sur
-        le fichier local."""
+        False si indisponible : le caller retombe alors sur le fichier local.
+        compile=False (comme pour le chargement local, cf. _load_from_local_file) :
+        évite de résoudre combined_loss/dice_coef/iou_metric au chargement, non
+        nécessaires pour l'inférence seule."""
         if not settings.mlflow_tracking_uri:
             return False
         try:
@@ -48,7 +49,9 @@ class ModelLoader:
 
             mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
             uri = f"models:/{settings.mlflow_model_name}/{settings.mlflow_model_stage}"
-            self._model = mlflow.keras.load_model(uri)
+            self._model = mlflow.keras.load_model(
+                uri, load_model_kwargs={"compile": False}
+            )
             self.is_loaded = True
             self.source = "registry"
             logger.info("Modèle chargé depuis MLflow Registry : %s", uri)

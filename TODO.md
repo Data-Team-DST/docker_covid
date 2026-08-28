@@ -72,13 +72,10 @@ seule. Détail (vérifications réelles, bugs trouvés/corrigés, point signalé
 
 ### 17. `mlflow` — câblé en écriture seule, aucun flux retour vers le déploiement
 
-`trainer` logue systématiquement dans MLflow (Postgres + MinIO + service dédié port 5000),
-mais `backend` charge son modèle depuis un fichier `.keras` local, jamais depuis le Model
-Registry. Cohérent avec la maturité MLOps actuelle (Phase 4 — Monitoring/Drift — pas encore
-atteinte), pas une erreur. Question à trancher : rester en observation pure, ou câbler un
-vrai flux registry → déploiement (backend/data-service interroge le stage `Production` au
-lieu d'un chemin codé en dur) ? À clarifier en premier (conditionne si le point 14 vaut le
-coût).
+**Résolu le 2026-08-28** — les deux modèles promus au stage `Production`, `boto3` ajouté
+(backend + segmentation-service), fix `compile=False` sur le chargement registry U-Net.
+Les deux services chargent désormais réellement depuis le Model Registry (vérifié en
+conteneur réel). Détail dans `CHANTIER_INFRA_SERVICES.md` § 4.
 
 ## Fait — pour mémoire (ne pas rouvrir sans raison)
 
