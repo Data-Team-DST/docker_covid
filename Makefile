@@ -17,6 +17,7 @@
 
 .PHONY: all setup setup-check setup-be setup-ds setup-dvc setup-fe setup-dashboard setup-demonstration setup-segmentation start start-local start-docker start-all \
         stop restart logs logs-all test test-be test-ds test-dvc test-segmentation verify lint fix clean build shell help dashboard demonstration \
+        presentation presentation-all \
         data-build data-start data-stop data-logs data-test data-shell \
         dvc-build dvc-start dvc-stop dvc-logs dvc-shell \
         dvc-setup dvc-setup-dagshub dvc-push dvc-pull dvc-push-dagshub dvc-pull-dagshub dvc-repro load-test setup-load-test
@@ -425,6 +426,20 @@ demonstration: setup-demonstration ## Lance la démo produit (contexte/prédicte
 	@echo "$(YELLOW)Démonstration DS_COVID → http://localhost:5051$(NC)"
 	@echo "$(YELLOW)(Ctrl+C pour arrêter — nécessite le backend démarré séparément : make start)$(NC)"
 	@cd demonstration && .venv/bin/python app.py
+
+presentation: demonstration ## Alias de 'make demonstration' — nom plus parlant pour la soutenance
+
+presentation-all: setup-dashboard setup-demonstration ## Lance tout pour la soutenance : backend + dashboard (:5050) + demonstration (:5051)
+	@echo "$(YELLOW)Démarrage backend...$(NC)"
+	@$(COMPOSE) up -d --build backend
+	@echo "$(YELLOW)Dashboard (arrière-plan)   → http://localhost:5050$(NC)"
+	@echo "$(YELLOW)Démonstration              → http://localhost:5051$(NC)"
+	@echo "$(YELLOW)(Ctrl+C pour tout arrêter)$(NC)"
+	@cd dashboard && .venv/bin/python app.py & \
+	 DASHBOARD_PID=$$!; \
+	 sleep 2; \
+	 trap '$(COMPOSE) stop backend 2>/dev/null; kill $$DASHBOARD_PID 2>/dev/null; exit 0' INT; \
+	 cd demonstration && .venv/bin/python app.py
 
 clean-docker: ## Supprime les images et volumes Docker du projet
 	$(COMPOSE) down -v --rmi local 2>/dev/null || true

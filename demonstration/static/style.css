@@ -19,11 +19,21 @@
   border-radius: 6px; text-decoration: none !important; font-size: .9rem;
 }
 .nav-btn:hover { background: #388bfd; }
-.nav-backlog {
+.nav-center { display: flex; align-items: center; gap: .6rem; }
+.nav-icon {
   font-size: 1.3rem; text-decoration: none !important; opacity: .55;
   line-height: 1; padding: 4px 8px; border-radius: 6px;
 }
-.nav-backlog:hover { opacity: 1; background: #21262d; }
+.nav-icon:hover { opacity: 1; background: #21262d; }
+/* .nav-num réutilise le style des badges numérotés du sommaire (.step-num) —
+   le backlog est visuellement "l'étape 0", avant le début de la présentation. */
+.nav-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; background: #1f6feb; color: #fff !important;
+  border-radius: 50%; font-weight: bold; font-size: .85rem;
+  text-decoration: none !important; opacity: .7;
+}
+.nav-num:hover { opacity: 1; background: #388bfd; }
 
 /* Sommaire (écran d'ouverture) */
 .title-block { margin-bottom: .5rem; }
