@@ -5,8 +5,10 @@
     <span></span>
     {% endif %}
     <div class="nav-center">
-      <a href="/" class="nav-icon" title="Sommaire" aria-label="Sommaire">🏠</a>
-      <a href="{{ dashboard_url }}/" hx-boost="false" class="nav-num" title="Backlog (outil interne)" aria-label="Backlog">0</a>
+      <a href="/" class="nav-sec">🏠 Accueil</a>
+      <a href="{{ dashboard_url }}/" hx-boost="false" class="nav-sec" title="Backlog (outil interne)">
+        <span class="nav-num">0</span> Backlog
+      </a>
     </div>
     {% if next_page %}
     <a href="{{ next_page[0] }}" class="nav-btn nav-next">{{ next_page[1] }} →</a>

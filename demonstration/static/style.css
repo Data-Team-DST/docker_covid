@@ -20,20 +20,22 @@
 }
 .nav-btn:hover { background: #388bfd; }
 .nav-center { display: flex; align-items: center; gap: .6rem; }
-.nav-icon {
-  font-size: 1.3rem; text-decoration: none !important; opacity: .55;
-  line-height: 1; padding: 4px 8px; border-radius: 6px;
+/* Boutons secondaires (Accueil/Backlog) — même famille que .nav-btn mais en retrait
+   visuel (contour, pas de fond plein) : Précédent/Suivant restent l'action principale. */
+.nav-sec {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: transparent; border: 1px solid #30363d; color: #8b949e !important;
+  padding: 6px 14px; border-radius: 20px; text-decoration: none !important;
+  font-size: .82rem; transition: border-color .15s, color .15s;
 }
-.nav-icon:hover { opacity: 1; background: #21262d; }
-/* .nav-num réutilise le style des badges numérotés du sommaire (.step-num) —
-   le backlog est visuellement "l'étape 0", avant le début de la présentation. */
-.nav-num {
+.nav-sec:hover { border-color: #58a6ff; color: #c9d1d9 !important; }
+/* Badge "0" — même style que les badges numérotés du sommaire (.step-num), le
+   backlog est visuellement "l'étape 0", avant le début de la présentation. */
+.nav-sec .nav-num {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; background: #1f6feb; color: #fff !important;
-  border-radius: 50%; font-weight: bold; font-size: .85rem;
-  text-decoration: none !important; opacity: .7;
+  width: 18px; height: 18px; background: #1f6feb; color: #fff;
+  border-radius: 50%; font-weight: bold; font-size: .68rem; flex-shrink: 0;
 }
-.nav-num:hover { opacity: 1; background: #388bfd; }
 
 /* Sommaire (écran d'ouverture) — hero centré, cf. recherche 2026-08-28 (hiérarchie
    titre -> sous-titre -> CTA, espace généreux, dark theme "considéré" plutôt que
