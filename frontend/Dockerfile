@@ -1,7 +1,15 @@
-ARG BASE_IMAGE=ghcr.io/data-team-dst/covid-xray-base:latest
-FROM ${BASE_IMAGE}
+FROM python:3.11-slim
 
 WORKDIR /workspace
+
+# curl : requis par HEALTHCHECK. frontend n'utilise ni TensorFlow ni OpenCV (vérifié :
+# aucun import tensorflow/cv2/keras dans frontend/**/*.py, cf. CHANTIER_INFRA_SERVICES.md
+# point 14) — pas besoin de l'image de base GPU partagée avec trainer.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser
 
 COPY requirements.txt /tmp/streamlit.txt
 
@@ -11,8 +19,7 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 
 COPY . /workspace/frontend/
 
-RUN id -u appuser >/dev/null 2>&1 || (groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser) \
- && chown -R appuser:appuser /workspace
+RUN chown -R appuser:appuser /workspace
 ENV HOME=/home/appuser
 USER appuser
 

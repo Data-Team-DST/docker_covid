@@ -21,10 +21,16 @@ DVC_RAW_FILE = ROOT / "data" / "raw.dvc"
 MODELS_DIR = ROOT / "data" / "models"
 
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-API_KEY = os.getenv("API_KEY", "")
+DVC_SERVICE_URL = os.getenv("DVC_SERVICE_URL", "http://localhost:5003")
+DEMONSTRATION_URL = os.getenv("DEMONSTRATION_URL", "http://localhost:5051")
 REPO_URL = "https://github.com/Data-Team-DST/docker_covid"
 _SAFE_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+@app.context_processor
+def inject_demonstration_url():
+    """Rend demonstration_url disponible dans tous les templates (lien croisé vers demonstration/)."""
+    return {"demonstration_url": DEMONSTRATION_URL}
 
 
 def find_commits_for_story(story_id: str, limit: int = 5) -> list:
@@ -187,11 +193,6 @@ def index():
     return render_template("index.html", backlog=backlog, stats=stats)
 
 
-@app.route("/contexte")
-def contexte():
-    return render_template("contexte.html")
-
-
 @app.route("/sprint/<sprint_id>")
 def sprint_detail(sprint_id: str):
     backlog = load_backlog()
@@ -213,43 +214,6 @@ def sprint_detail(sprint_id: str):
         for story in sprint["stories"]
     ]
     return render_template("sprint_detail.html", sprint=sprint, stories=stories)
-
-
-@app.route("/predict", methods=["GET", "POST"])
-def predict():
-    if request.method == "GET":
-        return render_template("predict.html", result=None, error=None)
-
-    file = request.files.get("file")
-    if not file or not file.filename:
-        return render_template(
-            "predict.html", result=None, error="Aucun fichier sélectionné."
-        )
-
-    try:
-        r = requests.post(
-            f"{BACKEND_URL}/api/v1/predict",
-            files={"file": (file.filename, file.stream, file.mimetype)},
-            headers={"X-API-Key": API_KEY},
-            timeout=30,
-        )
-    except requests.exceptions.ConnectionError:
-        return render_template(
-            "predict.html",
-            result=None,
-            error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
-        )
-
-    if r.status_code != 200:
-        try:
-            detail = r.json().get("detail", r.text)
-        except ValueError:
-            detail = r.text
-        return render_template(
-            "predict.html", result=None, error=f"Erreur {r.status_code} : {detail}"
-        )
-
-    return render_template("predict.html", result=r.json(), error=None)
 
 
 @app.route("/data")
@@ -298,7 +262,9 @@ def data_explorer():
         else:
             # Fallback 2 : scan filesystem (lent, dernier recours)
             stats = load_data_stats()
-    return render_template("data_explorer.html", stats=stats)
+    anomalies_dir = Path(__file__).parent / "static" / "img" / "anomalies"
+    anomaly_images = sorted(p.name for p in anomalies_dir.glob("*.png")) if anomalies_dir.exists() else []
+    return render_template("data_explorer.html", stats=stats, anomaly_images=anomaly_images)
 
 
 # ── API backlog ────────────────────────────────────────────────────────────
@@ -335,7 +301,7 @@ def api_data_stats():
     return jsonify(load_data_stats())
 
 
-# ── Proxy DVC → data-service ───────────────────────────────────────────────
+# ── Proxy DVC → dvc-service (chantier point 16 : extrait de data-service) ──
 
 @app.route("/api/dvc/<action>", methods=["GET", "POST"])
 def dvc_proxy(action: str):
@@ -345,15 +311,15 @@ def dvc_proxy(action: str):
     try:
         r = requests.request(
             method,
-            f"{DATA_SERVICE_URL}/v1/dvc/{action}",
+            f"{DVC_SERVICE_URL}/v1/dvc/{action}",
             timeout=310,
         )
         return jsonify(r.json()), r.status_code
     except requests.exceptions.ConnectionError:
         return jsonify({
-            "error": f"data-service inaccessible ({DATA_SERVICE_URL})",
+            "error": f"dvc-service inaccessible ({DVC_SERVICE_URL})",
             "stdout": "",
-            "stderr": "Lancer : make data-start",
+            "stderr": "Lancer : make start",
         }), 503
 
 
@@ -397,6 +363,32 @@ def ds_image_proxy():
             status=r.status_code,
             content_type=r.headers.get("content-type", "image/png"),
         )
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/sample")
+def ds_sample_proxy():
+    """Proxy vers /v1/data/sample (chantier point 15, portage de 02_donnees)."""
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/sample",
+            params=request.args, timeout=15,
+        )
+        return jsonify(r.json()), r.status_code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/metrics")
+def ds_metrics_proxy():
+    """Proxy vers /v1/data/metrics (chantier point 15, portage de 02_donnees)."""
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/metrics",
+            params=request.args, timeout=15,
+        )
+        return jsonify(r.json()), r.status_code
     except requests.exceptions.ConnectionError:
         return jsonify({"error": "data-service inaccessible"}), 503
 

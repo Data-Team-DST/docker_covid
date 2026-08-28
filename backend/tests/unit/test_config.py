@@ -33,6 +33,17 @@ def test_defaults_match_params_yaml_preprocess_section():
     assert settings.denoising_method == prep["denoising_method"]
 
 
+def test_mlflow_model_name_matches_params_yaml():
+    """mlflow_model_name DOIT rester synchronisé avec params.yaml (mlflow.model_name) —
+    sinon la Registry est interrogée sous un nom que rien n'y enregistre jamais."""
+    with open(REPO_ROOT / "params.yaml", encoding="utf-8") as f:
+        mlflow_params = yaml.safe_load(f)["mlflow"]
+
+    settings = Settings()
+
+    assert settings.mlflow_model_name == mlflow_params["model_name"]
+
+
 def test_production_without_api_key_raises():
     with pytest.raises(ValidationError, match="API_KEY"):
         Settings(api_env="production", api_key="")

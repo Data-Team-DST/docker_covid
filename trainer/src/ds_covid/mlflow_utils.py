@@ -52,6 +52,8 @@ class DualMlflowRun:
             return
 
         try:
+            os.environ["MLFLOW_TRACKING_URI"] = tracking_uri
+            os.environ["MLFLOW_REGISTRY_URI"] = tracking_uri
             os.environ["MLFLOW_TRACKING_USERNAME"] = username
             os.environ["MLFLOW_TRACKING_PASSWORD"] = token
             self.remote_client = MlflowClient(

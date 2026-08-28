@@ -174,11 +174,11 @@ sprints:
     stories:
       - id: US-18
         title: "Prometheus + instrumentation FastAPI"
-        description: "prometheus-fastapi-instrumentator sur /predict et /health. Métriques exposées : latence P50/P95, throughput, error rate, confidence distribution, class distribution. Endpoint /metrics."
+        description: "Instrumentation via prometheus_client (pas prometheus-fastapi-instrumentator — préfixe de métrique par défaut incompatible avec ds_covid_ imposé par alert_rules.yml). 8 métriques sur /metrics : uptime, model_loaded, predictions_total, http_requests_total{status,path} (middleware toutes routes), inference_latency_seconds (histogram), auth_failures_total, low_confidence_predictions_total, predictions_by_class_total{predicted_class}. Voir docs/us-verification.md."
         blocks: ["US-19", "US-20"]
         points: 4
         priority: MUST
-        done: false
+        done: true
       - id: US-19
         title: "Grafana dashboard (≥5 panels + alertes)"
         description: "Dashboard Grafana : latence P50/P95, error rate, throughput, confidence moyenne, distribution classes. Alertes : latence P95 > 1s, error rate > 5%. Provisioning automatique via docker-compose."
