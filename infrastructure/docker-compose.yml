@@ -78,7 +78,11 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      # 200s : chargement U-Net (173 Mo) depuis MLflow Registry sur CPU (pas de GPU
+      # dans le conteneur) observé à ~152s le 2026-08-28 — 60s était trop court,
+      # faisait échouer le démarrage à froid (logs : succès juste après le verdict
+      # "unhealthy" de Docker Compose).
+      start_period: 200s
     restart: unless-stopped
     deploy:
       resources:
