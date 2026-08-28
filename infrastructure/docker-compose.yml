@@ -87,7 +87,13 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          # 512m était trop juste : le modèle U-Net à froid consomme déjà ~300 Mo
+          # (58% de 512m) au repos, et 34 appels /predict séquentiels pendant un
+          # test réel (2026-08-28) ont fait planter le conteneur (kill silencieux,
+          # aucune trace de shutdown dans les logs — pas de crash applicatif propre).
+          # 1g laisse une vraie marge ; la cause racine (TF qui n'accumule pas de
+          # mémoire proprement entre appels predict()) reste à investiguer.
+          memory: 1g
           cpus: "1.0"
     networks:
       - covid-net
