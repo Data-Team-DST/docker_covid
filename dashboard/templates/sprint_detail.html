@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DS_COVID — {{ sprint.id }} {{ sprint.name }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
   <style>
     body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
     h1 { color: #58a6ff; }
@@ -35,8 +40,6 @@
       border: 1px dashed #30363d; border-radius: 6px; padding: .5rem .8rem; margin-top: .4rem;
     }
   </style>
-</head>
-<body>
 
   <p><a href="/">← Retour au backlog</a></p>
   <h1>{{ sprint.id }} — {{ sprint.name }}</h1>

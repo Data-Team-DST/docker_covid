@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <title>DS_COVID — Data Explorer</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
   <style>
     body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
     h1 { color: #58a6ff; }
@@ -74,11 +79,34 @@
     .zoom-btns { display:flex; gap:.4rem; justify-content:center; margin-bottom:.6rem; }
     .zoom-btn { background:#21262d; border:1px solid #30363d; color:#c9d1d9; border-radius:5px; padding:3px 10px; cursor:pointer; font-size:.8rem; }
     .zoom-btn.active, .zoom-btn:hover { background:#1f6feb; border-color:#1f6feb; color:#fff; }
+    /* Échantillonnage + métriques */
+    .sample-controls { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem; }
+    .sample-controls select, .sample-controls input {
+      background:#21262d; border:1px solid #30363d; color:#c9d1d9;
+      padding:6px 10px; border-radius:6px; font-family:monospace; font-size:.9rem;
+    }
+    .sample-grid { display:flex; flex-wrap:wrap; gap:1rem; }
+    .sample-card {
+      background:#21262d; border:1px solid #30363d; border-radius:8px;
+      padding:.7rem; width:220px;
+    }
+    .sample-card .sample-imgs { display:flex; gap:.4rem; margin-bottom:.5rem; }
+    .sample-card img { width:96px; height:96px; object-fit:cover; border-radius:4px; cursor:pointer; }
+    .sample-card .sample-imgs .empty-mask {
+      width:96px; height:96px; display:flex; align-items:center; justify-content:center;
+      background:#161b22; border-radius:4px; color:#484f58; font-size:.7rem; text-align:center;
+    }
+    .metric-row { display:flex; justify-content:space-between; font-size:.78rem; color:#8b949e; padding:1px 0; }
+    .metric-row b { color:#c9d1d9; }
+    .anomaly-gallery { display:flex; flex-wrap:wrap; gap:.8rem; }
+    .anomaly-gallery img {
+      width:160px; height:160px; object-fit:cover; border-radius:6px;
+      border:1px solid #30363d; cursor:pointer;
+    }
+    .anomaly-gallery img:hover { border-color:#58a6ff; }
   </style>
-</head>
-<body>
   <h1>🗂 DS_COVID — Data Explorer</h1>
-  <p><a href="/">← Retour au backlog</a> · <a href="/predict">🔬 Prédicteur</a></p>
+  <p><a href="/">← Retour au backlog</a> · <a href="{{ demonstration_url }}/predict" hx-boost="false">🔬 Prédicteur</a></p>
 
   <h2>📦 DVC — Opérations</h2>
   <div class="card">
@@ -162,6 +190,42 @@
     <div id="search-results"></div>
   </div>
 
+  <h2>🔬 Échantillonnage & métriques par classe</h2>
+  <div class="card">
+    <p style="color:#8b949e; font-size:.85rem; margin-top:0">
+      Tire des images au hasard dans une classe et calcule luminosité/contraste/entropie
+      en direct, avec le taux de couverture du masque associé — porté depuis
+      <code>frontend/page/02_donnees</code> (chantier point 15).
+    </p>
+    <div class="sample-controls">
+      <select id="sample-class">
+        <option value="COVID">COVID</option>
+        <option value="Lung_Opacity">Lung_Opacity</option>
+        <option value="Normal">Normal</option>
+        <option value="Viral Pneumonia">Viral Pneumonia</option>
+      </select>
+      <input type="number" id="sample-n" value="5" min="1" max="20" style="width:70px">
+      <button class="btn-dvc" onclick="doSample()">🎲 Échantillonner</button>
+      <span id="sample-info" style="color:#8b949e; font-size:.85rem;"></span>
+    </div>
+    <div id="sample-grid" class="sample-grid"></div>
+  </div>
+
+  <h2>🖼 Galerie d'anomalies</h2>
+  <div class="card">
+    <p style="color:#8b949e; font-size:.85rem; margin-top:0">
+      Artefacts observés dans les radiographies (échantillon curé, porté depuis
+      <code>frontend/page/images/anomalies_cxr</code>).
+    </p>
+    <div class="anomaly-gallery">
+      {% for img in anomaly_images %}
+      <img src="{{ url_for('static', filename='img/anomalies/' + img) }}"
+           alt="{{ img }}" loading="lazy"
+           onclick="openModal('{{ url_for('static', filename='img/anomalies/' + img) }}', '{{ img }}', 'anomalie')">
+      {% endfor %}
+    </div>
+  </div>
+
   <h2>🧠 Modèles disponibles</h2>
   <div class="card">
     {% if stats.models %}
@@ -215,8 +279,10 @@
     }
 
     // ── Image search ─────────────────────────────────────────────────────────
-    let _debounceTimer = null;
-    let _lastQuery = '';
+    // var (pas const/let) : ce script se réexécute à chaque navigation hx-boost
+    // sans rechargement complet de page — une redéclaration const/let planterait.
+    var _debounceTimer = null;
+    var _lastQuery = '';
 
     function clearResults() {
       document.getElementById('search-results').innerHTML = '';
@@ -316,9 +382,66 @@
       if (!e.target.closest('.search-wrap')) hideSuggest();
     });
 
+    // ── Échantillonnage + métriques ─────────────────────────────────────────
+    async function doSample() {
+      const cls = document.getElementById('sample-class').value;
+      const n = document.getElementById('sample-n').value;
+      const info = document.getElementById('sample-info');
+      const grid = document.getElementById('sample-grid');
+      info.textContent = '⏳ Échantillonnage…';
+      grid.innerHTML = '';
+      try {
+        const r = await fetch(`/api/ds/sample?cls=${encodeURIComponent(cls)}&n=${n}`);
+        const data = await r.json();
+        if (data.error) { info.textContent = '❌ ' + data.error; return; }
+        if (!data.images?.length) { info.textContent = 'Aucune image pour cette classe.'; return; }
+        info.textContent = data.images.length + ' image(s)';
+        data.images.forEach(item => renderSampleCard(item, grid));
+      } catch (e) { info.textContent = '❌ ' + e; }
+    }
+
+    async function renderSampleCard(item, grid) {
+      const imgUrl = `/api/ds/image?dataset=raw&path=${encodeURIComponent(item.path)}`;
+      const maskUrl = item.mask_path
+        ? `/api/ds/image?dataset=raw&path=${encodeURIComponent(item.mask_path)}` : null;
+
+      const card = document.createElement('div');
+      card.className = 'sample-card';
+      card.innerHTML = `
+        <div class="sample-imgs">
+          <img src="${imgUrl}" alt="${item.filename}" loading="lazy">
+          ${maskUrl
+            ? `<img src="${maskUrl}" alt="masque de ${item.filename}" loading="lazy">`
+            : `<div class="empty-mask">pas de masque</div>`}
+        </div>
+        <div class="img-name" title="${item.filename}" style="margin-bottom:.4rem">${item.filename}</div>
+        <div class="metric-row"><span>Luminosité</span><b class="m-lum">…</b></div>
+        <div class="metric-row"><span>Contraste</span><b class="m-std">…</b></div>
+        <div class="metric-row"><span>Entropie</span><b class="m-ent">…</b></div>
+        <div class="metric-row"><span>Couverture masque</span><b class="m-cov">…</b></div>`;
+      card.querySelector('img').onclick = () => openModal(imgUrl, item.filename, 'image');
+      if (maskUrl) {
+        card.querySelectorAll('img')[1].onclick = () => openModal(maskUrl, item.filename, 'masque');
+      }
+      grid.appendChild(card);
+
+      try {
+        const r = await fetch(`/api/ds/metrics?path=${encodeURIComponent(item.path)}`);
+        const data = await r.json();
+        if (data.error) return;
+        card.querySelector('.m-lum').textContent = data.metrics.luminosity_mean.toFixed(1);
+        card.querySelector('.m-std').textContent = data.metrics.contrast_std.toFixed(1);
+        card.querySelector('.m-ent').textContent = data.metrics.entropy.toFixed(2);
+        card.querySelector('.m-cov').textContent =
+          data.mask_coverage != null ? data.mask_coverage.toFixed(1) + '%' : 'N/A';
+      } catch (e) {
+        console.warn('métriques indisponibles pour', item.filename, e);
+      }
+    }
+
     // ── Modal & zoom ─────────────────────────────────────────────────────────
-    let _zoom = 0;
-    const _dlg = () => document.getElementById('modal-overlay');
+    var _zoom = 0;
+    var _dlg = () => document.getElementById('modal-overlay');
 
     function setZoom(level) {
       _zoom = level;

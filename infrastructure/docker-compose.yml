@@ -23,6 +23,14 @@ services:
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
       - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-100}
       - SEGMENTATION_SERVICE_URL=http://segmentation-service:8001
+      # MLflow Model Registry — chargement prioritaire, fallback sur MODEL_PATH si
+      # indisponible (voir backend/app/models/loader.py). Volontairement pas de
+      # depends_on sur mlflow : le backend doit démarrer même si MLflow est down.
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
     depends_on:
       segmentation-service:
         condition: service_healthy
@@ -58,22 +66,39 @@ services:
       - PYTHONUNBUFFERED=1
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
       - MODEL_PATH=${SEGMENTATION_MODEL_PATH:-data/models/segmentation.keras}
+      # MLflow Model Registry — chargement prioritaire, fallback sur MODEL_PATH si
+      # indisponible (voir model.py). Volontairement pas de depends_on sur mlflow.
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      # 200s : chargement U-Net (173 Mo) depuis MLflow Registry sur CPU (pas de GPU
+      # dans le conteneur) observé à ~152s le 2026-08-28 — 60s était trop court,
+      # faisait échouer le démarrage à froid (logs : succès juste après le verdict
+      # "unhealthy" de Docker Compose).
+      start_period: 200s
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 512m
+          # 512m était trop juste : le modèle U-Net à froid consomme déjà ~300 Mo
+          # (58% de 512m) au repos, et 34 appels /predict séquentiels pendant un
+          # test réel (2026-08-28) ont fait planter le conteneur (kill silencieux,
+          # aucune trace de shutdown dans les logs — pas de crash applicatif propre).
+          # 1g laisse une vraie marge ; la cause racine (TF qui n'accumule pas de
+          # mémoire proprement entre appels predict()) reste à investiguer.
+          memory: 1g
           cpus: "1.0"
     networks:
       - covid-net
 
-  # ── Data Service (DVC + stats données) ────────────────────────────────────
+  # ── Data Service (lecture seule : stats/recherche/images données) ─────────
   data-service:
     build:
       context: ./data-service
@@ -84,6 +109,41 @@ services:
       - "5001:5001"
     volumes:
       - ./data:/app/data
+      - ./tmp/logs:/app/tmp/logs
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATA_SERVICE_PORT=5001
+      - LOG_SERVICE_URL=http://log-service:5002/v1/log
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    networks:
+      - covid-net
+
+  # ── DVC Service (opérations : status/pull/push/repro) ─────────────────────
+  # Extrait de data-service (chantier point 16) : lecture vs mutation d'état
+  # local separees. Appelle data-service en HTTP pour invalider son cache
+  # stats apres un pull/repro (R8 - jamais de partage de filesystem/etat).
+  dvc-service:
+    build:
+      context: ./dvc-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY}/${GITHUB_USER}/covid-xray-dvc-service:${IMAGE_TAG:-latest}
+    container_name: covid-xray-dvc-service
+    ports:
+      - "5003:5003"
+    volumes:
+      - ./data:/app/data
       - ./.dvc:/app/.dvc
       - ./.git:/app/.git:ro
       - ./tmp/logs:/app/tmp/logs
@@ -91,14 +151,15 @@ services:
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
-      - DATA_SERVICE_PORT=5001
+      - DVC_SERVICE_PORT=5003
+      - DATA_SERVICE_URL=http://data-service:5001
       - DVC_REMOTE_MINIO_ENDPOINTURL=http://minio:9000
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - AWS_DEFAULT_REGION=us-east-1
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -176,7 +237,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: 8g
           cpus: "2.0"
         reservations:
           devices:

@@ -9,4 +9,4 @@
 [remote "dagshub-storage"]
     url = https://dagshub.com/DST_Data_Team/docker_covid.dvc
     auth = basic
-    user = bioinfodl
+    user = L-Poca

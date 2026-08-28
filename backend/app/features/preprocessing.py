@@ -1,4 +1,4 @@
-# code-smell: max-lines=200 reason="Pipeline masking/crop/CLAHE dupliqué localement (autonomie du service, cf. frontières de service) + appel HTTP segmentation-service"
+# code-smell: max-lines=200 reason="Pipeline masking/CLAHE local + appel segmentation"
 """Preprocessing des images pour l'inférence.
 
 Pipeline autonome (masking + crop poumons + CLAHE + resize + normalisation),
@@ -13,6 +13,7 @@ service à part, déployable/scalable indépendamment (cf. `predict_lung_mask`).
 """
 
 import logging
+from dataclasses import dataclass, field
 
 import cv2
 import httpx
@@ -29,11 +30,8 @@ def _decode_grayscale(image_bytes: bytes) -> np.ndarray:
     return img
 
 
-def squared_crop_to_lungs(masked_img: np.ndarray) -> np.ndarray:
-    """
-    Rogne l'image masquée pour ne garder que la région contenant les poumons, puis ajoute
-    du padding pour obtenir une image carrée (recentre les poumons, réduit le bruit de
-    fond, préserve un format carré pour les étapes suivantes du pipeline).
+def _mask_bounding_box(masked_img: np.ndarray) -> tuple[int, int, int, int]:
+    """Calcule (r1, r2, c1, c2), les bornes de la région non nulle de `masked_img`.
 
     Raises:
         ValueError - si l'image masquée ne contient aucun pixel non nul
@@ -42,56 +40,97 @@ def squared_crop_to_lungs(masked_img: np.ndarray) -> np.ndarray:
     cols = np.any(masked_img > 0, axis=0)
 
     if not rows.any() or not cols.any():
-        raise ValueError("L'image masquée ne contient aucun pixel de poumon (tous les pixels sont à zéro)")
+        raise ValueError(
+            "L'image masquée ne contient aucun pixel de poumon "
+            "(tous les pixels sont à zéro)"
+        )
 
     r1, r2 = np.where(rows)[0][[0, -1]]
     c1, c2 = np.where(cols)[0][[0, -1]]
+    return r1, r2, c1, c2
 
+
+def _square_bounds(
+    box: tuple[int, int, int, int], shape: tuple[int, int]
+) -> tuple[int, int, int, int]:
+    """Calcule (y1, y2, x1, x2) : un carré centré sur `box`, clampé à `shape`."""
+    r1, r2, c1, c2 = box
     h, w = r2 - r1 + 1, c2 - c1 + 1
     side = max(h, w)
     cy, cx = (r1 + r2) // 2, (c1 + c2) // 2
 
     y1 = max(0, cy - side // 2)
     x1 = max(0, cx - side // 2)
-    y2 = min(masked_img.shape[0], y1 + side)
-    x2 = min(masked_img.shape[1], x1 + side)
+    y2 = min(shape[0], y1 + side)
+    x2 = min(shape[1], x1 + side)
 
-    # Si x2 ou y2 a été clampé, on réajuste x1 et y1 pour garder un carré de la bonne taille
+    # Si x2 ou y2 a été clampé, on réajuste x1 et y1 pour garder un carré
+    # de la bonne taille
     y1, x1 = max(0, y2 - side), max(0, x2 - side)
+    return y1, y2, x1, x2
 
+
+def squared_crop_to_lungs(masked_img: np.ndarray) -> np.ndarray:
+    """
+    Rogne l'image masquée pour ne garder que la région contenant les poumons,
+    puis ajoute du padding pour obtenir une image carrée (recentre les poumons,
+    réduit le bruit de fond, préserve un format carré pour les étapes suivantes
+    du pipeline).
+
+    Raises:
+        ValueError - si l'image masquée ne contient aucun pixel non nul
+    """
+    box = _mask_bounding_box(masked_img)
+    y1, y2, x1, x2 = _square_bounds(box, masked_img.shape)
     return masked_img[y1:y2, x1:x2]
+
+
+@dataclass
+class PipelineOptions:
+    """Options du pipeline interne (crop/denoise/CLAHE/resize), cf. `apply_pipeline`."""
+
+    cropping: bool
+    denoising_method: str | None
+    clahe_processor: cv2.CLAHE | None
+    target_size: int
 
 
 def apply_pipeline(
     img_array: np.ndarray,
     mask_array: np.ndarray | None,
-    cropping: bool,
-    denoising_method: str | None,
-    clahe_processor: cv2.CLAHE | None,
-    target_size: int,
+    options: PipelineOptions,
 ) -> np.ndarray:
     """Applique masking + crop + CLAHE + resize à une image en niveaux de gris déjà
     chargée en mémoire. Identique à `ds_covid.preprocessing.apply_pipeline`."""
 
-    if denoising_method == "gaussian":
+    if options.denoising_method == "gaussian":
         img_array = cv2.GaussianBlur(img_array, (5, 5), 0)
 
     if mask_array is not None:
         mask_array = cv2.resize(
-            mask_array, (img_array.shape[1], img_array.shape[0]), interpolation=cv2.INTER_NEAREST
+            mask_array,
+            (img_array.shape[1], img_array.shape[0]),
+            interpolation=cv2.INTER_NEAREST,
         )
-        mask_binary = (mask_array * 255).astype(np.uint8) if mask_array.max() <= 1 else mask_array.astype(np.uint8)
+        if mask_array.max() <= 1:
+            mask_binary = (mask_array * 255).astype(np.uint8)
+        else:
+            mask_binary = mask_array.astype(np.uint8)
         masked_array = cv2.bitwise_and(img_array, img_array, mask=mask_binary)
 
-        if cropping:
+        if options.cropping:
             masked_array = squared_crop_to_lungs(masked_array)
 
         img_array = masked_array
 
-    if clahe_processor:
-        img_array = clahe_processor.apply(img_array)
+    if options.clahe_processor:
+        img_array = options.clahe_processor.apply(img_array)
 
-    return cv2.resize(img_array, (target_size, target_size), interpolation=cv2.INTER_LANCZOS4)
+    return cv2.resize(
+        img_array,
+        (options.target_size, options.target_size),
+        interpolation=cv2.INTER_LANCZOS4,
+    )
 
 
 def predict_lung_mask(
@@ -104,20 +143,25 @@ def predict_lung_mask(
 
     Args:
         image_bytes: contenu brut de l'image (n'importe quelle taille/format)
-        segmentation_service_url: base URL du segmentation-service (ex: http://segmentation-service:8001)
+        segmentation_service_url: base URL du segmentation-service
+            (ex: http://segmentation-service:8001)
         timeout: délai max en secondes pour l'appel HTTP
         client: client httpx à utiliser (permet l'injection d'un transport de test) ;
             None = requête réelle via httpx.post
 
     Returns:
-        np.ndarray (H, W) uint8 - mask binaire {0, 255}, mêmes dimensions que l'image envoyée
+        np.ndarray (H, W) uint8 - mask binaire {0, 255}, mêmes dimensions que
+        l'image envoyée
 
     Raises:
         httpx.HTTPError - si le service est injoignable ou renvoie une erreur
     """
     files = {"file": ("image.png", image_bytes, "application/octet-stream")}
     url = f"{segmentation_service_url}/v1/segment"
-    response = client.post(url, files=files, timeout=timeout) if client else httpx.post(url, files=files, timeout=timeout)
+    if client:
+        response = client.post(url, files=files, timeout=timeout)
+    else:
+        response = httpx.post(url, files=files, timeout=timeout)
     response.raise_for_status()
     mask = cv2.imdecode(np.frombuffer(response.content, np.uint8), cv2.IMREAD_GRAYSCALE)
     if mask is None:
@@ -125,18 +169,39 @@ def predict_lung_mask(
     return mask
 
 
+# R0902 (too-many-instance-attributes) : bag d'options 1-pour-1 avec params.yaml
+# (section `preprocess`) + le HTTP call au segmentation-service — scinder casserait
+# la correspondance directe avec les clés de params.yaml que `test_config.py`
+# vérifie déjà côté `app.config.Settings`.
+# R0801 (duplicate-code avec app.config.Settings) : mirroring intentionnel, documenté
+# ci-dessous — Settings reste la source réelle utilisée par predict.py, ce dataclass
+# ne sert qu'aux appels directs de preprocess_image hors API (tests).
+@dataclass
+class PreprocessOptions:  # pylint: disable=too-many-instance-attributes,duplicate-code
+    """Options de `preprocess_image` — miroir de `params.yaml` (section `preprocess`).
+
+    Les defaults DOIVENT rester synchronisés avec `params.yaml` (cf.
+    `test_config.py::test_defaults_match_params_yaml_preprocess_section`, qui
+    vérifie `app.config.Settings`, source réelle utilisée par `predict.py` — ces
+    defaults ici ne servent qu'aux appels directs de `preprocess_image` hors API,
+    ex. tests).
+    """
+
+    img_size: tuple[int, int] = (256, 256)
+    masking: bool = True
+    cropping: bool = True
+    clahe: bool = True
+    clahe_clip_limit: float = 2.0
+    clahe_tile_grid_size: tuple[int, int] = field(default=(8, 8))
+    denoising_method: str | None = None
+    segmentation_service_url: str = ""
+    segmentation_service_timeout_s: float = 10.0
+    segmentation_client: httpx.Client | None = None
+
+
 def preprocess_image(
     image_bytes: bytes,
-    img_size: tuple[int, int] = (256, 256),
-    masking: bool = True,
-    cropping: bool = True,
-    clahe: bool = True,
-    clahe_clip_limit: float = 2.0,
-    clahe_tile_grid_size: tuple[int, int] = (8, 8),
-    denoising_method: str | None = None,
-    segmentation_service_url: str = "",
-    segmentation_service_timeout_s: float = 10.0,
-    segmentation_client: httpx.Client | None = None,
+    options: PreprocessOptions | None = None,
 ) -> np.ndarray:
     """
     Prépare une image brute pour l'inférence.
@@ -149,12 +214,7 @@ def preprocess_image(
 
     Args:
         image_bytes: contenu brut du fichier image
-        img_size: taille cible carrée (doit correspondre à params.yaml preprocess.img_size)
-        masking: si True, appelle le segmentation-service pour masquer/recadrer l'image
-            (désactiver provoque un train/serving skew — à éviter en production)
-        cropping / clahe / clahe_clip_limit / clahe_tile_grid_size / denoising_method :
-            mêmes options que `params.yaml` (section `preprocess`)
-        segmentation_service_url / segmentation_service_timeout_s: cf. `predict_lung_mask`
+        options: cf. `PreprocessOptions` (None = valeurs par défaut)
 
     Returns:
         np.ndarray de shape (1, H, W, 1), dtype float32, valeurs [-1, 1]
@@ -163,26 +223,35 @@ def preprocess_image(
         ValueError - si les bytes ne représentent pas une image décodable
         httpx.HTTPError - si masking=True et le segmentation-service est injoignable
     """
+    opts = options or PreprocessOptions()
     img_array = _decode_grayscale(image_bytes)
 
     mask_array = None
-    if masking:
+    if opts.masking:
         mask_array = predict_lung_mask(
-            image_bytes, segmentation_service_url, segmentation_service_timeout_s, client=segmentation_client
+            image_bytes,
+            opts.segmentation_service_url,
+            opts.segmentation_service_timeout_s,
+            client=opts.segmentation_client,
         )
 
-    clahe_processor = (
-        cv2.createCLAHE(clipLimit=clahe_clip_limit, tileGridSize=tuple(clahe_tile_grid_size)) if clahe else None
-    )
+    clahe_processor = None
+    if opts.clahe:
+        clahe_processor = cv2.createCLAHE(
+            clipLimit=opts.clahe_clip_limit,
+            tileGridSize=tuple(opts.clahe_tile_grid_size),
+        )
 
     processed = apply_pipeline(
         img_array,
         mask_array,
-        cropping=cropping and mask_array is not None,
-        denoising_method=denoising_method,
-        clahe_processor=clahe_processor,
-        target_size=img_size[0],
+        PipelineOptions(
+            cropping=opts.cropping and mask_array is not None,
+            denoising_method=opts.denoising_method,
+            clahe_processor=clahe_processor,
+            target_size=opts.img_size[0],
+        ),
     )
 
     arr = (processed.astype("float32") / 127.5) - 1.0
-    return arr.reshape(1, img_size[0], img_size[1], 1)
+    return arr.reshape(1, opts.img_size[0], opts.img_size[1], 1)
