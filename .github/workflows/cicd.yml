@@ -538,6 +538,7 @@ jobs:
             -e API_ENV=production \
             -e API_KEY=smoke-test-key \
             -e MODEL_PATH=data/models/classification.keras \
+            -e MLFLOW_TRACKING_URI="" \
             -e PYTHONUNBUFFERED=1 \
             -e LOG_SERVICE_URL=http://localhost:5002/v1/log \
             -v "${{ github.workspace }}/tmp/logs:/app/tmp/logs" \
