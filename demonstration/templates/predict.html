@@ -74,19 +74,20 @@
   <div class="card">
     <form method="post" enctype="multipart/form-data" id="predict-form">
       <label class="drop-zone" id="drop-zone" for="file-input">
-        <span id="drop-label">
+        <span id="drop-label" {% if image_data_uri %}style="display:none"{% endif %}>
           <span class="drop-icon">📤</span>
           Glisser une image ici, ou cliquer pour choisir un fichier
           <span class="drop-hint">JPEG ou PNG — radiographie thoracique</span>
         </span>
-        <img id="preview" alt="Aperçu">
+        <img id="preview" alt="Aperçu"
+             {% if image_data_uri %}src="{{ image_data_uri }}" style="display:block"{% endif %}>
       </label>
       <input type="file" id="file-input" name="file" accept="image/jpeg,image/png" required>
-      <div id="filename"></div>
+      <div id="filename" {% if filename %}style="display:block"{% endif %}>{% if filename %}📎 {{ filename }}{% endif %}</div>
       <div class="classes-hint">
         <span>COVID</span><span>Lung Opacity</span><span>Normal</span><span>Viral Pneumonia</span>
       </div>
-      <button type="submit" class="btn-predict" id="submit-btn">Classer l'image</button>
+      <button type="submit" class="btn-predict" id="submit-btn">{% if filename %}Classer une autre image →{% else %}Classer l'image{% endif %}</button>
     </form>
   </div>
 

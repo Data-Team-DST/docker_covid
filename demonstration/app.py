@@ -1,4 +1,5 @@
 """Demonstration Flask — DS_COVID MLOps — facade demo produit (contexte, prédicteur, modèles)."""
+import base64
 import os
 
 import requests
@@ -65,7 +66,9 @@ def preprocessing():
 def predict():
     nav = nav_context("/predict")
     if request.method == "GET":
-        return render_template("predict.html", result=None, error=None, **nav)
+        return render_template(
+            "predict.html", result=None, error=None, filename=None, image_data_uri=None, **nav
+        )
 
     file = request.files.get("file")
     if not file or not file.filename:
@@ -73,10 +76,17 @@ def predict():
             "predict.html", result=None, error="Aucun fichier sélectionné.", **nav
         )
 
+    file_bytes = file.read()
+    image_ctx = {
+        "filename": file.filename,
+        "image_data_uri": f"data:{file.mimetype};base64,"
+        + base64.b64encode(file_bytes).decode("ascii"),
+    }
+
     try:
         r = requests.post(
             f"{BACKEND_URL}/api/v1/predict",
-            files={"file": (file.filename, file.stream, file.mimetype)},
+            files={"file": (file.filename, file_bytes, file.mimetype)},
             headers={"X-API-Key": API_KEY},
             timeout=30,
         )
@@ -86,6 +96,7 @@ def predict():
             result=None,
             error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
             **nav,
+            **image_ctx,
         )
 
     if r.status_code != 200:
@@ -94,10 +105,14 @@ def predict():
         except ValueError:
             detail = r.text
         return render_template(
-            "predict.html", result=None, error=f"Erreur {r.status_code} : {detail}", **nav
+            "predict.html",
+            result=None,
+            error=f"Erreur {r.status_code} : {detail}",
+            **nav,
+            **image_ctx,
         )
 
-    return render_template("predict.html", result=r.json(), error=None, **nav)
+    return render_template("predict.html", result=r.json(), error=None, **nav, **image_ctx)
 
 
 @app.route("/modeles")
