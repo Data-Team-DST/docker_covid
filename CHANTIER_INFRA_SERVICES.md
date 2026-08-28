@@ -53,6 +53,26 @@ ressource partagée entre deux consommateurs qui n'en ont pas besoin au même de
 
 ## 2. `frontend` (streamlit) vs `dashboard` (Flask) — chantier de fond, pas un renommage
 
+**Option C appliquée le 2026-08-28** (inventaire page par page fait, cf. session) — contenu
+migré vers `dashboard` au fil de l'eau, pas de split de service ni de `demonstration/` dédié
+(pas le temps avant la soutenance) :
+- `01`/`04`/`05` (texte) : déjà condensés dans `/contexte` avant même cette session.
+- **07 (conclusion critique/éthique)** : migré → nouvelle page `/conclusion`. Roadmap mise à
+  jour pour ne plus présenter comme "futur" ce qui est déjà livré (versionnage données,
+  pipeline MLOps).
+- **Images 04/05** (5 matrices de confusion, architecture InceptionV3, courbes loss/accuracy,
+  matrice deep learning, 2 visualisations LIME) : copiées dans `dashboard/static/img/`,
+  intégrées dans `/contexte`.
+- **02_données** (seule page avec calcul réel, pas juste des images statiques) : logique
+  d'échantillonnage + métriques (luminosité/contraste/entropie/couverture masque) portée vers
+  `data-service` (pas directement dans `dashboard`, pour respecter la frontière de service
+  déjà établie) — nouveaux endpoints `/v1/data/sample` et `/v1/data/metrics`, section dédiée
+  sur `/data` + galerie d'anomalies (8 images statiques).
+- **Non fait** : 03 (captures d'écran statiques — env Windows/WSL/Colab, masking, augmentation ;
+  faible priorité, coût faible si repris plus tard). 06 (CI/CD) — **volontairement pas migré**,
+  contenu périmé (présente Docker/CD/monitoring comme absents alors qu'ils existent).
+- `frontend/` (Streamlit) devient supprimable une fois 03 traité ou explicitement abandonné.
+
 **Constat déjà établi** (audit du 2026-08-26, avant récupération de `raf5`) : sur les 7 pages
 streamlit, seules `01_accueil` et `02_données` ont un équivalent partiel dans `dashboard`. Les
 5 autres (`03_preprocessing`, `04_Machine_learning_et_optimisation`, `05_Deep_learning_et_
