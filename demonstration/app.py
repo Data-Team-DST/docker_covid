@@ -2,13 +2,23 @@
 import os
 
 import requests
-from flask import Flask, redirect, render_template, request
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:5050")
 API_KEY = os.getenv("API_KEY", "")
+
+# Ordre de présentation (soutenance) — pilote la nav séquentielle Précédent/Suivant.
+PAGE_ORDER = [
+    ("/", "Sommaire"),
+    ("/contexte", "Contexte DS"),
+    ("/preprocessing", "Préprocessing"),
+    ("/predict", "Prédicteur"),
+    ("/modeles", "Modèles"),
+    ("/conclusion", "Conclusion"),
+]
 
 
 @app.context_processor
@@ -17,40 +27,50 @@ def inject_dashboard_url():
     return {"dashboard_url": DASHBOARD_URL}
 
 
+def nav_context(current_path: str) -> dict:
+    """Précédent/suivant dans PAGE_ORDER, pour la nav séquentielle Précédent/Suivant."""
+    idx = next(i for i, (path, _) in enumerate(PAGE_ORDER) if path == current_path)
+    return {
+        "prev_page": PAGE_ORDER[idx - 1] if idx > 0 else None,
+        "next_page": PAGE_ORDER[idx + 1] if idx < len(PAGE_ORDER) - 1 else None,
+    }
+
+
 @app.route("/")
-def index():
-    """Pas de page d'accueil dédiée — redirige vers la première page de la démo."""
-    return redirect("/contexte")
+def sommaire():
+    """Écran d'ouverture de la présentation — sommaire visuel des 5 étapes."""
+    return render_template("sommaire.html", **nav_context("/"))
 
 
 @app.route("/contexte")
 def contexte():
-    return render_template("contexte.html")
+    return render_template("contexte.html", **nav_context("/contexte"))
 
 
 @app.route("/conclusion")
 def conclusion():
     """Conclusion critique et perspectives — condensé depuis
     frontend/page/07_conclusion_critique_perspective.py (chantier point 15)."""
-    return render_template("conclusion.html")
+    return render_template("conclusion.html", **nav_context("/conclusion"))
 
 
 @app.route("/preprocessing")
 def preprocessing():
     """Environnements/masking/déséquilibre/augmentation — condensé depuis
     frontend/page/03_preprocessing (chantier point 15)."""
-    return render_template("preprocessing.html")
+    return render_template("preprocessing.html", **nav_context("/preprocessing"))
 
 
 @app.route("/predict", methods=["GET", "POST"])
 def predict():
+    nav = nav_context("/predict")
     if request.method == "GET":
-        return render_template("predict.html", result=None, error=None)
+        return render_template("predict.html", result=None, error=None, **nav)
 
     file = request.files.get("file")
     if not file or not file.filename:
         return render_template(
-            "predict.html", result=None, error="Aucun fichier sélectionné."
+            "predict.html", result=None, error="Aucun fichier sélectionné.", **nav
         )
 
     try:
@@ -65,6 +85,7 @@ def predict():
             "predict.html",
             result=None,
             error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
+            **nav,
         )
 
     if r.status_code != 200:
@@ -73,10 +94,10 @@ def predict():
         except ValueError:
             detail = r.text
         return render_template(
-            "predict.html", result=None, error=f"Erreur {r.status_code} : {detail}"
+            "predict.html", result=None, error=f"Erreur {r.status_code} : {detail}", **nav
         )
 
-    return render_template("predict.html", result=r.json(), error=None)
+    return render_template("predict.html", result=r.json(), error=None, **nav)
 
 
 @app.route("/modeles")
@@ -93,7 +114,9 @@ def model_status():
         health = None
         error = f"Backend inaccessible ({BACKEND_URL}) — {e}"
 
-    return render_template("model_status.html", health=health, error=error)
+    return render_template(
+        "model_status.html", health=health, error=error, **nav_context("/modeles")
+    )
 
 
 if __name__ == "__main__":

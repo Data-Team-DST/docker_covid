@@ -1,5 +1,39 @@
-body { background: #f5f6fa; font-size: 0.9rem; }
-.sprint-card { border-left: 4px solid #6c757d; }
-.sprint-card .card-header { background: #fff; }
-.story-row td { vertical-align: middle; }
-.navbar { margin-bottom: 0; }
+/* Nav séquentielle (Précédent/Suivant) — pied de page commun à toutes les pages,
+   partagé via le <link> en <head> (persiste à travers les swaps hx-boost, contrairement
+   aux <style> inline placés en <body> qui sont propres à chaque page). */
+.nav-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #21262d;
+  max-width: 900px;
+}
+.nav-btn {
+  background: #1f6feb; color: #fff !important; padding: 8px 16px;
+  border-radius: 6px; text-decoration: none !important; font-size: .9rem;
+}
+.nav-btn:hover { background: #388bfd; }
+.nav-backlog { color: #6e7681 !important; font-size: .8rem; text-decoration: none !important; }
+.nav-backlog:hover { color: #8b949e; text-decoration: underline !important; }
+
+/* Sommaire (écran d'ouverture) */
+.title-block { margin-bottom: .5rem; }
+.title-block h1 { font-size: 2.2rem; margin-bottom: .3rem; }
+.title-block .subtitle { color: #8b949e; font-size: 1rem; margin: 0 0 .3rem; }
+.title-block .team { color: #6e7681; font-size: .85rem; }
+
+.step-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem; max-width: 1000px; margin-top: 1.5rem;
+}
+.step-card {
+  display: block; background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+  padding: 1.2rem; text-decoration: none !important; color: #c9d1d9 !important;
+  transition: border-color .15s;
+}
+.step-card:hover { border-color: #58a6ff; }
+.step-num {
+  display: inline-block; width: 28px; height: 28px; line-height: 28px;
+  text-align: center; background: #1f6feb; color: #fff; border-radius: 50%;
+  font-weight: bold; font-size: .85rem; margin-bottom: .5rem;
+}
+.step-title { font-weight: bold; font-size: 1.05rem; color: #58a6ff; margin-bottom: .3rem; }
+.step-desc { font-size: .82rem; color: #8b949e; }

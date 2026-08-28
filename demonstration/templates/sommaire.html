@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS_COVID — Présentation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
+  <style>
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+  </style>
+
+  <div class="title-block">
+    <h1>🫁 DS_COVID</h1>
+    <p class="subtitle">Classification de radiographies pulmonaires — industrialisation MLOps</p>
+    <p class="team">Équipe : Cirine B. · Lena B. · Steven M. · Rafael C.</p>
+  </div>
+
+  <div class="step-grid">
+    <a class="step-card" href="/contexte">
+      <div class="step-num">1</div>
+      <div class="step-title">🫁 Contexte DS</div>
+      <div class="step-desc">D'où part le projet, objectif SMART, résultats baseline</div>
+    </a>
+    <a class="step-card" href="/preprocessing">
+      <div class="step-num">2</div>
+      <div class="step-title">🧫 Préprocessing</div>
+      <div class="step-desc">Environnements, masking, déséquilibre, augmentation</div>
+    </a>
+    <a class="step-card" href="/predict">
+      <div class="step-num">3</div>
+      <div class="step-title">🔬 Prédicteur</div>
+      <div class="step-desc">Démo live — classification en direct via le backend</div>
+    </a>
+    <a class="step-card" href="/modeles">
+      <div class="step-num">4</div>
+      <div class="step-title">🧪 Modèles</div>
+      <div class="step-desc">Provenance MLflow Model Registry vs fichier local</div>
+    </a>
+    <a class="step-card" href="/conclusion">
+      <div class="step-num">5</div>
+      <div class="step-title">🧭 Conclusion</div>
+      <div class="step-desc">Enseignements, limites, perspectives, disclaimer éthique</div>
+    </a>
+  </div>
+
+  {% include '_nav_footer.html' %}
+</body>
+</html>
