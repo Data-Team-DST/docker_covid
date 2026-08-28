@@ -1,9 +1,11 @@
-"""Middlewares HTTP — logging structuré des requêtes."""
+"""Middlewares HTTP — logging structuré et métriques Prometheus des requêtes."""
 
 import logging
 import time
 
 from fastapi import Request
+
+from app.api.metrics import http_requests_total
 
 logger = logging.getLogger(__name__)
 
@@ -20,4 +22,13 @@ async def log_requests(request: Request, call_next):
         response.status_code,
         latency_ms,
     )
+    return response
+
+
+async def track_http_metrics(request: Request, call_next):
+    """Incrémente ds_covid_http_requests_total{status,path} pour chaque requête."""
+    response = await call_next(request)
+    http_requests_total.labels(
+        status=str(response.status_code), path=request.url.path
+    ).inc()
     return response

@@ -7,7 +7,11 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from app.features.preprocessing import predict_lung_mask, preprocess_image
+from app.features.preprocessing import (
+    PreprocessOptions,
+    predict_lung_mask,
+    preprocess_image,
+)
 
 
 def make_test_image(size=(300, 300), mode="L") -> bytes:
@@ -46,23 +50,25 @@ def _fake_segmentation_client(mask_png: bytes, status_code: int = 200) -> httpx.
 
 
 def test_preprocess_output_shape():
-    result = preprocess_image(make_test_image(), img_size=(256, 256), masking=False)
+    options = PreprocessOptions(img_size=(256, 256), masking=False)
+    result = preprocess_image(make_test_image(), options)
     assert result.shape == (1, 256, 256, 1)
 
 
 def test_preprocess_dtype():
-    result = preprocess_image(make_test_image(), masking=False)
+    result = preprocess_image(make_test_image(), PreprocessOptions(masking=False))
     assert result.dtype == np.float32
 
 
 def test_preprocess_custom_size():
-    result = preprocess_image(make_test_image(), img_size=(128, 128), masking=False)
+    options = PreprocessOptions(img_size=(128, 128), masking=False)
+    result = preprocess_image(make_test_image(), options)
     assert result.shape == (1, 128, 128, 1)
 
 
 def test_preprocess_batch_dim():
     """La dimension batch doit toujours être 1."""
-    result = preprocess_image(make_test_image(), masking=False)
+    result = preprocess_image(make_test_image(), PreprocessOptions(masking=False))
     assert result.ndim == 4
     assert result.shape[0] == 1
 
@@ -71,13 +77,13 @@ def test_preprocess_batch_dim():
 
 
 def test_preprocess_normalized():
-    result = preprocess_image(make_test_image(), masking=False)
+    result = preprocess_image(make_test_image(), PreprocessOptions(masking=False))
     assert result.min() >= -1.0
     assert result.max() <= 1.0
 
 
 def test_preprocess_not_constant():
-    result = preprocess_image(make_test_image(), masking=False)
+    result = preprocess_image(make_test_image(), PreprocessOptions(masking=False))
     assert result.min() != result.max()
 
 
@@ -85,12 +91,14 @@ def test_preprocess_not_constant():
 
 
 def test_preprocess_rgb_converted_to_grayscale():
-    result = preprocess_image(make_test_image(mode="RGB"), masking=False)
+    options = PreprocessOptions(masking=False)
+    result = preprocess_image(make_test_image(mode="RGB"), options)
     assert result.shape == (1, 256, 256, 1)
 
 
 def test_preprocess_rgba_converted_to_grayscale():
-    result = preprocess_image(make_test_image(mode="RGBA"), masking=False)
+    options = PreprocessOptions(masking=False)
+    result = preprocess_image(make_test_image(mode="RGBA"), options)
     assert result.shape == (1, 256, 256, 1)
 
 
@@ -98,17 +106,20 @@ def test_preprocess_rgba_converted_to_grayscale():
 
 
 def test_preprocess_small_image_upscaled():
-    result = preprocess_image(make_test_image(size=(32, 32)), masking=False)
+    options = PreprocessOptions(masking=False)
+    result = preprocess_image(make_test_image(size=(32, 32)), options)
     assert result.shape == (1, 256, 256, 1)
 
 
 def test_preprocess_large_image_downscaled():
-    result = preprocess_image(make_test_image(size=(1024, 1024)), masking=False)
+    options = PreprocessOptions(masking=False)
+    result = preprocess_image(make_test_image(size=(1024, 1024)), options)
     assert result.shape == (1, 256, 256, 1)
 
 
 def test_preprocess_non_square_image():
-    result = preprocess_image(make_test_image(size=(640, 480)), masking=False)
+    options = PreprocessOptions(masking=False)
+    result = preprocess_image(make_test_image(size=(640, 480)), options)
     assert result.shape == (1, 256, 256, 1)
 
 
@@ -118,7 +129,7 @@ def test_preprocess_non_square_image():
 def test_preprocess_invalid_bytes_raises():
     """Des bytes invalides doivent lever une exception."""
     with pytest.raises(ValueError):
-        preprocess_image(b"not_an_image", masking=False)
+        preprocess_image(b"not_an_image", PreprocessOptions(masking=False))
 
 
 # ── Masking via le segmentation-service (transport HTTP mocké) ─────────────────────────
@@ -147,10 +158,12 @@ def test_preprocess_with_masking_calls_segmentation_service():
     mask_png = _mask_png_bytes(size=(300, 300), fill=255)
     client = _fake_segmentation_client(mask_png)
 
-    result = preprocess_image(
-        make_test_image(size=(300, 300)), img_size=(256, 256),
-        masking=True, cropping=True,
+    options = PreprocessOptions(
+        img_size=(256, 256),
+        masking=True,
+        cropping=True,
         segmentation_service_url="http://segmentation-service:8001",
         segmentation_client=client,
     )
+    result = preprocess_image(make_test_image(size=(300, 300)), options)
     assert result.shape == (1, 256, 256, 1)

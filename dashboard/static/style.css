@@ -1,5 +1,19 @@
-body { background: #f5f6fa; font-size: 0.9rem; }
+/* Thème sombre — cohérent avec demonstration/ et data_explorer.html/sprint_detail.html
+   (déjà sombres). data-bs-theme="dark" sur <html> gère la majorité des composants
+   Bootstrap automatiquement ; ce fichier corrige juste les couleurs que l'ancien thème
+   clair fixait en dur (body, en-tête de carte sprint). */
+body { background: #0d1117; font-size: 0.9rem; }
 .sprint-card { border-left: 4px solid #6c757d; }
-.sprint-card .card-header { background: #fff; }
+.sprint-card .card-header { background: #161b22; }
 .story-row td { vertical-align: middle; }
 .navbar { margin-bottom: 0; }
+/* Bootstrap 5.3 .table-success (story terminée) garde un fond vert clair même sous
+   data-bs-theme="dark", alors que le texte passe en clair par défaut — illisible.
+   Override explicite : fond vert sombre, texte clair. */
+.table-success, .table-success > td {
+  --bs-table-bg: #0d3320;
+  --bs-table-color: #c9d1d9;
+  background-color: #0d3320 !important;
+  color: #c9d1d9 !important;
+}
+.table-success .text-muted { color: #7d9488 !important; }

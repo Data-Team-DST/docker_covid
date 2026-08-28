@@ -2,10 +2,12 @@
 
 `ModelLoader` dupliqué depuis backend/app/models/loader.py plutôt qu'importé :
 ce service reste buildable/déployable indépendamment du backend (cf.
-logging_config.py pour la même logique appliquée au logging).
+logging_config.py pour la même logique appliquée au logging). Même pattern
+MLflow Registry + fallback fichier local que le backend.
 """
 
 import logging
+import os
 from pathlib import Path
 
 import cv2
@@ -20,9 +22,53 @@ class ModelLoader:
     def __init__(self):
         self._model = None
         self.is_loaded = False
+        self.source: str | None = None  # "registry" ou "local", pour observabilité
 
     def load(self, model_path: str) -> None:
-        """Charge le modèle Keras depuis le chemin configuré."""
+        """Charge le modèle : MLflow Registry en priorité, fallback fichier local."""
+        from segmentation_service.config import settings
+
+        if self._load_from_registry(settings):
+            return
+        self._load_from_local_file(model_path)
+
+    def _load_from_registry(self, settings) -> bool:
+        """Tente MLflow Model Registry. Ne laisse jamais remonter d'exception — retourne
+        False si indisponible : le caller retombe alors sur le fichier local.
+        compile=False (comme pour le chargement local, cf. _load_from_local_file) :
+        évite de résoudre combined_loss/dice_coef/iou_metric au chargement, non
+        nécessaires pour l'inférence seule."""
+        if not settings.mlflow_tracking_uri:
+            return False
+        try:
+            os.environ.setdefault(
+                "MLFLOW_HTTP_REQUEST_TIMEOUT",
+                str(int(settings.mlflow_lookup_timeout_s)),
+            )
+            import mlflow
+
+            mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+            uri = f"models:/{settings.mlflow_model_name}/{settings.mlflow_model_stage}"
+            self._model = mlflow.keras.load_model(
+                uri, load_model_kwargs={"compile": False}
+            )
+            self.is_loaded = True
+            self.source = "registry"
+            logger.info("Modèle chargé depuis MLflow Registry : %s", uri)
+            return True
+        except Exception as e:  # noqa: BLE001 — fallback voulu, quelle que soit la cause
+            logger.warning(
+                "MLflow Registry indisponible ou pas de modèle '%s' en stage '%s' (%s) "
+                "— fallback sur le fichier local",
+                settings.mlflow_model_name,
+                settings.mlflow_model_stage,
+                e,
+            )
+            return False
+
+    def _load_from_local_file(self, model_path: str) -> None:
+        """Charge le modèle depuis un fichier .keras local (fallback, ou si MLflow
+        n'est pas configuré)."""
         path = Path(model_path)
 
         if not path.exists():
@@ -41,10 +87,11 @@ class ModelLoader:
             # "Could not locate function 'combined_loss'".
             self._model = tf.keras.models.load_model(str(path), compile=False)
             self.is_loaded = True
+            self.source = "local"
             logger.info(
                 "Modèle chargé : %s (%.1f Mo)", path, path.stat().st_size / 1e6
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — log + is_loaded=False voulu, cause quelconque
             logger.error("Échec chargement modèle : %s", e)
 
     def predict(self, img_array: np.ndarray) -> np.ndarray:

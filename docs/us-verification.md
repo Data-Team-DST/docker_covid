@@ -225,12 +225,26 @@ ls data/augmented/
 
 ## S4 — Monitoring, Drift & Maintenance
 
-### US-18 · Prometheus + instrumentation FastAPI 🔄 à faire
-**Objectif :** `prometheus-fastapi-instrumentator` sur `/predict` et `/health`. Métriques : latence P50/P95, throughput, error rate, confidence distribution. Endpoint `/metrics`.  
-**Vérifier (une fois fait) :**
+### US-18 · Prometheus + instrumentation FastAPI ✅
+**Fait :** Instrumentation via `prometheus_client` directement (pas `prometheus-fastapi-instrumentator` —
+son préfixe de métrique par défaut ne matchait pas `ds_covid_` déjà imposé par `alert_rules.yml`/le
+dashboard Grafana provisionnés par `dev`). 8 métriques exposées sur `/metrics`
+(`backend/app/api/metrics.py`) : `ds_covid_uptime_seconds`, `ds_covid_model_loaded`,
+`ds_covid_predictions_total`, `ds_covid_http_requests_total{status,path}` (middleware générique
+`app/middleware.py::track_http_metrics`, toutes routes), `ds_covid_inference_latency_seconds`
+(histogram, secondes), `ds_covid_auth_failures_total` (`app/api/security.py`),
+`ds_covid_low_confidence_predictions_total` (confidence < 0.6) et
+`ds_covid_predictions_by_class_total{predicted_class}` (`app/api/predict.py`). Lockfile
+`backend/requirements-dev.txt` régénéré avec `prometheus-client==0.20.0` (pip-compile en
+conteneur Linux, jamais sur la machine Windows locale).  
+**Vérifier :**
 ```bash
-make start-docker
-curl http://localhost:8000/metrics   # → format Prometheus (# HELP, # TYPE, ...)
+make monitoring-start   # backend + prometheus + grafana
+curl http://localhost:8000/metrics | grep ds_covid_   # → 8 métriques, # HELP/# TYPE présents
+
+open http://localhost:9090/targets   # → target "backend" UP
+open http://localhost:9090/alerts    # → 8 règles, aucune en erreur de parsing PromQL
+open http://localhost:3000           # → dashboard "COVID X-Ray Backend", panels avec données
 ```
 
 ---

@@ -7,26 +7,16 @@ fixes GPU/MLflow/DagsHub). Chaque point ci-dessous a été identifié en session
 volontairement laissé de côté (décision à prendre, hors périmètre du moment, ou correction
 non triviale).
 
-## Urgent — avant tout nouveau push/merge
-
-### 0. Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`
-
-Ouvert le 2026-08-27. `main` et cette branche ont divergé indépendamment (~30 commits
-chacune) depuis le merge de la PR #26, avec du recoupement réel sur le nommage des modèles
-(`classification.keras`/`segmentation.keras` sur main vs `covid_model.keras`/`lung_unet.keras`
-ici) et sur `max_samples_per_class`/`dvc.lock`. Détail complet, constat vérifié et stratégie
-proposée dans `CHANTIER_RECONCILIATION_GIT.md` — **à traiter en premier**, contrairement au
-chantier post-soutenance ci-dessous.
-
 ## Décisions en attente
 
-### 1. `params.yaml` — `max_samples_per_class: 500` restreint le dataset d'entraînement
+### 0. ~~Réconciliation `chore/claude-code-setup` ↔ `main`/`dev`~~ **close le 2026-08-27**
 
-Récupéré depuis `origin/raf5` (utilisé pour stabiliser le pipeline pendant le debug GPU).
-Cap le dataset brut à 500 images/classe avant augmentation — utile pour itérer vite, mais
-**à repasser à `null` (dataset complet) avant tout entraînement final destiné à la
-soutenance**, sous peine de modèle sous-entraîné par rapport aux résultats déjà présentés
-(cf. `frontend/page/04_Machine_learning_et_optimisation`).
+Grosse divergence (~30 commits chacune, PR #26) réconciliée via `main` (PR #27/#28,
+`4142cc9`) dans l'après-midi. Reliquat plus petit avec `dev` (travail de Léna, suivi MLflow
+en ligne) réglé le soir même par un `git merge origin/dev` sans conflit (`f94badc`) —
+`dvc.lock` a gardé la version de Léna, qui correspond aux fichiers modèles déjà vérifiés
+réels sur DagsHub. Poussé (confirmé : `f94badc` présent sur `origin/chore/claude-code-setup`).
+(`CHANTIER_RECONCILIATION_GIT.md`, qui détaillait ce chantier, supprimé le 2026-08-28 — clos.)
 
 ### 2. `trainer/requirements.txt` — hash-lock ~~abandonné~~ **régénéré avec succès le 2026-08-26**
 
@@ -52,51 +42,82 @@ avec `backend`/`data-service`/`segmentation-service`. `trainer/Dockerfile` n'a p
 d'ajouter `--require-hashes` explicitement — dès qu'une ligne du fichier a un hash, pip
 bascule automatiquement en mode vérification pour tout le fichier (protection gratuite).
 
-## Vérifications non faites
-
-### 5. CI segmentation-service jamais déclenchée réellement
-
-`lint_seg`/`test_seg` + entrée `segmentation-service` dans la matrice `build` de
-`cicd.yml` ajoutés par cohérence (raf5 ne l'avait pas câblé), mais jamais vus tourner en
-vrai sur GitHub Actions — à surveiller au prochain push/PR.
-
 ## Chantier post-soutenance — rôles et frontières des services
 
-Ouvert le 2026-08-26 (`CHANTIER_INFRA_SERVICES.md`), **à traiter après la soutenance du
-04/09/2026** (CLAUDE.md § Calendrier — pas de refactoring structurel risqué à l'approche de
-la démo). Détail complet, constats vérifiés et options dans le fichier lui-même ; ici,
-uniquement le suivi backlog.
+Ouvert le 2026-08-26. Les 4 points ci-dessous sont désormais résolus — chantier clos, doc
+détail (`CHANTIER_INFRA_SERVICES.md`) supprimée le 2026-08-28, résumé conservé ici.
 
 ### 14. `infrastructure/docker/base/` — `frontend` a-t-il vraiment besoin de l'image TF-GPU ?
 
-Non vérifié : lister les imports réels de `frontend/**/*.py` et confronter à
-`base/requirements.in`. Si confirmé que `frontend` n'a besoin que d'opencv/numpy/pandas/
-pillow, lui donner un Dockerfile léger (`python:3.11-slim`, comme `backend`) et laisser
-`base` (TensorFlow-GPU) à `trainer` seul.
+**Résolu le 2026-08-27** — grep exhaustif de `frontend/**/*.py` : zéro `tensorflow`/`cv2`/
+`keras` importé. `frontend/Dockerfile` passé de `${BASE_IMAGE}` (TF-GPU, 8,48 Go) à
+`python:3.11-slim` (+ `frontend/.dockerignore` ajouté, absent partout dans le repo).
+Vérifié réel : build OK, **image 9,13 Go → 969 Mo (-89%)**, healthcheck + page principale
+répondent 200.
 
 ### 15. `frontend` (streamlit) vs `dashboard` (Flask) — deux responsabilités mélangées dans `dashboard`
 
-`dashboard` porte déjà backlog agile interne + façade produit (data explorer, prédicteur
-live) avant même d'absorber le contenu streamlit. 3 options posées (scinder `dashboard`
-d'abord / créer un service `demonstration/` dédié / migrer le contenu tel quel dans
-`dashboard`). Prérequis avant de trancher : inventaire page par page de `frontend/page/`
-(conserver pour soutenance vs jetable).
+**Option C appliquée le 2026-08-28** (des 3 posées : scinder `dashboard` d'abord / créer un
+service `demonstration/` dédié / migrer le contenu tel quel) — pas de split de service, pas le
+temps avant la soutenance. Contenu migré page par page vers `dashboard` : 07 (conclusion),
+images matrices/LIME/InceptionV3, 02_données (échantillonnage + métriques portées côté
+`data-service`, pas `dashboard`, pour respecter la frontière de service), 03 (préprocessing).
+Non fait volontairement : 06 (CI/CD, contenu périmé). `frontend/` reste tant que 06 n'est pas
+tranché.
+
+**Mélange de responsabilités résolu le 2026-08-28** (`CHANTIER_DASHBOARD_SPLIT.md`, Option B) :
+`dashboard/` reste backlog agile + data explorer ; nouveau service `demonstration/` (Flask,
+port 5051) porte Contexte/Prédicteur/Préprocessing/Modèles/Conclusion. Split mécanique
+(Phase 1) vérifié en bac à sable réel (conteneur Docker, copie ciblée des deux services,
+sans écrire dans le repo) : les deux services démarrent, les 7 pages rendent 200, liens
+croisés inter-services résolus (`demonstration_url`/`dashboard_url` injectés via
+`context_processor`), assets statiques (style.css, images) accessibles, `/predict` retombe
+bien sur le message "Backend inaccessible" attendu sans backend démarré.
+
+**Phase 2 (nav fluide htmx) faite et vérifiée le 2026-08-28** — `hx-boost="true"` sur
+`<body>` des 8 templates (dashboard : index/data_explorer/sprint_detail ; demonstration :
+contexte/conclusion/preprocessing/predict/modeles), script htmx 1.9.12 en CDN (SRI épinglé).
+Vérifié avec un vrai navigateur headless (Playwright, conteneur
+`mcr.microsoft.com/playwright/python`, jamais sur cette machine) : 20/20 checks verts,
+zéro erreur console JS — navigation same-service sans reload complet (marker JS + absence
+de `framenavigated`), navigation cross-service (port différent) laissée en navigation
+normale, upload `/predict` fonctionnel sous boost, aucune duplication d'appel réseau après
+un aller-retour de navigation.
+
+Deux bugs réels trouvés par ce test navigateur (invisibles à une simple vérification HTML/curl) et corrigés :
+1. **htmx compare `hostname` seul, pas l'origine complète** (port exclu) → les liens
+   croisés `localhost:5050`↔`localhost:5051` étaient boostés à tort (AJAX cross-origin,
+   bloqué par CORS, navigation silencieusement cassée). Fix : `hx-boost="false"` explicite
+   sur les 12 liens croisés inter-services.
+2. **`const`/`let` en portée globale de script plantent à la réexécution** : sans reload
+   complet de page, le realm JS persiste entre navigations boostées — un script réexécuté
+   (retour sur une page déjà visitée, ou resoumission d'un formulaire boosté) redéclare les
+   mêmes identifiants → `Identifier 'X' has already been declared`. Fix : `const`/`let` →
+   `var` pour les déclarations top-level de script dans `index.html`, `data_explorer.html`,
+   `predict.html` (fonctions `function foo(){}` inchangées, pas concernées).
+
+**Limitation connue, non corrigée** (cosmétique, pas un bug bloquant) : dans
+`data_explorer.html`, deux `document.addEventListener(...)` (fermeture des suggestions de
+recherche au clic extérieur, zoom clavier de la modale) s'accumulent silencieusement à
+chaque aller-retour vers cette page dans la même session navigateur — sans effet visible
+(handlers idempotents), juste des appels redondants. Pas corrigé pour rester dans le
+périmètre minimal du fix htmx (CLAUDE.md règle #3) ; à reprendre si ça devient gênant.
+
+Chantier clos, `CHANTIER_DASHBOARD_SPLIT.md` supprimé.
 
 ### 16. `data-service` — mélange lecture (stats/recherche) et opérations DVC (pull/push/repro)
 
-Même famille de problème que le point 15, moins visible. Piste : scinder en `data-service`
-(lecture seule) + `pipeline-service`/`dvc-service` (opérations DVC) — pas évident que ce
-soit rentable pour la taille du projet, priorité la plus faible des 4.
+**Résolu le 2026-08-28** — `dvc-service` (port 5003) créé, `data-service` redevenu lecture
+seule. Vérifié en conteneur réel (build, tests, connectivité inter-services). Bug préexistant
+signalé et corrigé au passage : cache `/v1/data/stats` qui ne persistait jamais
+(permissions `/app/tmp`, fix Dockerfile).
 
 ### 17. `mlflow` — câblé en écriture seule, aucun flux retour vers le déploiement
 
-`trainer` logue systématiquement dans MLflow (Postgres + MinIO + service dédié port 5000),
-mais `backend` charge son modèle depuis un fichier `.keras` local, jamais depuis le Model
-Registry. Cohérent avec la maturité MLOps actuelle (Phase 4 — Monitoring/Drift — pas encore
-atteinte), pas une erreur. Question à trancher : rester en observation pure, ou câbler un
-vrai flux registry → déploiement (backend/data-service interroge le stage `Production` au
-lieu d'un chemin codé en dur) ? À clarifier en premier (conditionne si le point 14 vaut le
-coût).
+**Résolu le 2026-08-28** — les deux modèles promus au stage `Production`, `boto3` ajouté
+(backend + segmentation-service), fix `compile=False` sur le chargement registry U-Net.
+Les deux services chargent désormais réellement depuis le Model Registry (vérifié en
+conteneur réel, non-régression 88/88 + 19/19 tests).
 
 ## Fait — pour mémoire (ne pas rouvrir sans raison)
 

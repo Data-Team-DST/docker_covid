@@ -7,7 +7,12 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from segmentation_service.model import ModelLoader, clean_mask, model_loader, predict_lung_mask
+from segmentation_service.model import (
+    ModelLoader,
+    clean_mask,
+    model_loader,
+    predict_lung_mask,
+)
 
 
 def make_png_bytes(size=(300, 300)) -> bytes:
@@ -77,13 +82,19 @@ def test_predict_lung_mask_without_model_raises():
 # ── ModelLoader.load ─────────────────────────────────────────────────────────
 
 
-def test_load_missing_file_leaves_not_loaded(tmp_path):
+def test_load_missing_file_leaves_not_loaded(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "segmentation_service.config.settings.mlflow_tracking_uri", ""
+    )
     loader = ModelLoader()
     loader.load(model_path=str(tmp_path / "missing.keras"))
     assert loader.is_loaded is False
 
 
 def test_load_success_sets_is_loaded(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "segmentation_service.config.settings.mlflow_tracking_uri", ""
+    )
     model_path = tmp_path / "model.keras"
     model_path.write_bytes(b"fake-keras-model")
 
@@ -99,9 +110,13 @@ def test_load_success_sets_is_loaded(tmp_path, monkeypatch):
     loader.load(model_path=str(model_path))
 
     assert loader.is_loaded is True
+    assert loader.source == "local"
 
 
 def test_load_failure_keeps_not_loaded(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "segmentation_service.config.settings.mlflow_tracking_uri", ""
+    )
     model_path = tmp_path / "model.keras"
     model_path.write_bytes(b"fake-keras-model")
 
@@ -115,3 +130,61 @@ def test_load_failure_keeps_not_loaded(tmp_path, monkeypatch):
     loader.load(model_path=str(model_path))
 
     assert loader.is_loaded is False
+
+
+def test_load_from_registry_success(monkeypatch):
+    monkeypatch.setattr(
+        "segmentation_service.config.settings.mlflow_tracking_uri",
+        "http://mlflow:5000",
+    )
+    monkeypatch.setattr(
+        "segmentation_service.config.settings.mlflow_model_name", "segmentation"
+    )
+    monkeypatch.setattr(
+        "segmentation_service.config.settings.mlflow_model_stage", "Production"
+    )
+
+    fake_model = MagicMock()
+    fake_mlflow = SimpleNamespace(
+        set_tracking_uri=MagicMock(),
+        keras=SimpleNamespace(load_model=MagicMock(return_value=fake_model)),
+    )
+    monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
+
+    loader = ModelLoader()
+    loader.load(model_path="unused")
+
+    assert loader.is_loaded is True
+    assert loader.source == "registry"
+    fake_mlflow.keras.load_model.assert_called_once_with(
+        "models:/segmentation/Production", load_model_kwargs={"compile": False}
+    )
+
+
+def test_load_falls_back_to_local_when_registry_unavailable(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "segmentation_service.config.settings.mlflow_tracking_uri",
+        "http://mlflow:5000",
+    )
+    model_path = tmp_path / "model.keras"
+    model_path.write_bytes(b"fake-keras-model")
+
+    def _raise(*args, **kwargs):
+        raise ConnectionError("MLflow injoignable")
+
+    fake_mlflow = SimpleNamespace(set_tracking_uri=_raise)
+    monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
+
+    fake_model = MagicMock()
+    fake_tf = SimpleNamespace(
+        keras=SimpleNamespace(
+            models=SimpleNamespace(load_model=MagicMock(return_value=fake_model))
+        )
+    )
+    monkeypatch.setitem(sys.modules, "tensorflow", fake_tf)
+
+    loader = ModelLoader()
+    loader.load(model_path=str(model_path))
+
+    assert loader.is_loaded is True
+    assert loader.source == "local"
