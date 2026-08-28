@@ -192,6 +192,13 @@ def contexte():
     return render_template("contexte.html")
 
 
+@app.route("/conclusion")
+def conclusion():
+    """Conclusion critique et perspectives — condensé depuis
+    frontend/page/07_conclusion_critique_perspective.py (chantier point 15)."""
+    return render_template("conclusion.html")
+
+
 @app.route("/sprint/<sprint_id>")
 def sprint_detail(sprint_id: str):
     backlog = load_backlog()
