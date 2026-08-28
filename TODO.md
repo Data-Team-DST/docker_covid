@@ -18,14 +18,6 @@ en ligne) réglé le soir même par un `git merge origin/dev` sans conflit (`f94
 réels sur DagsHub. Détail complet dans `CHANTIER_RECONCILIATION_GIT.md`. Reste seulement à
 pousser (`git push`).
 
-### 1. `params.yaml` — `max_samples_per_class: 500` restreint le dataset d'entraînement
-
-Récupéré depuis `origin/raf5` (utilisé pour stabiliser le pipeline pendant le debug GPU).
-Cap le dataset brut à 500 images/classe avant augmentation — utile pour itérer vite, mais
-**à repasser à `null` (dataset complet) avant tout entraînement final destiné à la
-soutenance**, sous peine de modèle sous-entraîné par rapport aux résultats déjà présentés
-(cf. `frontend/page/04_Machine_learning_et_optimisation`).
-
 ### 2. `trainer/requirements.txt` — hash-lock ~~abandonné~~ **régénéré avec succès le 2026-08-26**
 
 ~~`pip-compile --generate-hashes` sur `trainer/requirements.in` avait été interrompu après
@@ -49,14 +41,6 @@ Validé de bout en bout :
 avec `backend`/`data-service`/`segmentation-service`. `trainer/Dockerfile` n'a pas besoin
 d'ajouter `--require-hashes` explicitement — dès qu'une ligne du fichier a un hash, pip
 bascule automatiquement en mode vérification pour tout le fichier (protection gratuite).
-
-## Vérifications non faites
-
-### 5. CI segmentation-service jamais déclenchée réellement
-
-`lint_seg`/`test_seg` + entrée `segmentation-service` dans la matrice `build` de
-`cicd.yml` ajoutés par cohérence (raf5 ne l'avait pas câblé), mais jamais vus tourner en
-vrai sur GitHub Actions — à surveiller au prochain push/PR.
 
 ## Chantier post-soutenance — rôles et frontières des services
 
