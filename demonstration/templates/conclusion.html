@@ -52,8 +52,9 @@
         GHCR (3 services) → smoke-test de déploiement</li>
       <li><span class="done">✅</span> Docker Compose production-ready : healthchecks et
         limites mémoire sur tous les services, 0 secret en dur</li>
-      <li><span class="done">✅</span> Monitoring de base : Prometheus/Grafana provisionnés,
-        rapport de dérive Evidently générable à la demande — voir <a href="/monitoring">Monitoring</a></li>
+      <li><span class="done">✅</span> Monitoring : dashboard Grafana (latence p50/p95, taux
+        d'erreurs, distribution des prédictions par classe) + alertes Prometheus, rapport de
+        dérive Evidently générable à la demande — voir <a href="/monitoring">Monitoring</a></li>
     </ul>
   </div>
 
@@ -84,8 +85,7 @@
     <table>
       <tr><th>Story</th><th>Statut</th></tr>
       <tr><td>US-15 — Load test /predict P95 &lt; 500 ms</td><td>Outillage prêt, bloqué sans modèle entraîné en local</td></tr>
-      <tr><td>US-19 — Dashboard Grafana (≥5 panels + alertes)</td><td>Prometheus/Grafana provisionnés, panels/alertes pas tous formalisés</td></tr>
-      <tr><td>US-21 — Ré-entraînement semi-automatique</td><td>Non démarré (dépend de US-20)</td></tr>
+      <tr><td>US-21 — Ré-entraînement semi-automatique</td><td>Non démarré (dépendance US-20 désormais levée)</td></tr>
       <tr><td>US-22 — Documentation finale (ADRs, runbooks)</td><td>Non démarré</td></tr>
       <tr><td>Kubernetes (Phase 3)</td><td>Manifests présents, non déployé</td></tr>
     </table>

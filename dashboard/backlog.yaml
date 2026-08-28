@@ -181,11 +181,11 @@ sprints:
         done: true
       - id: US-19
         title: "Grafana dashboard (≥5 panels + alertes)"
-        description: "Dashboard Grafana : latence P50/P95, error rate, throughput, confidence moyenne, distribution classes. Alertes : latence P95 > 1s, error rate > 5%. Provisioning automatique via docker-compose."
+        description: "✅ infrastructure/docker/monitoring/grafana/provisioning/dashboards/covid_backend.json : 10 panels (6 existants + 4 ajoutés — latence p50/p95, taux d'erreurs HTTP 5xx, distribution des prédictions par classe, % prédictions à faible confiance en proxy de la confiance moyenne, le backend ne loguant pas de score moyen brut). Alertes déjà présentes dans alert_rules.yml (InferenceLatencyHigh p95>1s, HighHttpErrorRate>5%, + bonus : auth failures, low confidence, class imbalance, no traffic). Provisioning automatique via docker-compose (updateIntervalSeconds: 30, pas de rebuild nécessaire)."
         depends_on: ["US-18"]
         points: 5
         priority: MUST
-        done: false
+        done: true
       - id: US-20
         title: "Evidently : détection dérive données"
         description: "✅ trainer/scripts/drift_report.py : Report Evidently (DataDriftPreset stattest=psi, seuil 0.2 + ColumnDriftMetric jensenshannon par classe), comparaison scores de prédiction production (log-service /v1/logs, logger app.predict.telemetry) vs référence train (échantillon 500 images). Rapport HTML en 1 commande, versionné DVC (outputs/drift/report.html.dvc, remote minio), embarqué en iframe sur demonstration :5051 /monitoring. Nuance vs formulation d'origine : dérive mesurée sur les scores de sortie par classe, pas sur la distribution brute des pixels d'entrée — approche standard pour du monitoring de classification, mais à noter si quelqu'un cherchait explicitement du pixel-level drift."
