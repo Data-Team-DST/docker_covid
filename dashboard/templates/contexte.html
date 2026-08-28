@@ -24,6 +24,10 @@
       border-left: 3px solid #58a6ff; padding: .8rem 1rem; margin-top: 2rem;
       background: #0f1520; max-width: 720px; font-size: .9rem;
     }
+    .img-gallery { display: flex; gap: .8rem; flex-wrap: wrap; margin-top: .8rem; }
+    .img-gallery figure { margin: 0; max-width: 340px; }
+    .img-gallery img { max-width: 100%; border-radius: 6px; border: 1px solid #30363d; }
+    .img-gallery figcaption { color: #8b949e; font-size: .78rem; margin-top: .3rem; }
   </style>
 </head>
 <body>
@@ -74,6 +78,28 @@
     <p><span class="result-good">✅ Random Forest</span> : modèle le plus performant.
        <span class="result-bad">❌ SVM</span> : le moins performant.
        Optimisation par Grid Search (validation croisée) sur les deux.</p>
+    <div class="img-gallery">
+      <figure>
+        <img src="{{ url_for('static', filename='img/matrice-confusion-rf-1.png') }}" alt="Matrice de confusion Random Forest 1">
+        <figcaption>Random Forest — matrice de confusion (1)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/matrice-confusion-rf-2.png') }}" alt="Matrice de confusion Random Forest 2">
+        <figcaption>Random Forest — matrice de confusion (2)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/matrice-confusion-svm-1.png') }}" alt="Matrice de confusion SVM 1">
+        <figcaption>SVM — matrice de confusion (1)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/matrice-confusion-svm-2.png') }}" alt="Matrice de confusion SVM 2">
+        <figcaption>SVM — matrice de confusion (2)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/matrice-confusion-knn.png') }}" alt="Matrice de confusion KNN">
+        <figcaption>k-NN — matrice de confusion</figcaption>
+      </figure>
+    </div>
   </div>
 
   <h2>Résultat baseline — Deep Learning (modèle retenu)</h2>
@@ -87,11 +113,35 @@
       (COVID, pneumonie virale, normal). Le transfert d'apprentissage InceptionV3 est
       efficace sur ce type d'images médicales.
     </p>
-    <p>
+    <div class="img-gallery">
+      <figure>
+        <img src="{{ url_for('static', filename='img/inceptionv3-architecture.png') }}" alt="Schéma InceptionV3">
+        <figcaption>Architecture InceptionV3 (transfer learning)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/courbe-loss-accuracy.png') }}" alt="Courbes loss et accuracy">
+        <figcaption>Courbes de loss et d'accuracy</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/matrice-confusion-deep-learning.png') }}" alt="Matrice de confusion InceptionV3">
+        <figcaption>Matrice de confusion (InceptionV3)</figcaption>
+      </figure>
+    </div>
+    <p style="margin-top:1rem">
       <b>Interprétabilité</b> : LIME (Local Interpretable Model-Agnostic Explanations) —
       méthode compréhensible, fiable et généralisable, utilisée pour visualiser les zones de
       l'image ayant motivé chaque prédiction.
     </p>
+    <div class="img-gallery">
+      <figure>
+        <img src="{{ url_for('static', filename='img/lime-1.png') }}" alt="Résultat LIME 1">
+        <figcaption>LIME — zones ayant motivé la prédiction (1)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/lime-2.png') }}" alt="Résultat LIME 2">
+        <figcaption>LIME — zones ayant motivé la prédiction (2)</figcaption>
+      </figure>
+    </div>
   </div>
 
   <div class="transition">
