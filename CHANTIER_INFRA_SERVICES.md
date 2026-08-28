@@ -14,6 +14,17 @@ et le backend l'appelle en HTTP.
 
 ## 1. `infrastructure/docker/base/` — image partagée `trainer`/`frontend`, probablement le mauvais pattern
 
+**Résolu le 2026-08-27.** Confirmé par grep exhaustif de `frontend/**/*.py` (hors `.venv`) :
+imports réels = `PIL`, `numpy`, `pandas`, `plotly`, `streamlit`, `streamlit_extras`,
+`kagglehub` + stdlib — zéro `tensorflow`/`cv2`/`keras`. `frontend/Dockerfile` passe de
+`FROM ${BASE_IMAGE}` (`tensorflow/tensorflow:2.21.0-gpu`, 8,48 Go) à `python:3.11-slim`,
+avec un `frontend/.dockerignore` ajouté au passage (absent partout dans le repo — bloquait
+le build à cause de `frontend/.venv/` local). `scikit-learn`/`requests` retirés de
+`requirements.in` (jamais importés ; `requests` reste en transitif via streamlit/kagglehub,
+normal). `cicd.yml` simplifié (plus besoin du login PAT dédié au pull de `covid-xray-base`
+pour frontend). Vérifié en conditions réelles : build OK, **image 9,13 Go → 969 Mo (-89%)**,
+conteneur démarre, healthcheck + page principale répondent 200.
+
 **Constat.** `base` = `tensorflow/tensorflow:2.21.0-gpu` + libs système (git, build-essential,
 libgl1) + stack Python commune (`numpy`, `pandas`, `scikit-learn`, `matplotlib`,
 `opencv-python`, `pillow` — voir `infrastructure/docker/base/requirements.in`). Ce n'est pas
