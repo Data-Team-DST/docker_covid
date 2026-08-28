@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-bs-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,11 +15,7 @@
     <span class="navbar-brand fw-bold">🫁 DS_COVID MLOps — Backlog</span>
     <span class="text-light small">Chef de projet : {{ backlog.chef_projet }} · Stack : {{ backlog.stack }}</span>
     <div class="d-flex gap-2">
-      <a href="{{ demonstration_url }}/contexte" hx-boost="false" class="btn btn-sm btn-outline-light">🫁 Contexte DS</a>
-      <a href="{{ demonstration_url }}/predict" hx-boost="false" class="btn btn-sm btn-outline-light">🔬 Prédicteur</a>
-      <a href="{{ demonstration_url }}/preprocessing" hx-boost="false" class="btn btn-sm btn-outline-light">🧫 Préprocessing</a>
-      <a href="{{ demonstration_url }}/modeles" hx-boost="false" class="btn btn-sm btn-outline-light">🧪 Modèles</a>
-      <a href="{{ demonstration_url }}/conclusion" hx-boost="false" class="btn btn-sm btn-outline-light">🧭 Conclusion</a>
+      <a href="{{ demonstration_url }}/" hx-boost="false" class="btn btn-sm btn-outline-light">🎬 Présentation</a>
       <a href="data" class="btn btn-sm btn-outline-light">🗂 Data Explorer</a>
     </div>
   </nav>
@@ -115,7 +111,7 @@
       </div>
       <div class="card-body p-0">
         <table class="table table-hover mb-0">
-          <thead class="table-light">
+          <thead>
             <tr>
               <th style="width:40px"></th>
               <th style="width:80px">ID</th>

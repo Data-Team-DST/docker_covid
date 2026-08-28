@@ -4,12 +4,16 @@
     {% else %}
     <span></span>
     {% endif %}
+    {% if not hide_center %}
     <div class="nav-center">
       <a href="/" class="nav-sec">🏠 Accueil</a>
       <a href="{{ dashboard_url }}/" hx-boost="false" class="nav-sec" title="Backlog (outil interne)">
         <span class="nav-num">0</span> Backlog
       </a>
     </div>
+    {% else %}
+    <span></span>
+    {% endif %}
     {% if next_page %}
     <a href="{{ next_page[0] }}" class="nav-btn nav-next">{{ next_page[1] }} →</a>
     {% else %}
