@@ -15,8 +15,8 @@ Grosse divergence (~30 commits chacune, PR #26) réconciliée via `main` (PR #27
 `4142cc9`) dans l'après-midi. Reliquat plus petit avec `dev` (travail de Léna, suivi MLflow
 en ligne) réglé le soir même par un `git merge origin/dev` sans conflit (`f94badc`) —
 `dvc.lock` a gardé la version de Léna, qui correspond aux fichiers modèles déjà vérifiés
-réels sur DagsHub. Détail complet dans `CHANTIER_RECONCILIATION_GIT.md`. Reste seulement à
-pousser (`git push`).
+réels sur DagsHub. Poussé (confirmé : `f94badc` présent sur `origin/chore/claude-code-setup`).
+(`CHANTIER_RECONCILIATION_GIT.md`, qui détaillait ce chantier, supprimé le 2026-08-28 — clos.)
 
 ### 2. `trainer/requirements.txt` — hash-lock ~~abandonné~~ **régénéré avec succès le 2026-08-26**
 
@@ -44,38 +44,44 @@ bascule automatiquement en mode vérification pour tout le fichier (protection g
 
 ## Chantier post-soutenance — rôles et frontières des services
 
-Ouvert le 2026-08-26 (`CHANTIER_INFRA_SERVICES.md`), **à traiter après la soutenance du
-04/09/2026** (CLAUDE.md § Calendrier — pas de refactoring structurel risqué à l'approche de
-la démo). Détail complet, constats vérifiés et options dans le fichier lui-même ; ici,
-uniquement le suivi backlog.
+Ouvert le 2026-08-26. Les 4 points ci-dessous sont désormais résolus — chantier clos, doc
+détail (`CHANTIER_INFRA_SERVICES.md`) supprimée le 2026-08-28, résumé conservé ici.
 
 ### 14. `infrastructure/docker/base/` — `frontend` a-t-il vraiment besoin de l'image TF-GPU ?
 
-Non vérifié : lister les imports réels de `frontend/**/*.py` et confronter à
-`base/requirements.in`. Si confirmé que `frontend` n'a besoin que d'opencv/numpy/pandas/
-pillow, lui donner un Dockerfile léger (`python:3.11-slim`, comme `backend`) et laisser
-`base` (TensorFlow-GPU) à `trainer` seul.
+**Résolu le 2026-08-27** — grep exhaustif de `frontend/**/*.py` : zéro `tensorflow`/`cv2`/
+`keras` importé. `frontend/Dockerfile` passé de `${BASE_IMAGE}` (TF-GPU, 8,48 Go) à
+`python:3.11-slim` (+ `frontend/.dockerignore` ajouté, absent partout dans le repo).
+Vérifié réel : build OK, **image 9,13 Go → 969 Mo (-89%)**, healthcheck + page principale
+répondent 200.
 
 ### 15. `frontend` (streamlit) vs `dashboard` (Flask) — deux responsabilités mélangées dans `dashboard`
 
-`dashboard` porte déjà backlog agile interne + façade produit (data explorer, prédicteur
-live) avant même d'absorber le contenu streamlit. 3 options posées (scinder `dashboard`
-d'abord / créer un service `demonstration/` dédié / migrer le contenu tel quel dans
-`dashboard`). Prérequis avant de trancher : inventaire page par page de `frontend/page/`
-(conserver pour soutenance vs jetable).
+**Option C appliquée le 2026-08-28** (des 3 posées : scinder `dashboard` d'abord / créer un
+service `demonstration/` dédié / migrer le contenu tel quel) — pas de split de service, pas le
+temps avant la soutenance. Contenu migré page par page vers `dashboard` : 07 (conclusion),
+images matrices/LIME/InceptionV3, 02_données (échantillonnage + métriques portées côté
+`data-service`, pas `dashboard`, pour respecter la frontière de service), 03 (préprocessing).
+Non fait volontairement : 06 (CI/CD, contenu périmé). `frontend/` reste tant que 06 n'est pas
+tranché. **Le mélange de responsabilités que Option C n'a explicitement pas résolu** (backlog
+agile interne + façade produit demo) reste un sujet ouvert — voir échange du 2026-08-28 :
+Steven a demandé si `dashboard` devrait être scindé maintenant qu'il porte tout le contenu
+demo (Contexte/Prédicteur/Préprocessing/Modèles/Conclusion/Data Explorer) en plus du backlog ;
+pas encore tranché, à reprendre après la soutenance.
 
 ### 16. `data-service` — mélange lecture (stats/recherche) et opérations DVC (pull/push/repro)
 
 **Résolu le 2026-08-28** — `dvc-service` (port 5003) créé, `data-service` redevenu lecture
-seule. Détail (vérifications réelles, bugs trouvés/corrigés, point signalé non traité) dans
-`CHANTIER_INFRA_SERVICES.md` § 3.
+seule. Vérifié en conteneur réel (build, tests, connectivité inter-services). Bug préexistant
+signalé et corrigé au passage : cache `/v1/data/stats` qui ne persistait jamais
+(permissions `/app/tmp`, fix Dockerfile).
 
 ### 17. `mlflow` — câblé en écriture seule, aucun flux retour vers le déploiement
 
 **Résolu le 2026-08-28** — les deux modèles promus au stage `Production`, `boto3` ajouté
 (backend + segmentation-service), fix `compile=False` sur le chargement registry U-Net.
 Les deux services chargent désormais réellement depuis le Model Registry (vérifié en
-conteneur réel). Détail dans `CHANTIER_INFRA_SERVICES.md` § 4.
+conteneur réel, non-régression 88/88 + 19/19 tests).
 
 ## Fait — pour mémoire (ne pas rouvrir sans raison)
 
