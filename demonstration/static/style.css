@@ -2,7 +2,7 @@
    plein bord) mais le contenu réel vit dans .page-content, centré et plafonné.
    padding vit ici (pas sur body) pour ne pas entrer en conflit avec le <style>
    inline de chaque page (source order : il gagnerait sinon sur ce fichier). */
-.page-content { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+.page-content { max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.6; }
 
 /* Nav séquentielle (Précédent/Suivant) — dupliquée en haut ET en bas de chaque
    page, partagée via le <link> en <head> (persiste à travers les swaps hx-boost,
@@ -35,11 +35,27 @@
 }
 .nav-num:hover { opacity: 1; background: #388bfd; }
 
-/* Sommaire (écran d'ouverture) */
-.title-block { margin-bottom: .5rem; }
-.title-block h1 { font-size: 2.2rem; margin-bottom: .3rem; }
-.title-block .subtitle { color: #8b949e; font-size: 1rem; margin: 0 0 .3rem; }
-.title-block .team { color: #6e7681; font-size: .85rem; }
+/* Sommaire (écran d'ouverture) — hero centré, cf. recherche 2026-08-28 (hiérarchie
+   titre -> sous-titre -> CTA, espace généreux, dark theme "considéré" plutôt que
+   du texte brut collé en haut de page). */
+.hero { text-align: center; padding: 3rem 0 2.5rem; }
+.hero-badge {
+  display: inline-block; background: #161b22; border: 1px solid #30363d;
+  border-radius: 20px; padding: 4px 14px; font-size: .78rem; color: #58a6ff;
+  letter-spacing: .05em; margin-bottom: 1.2rem;
+}
+.hero h1 {
+  font-size: 2.4rem; line-height: 1.25; color: #e6edf3; margin: 0 auto .8rem;
+  max-width: 700px;
+}
+.hero-subtitle { color: #8b949e; font-size: 1.05rem; max-width: 640px; margin: 0 auto .6rem; }
+.hero-team { color: #6e7681; font-size: .85rem; margin: 0 0 1.8rem; }
+.hero-cta {
+  display: inline-block; background: #1f6feb; color: #fff !important;
+  text-decoration: none !important; padding: 12px 28px; border-radius: 8px;
+  font-size: 1rem; font-weight: bold; transition: background .15s, transform .15s;
+}
+.hero-cta:hover { background: #388bfd; transform: translateY(-1px); }
 
 .step-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
