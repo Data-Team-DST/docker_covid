@@ -135,7 +135,7 @@ sprints:
         done: true
       - id: US-15
         title: "Load test /predict P95 < 500ms"
-        description: "🔄 Outillage fait : scripts/load_test/locustfile.py (10 req/s, 10 users), make load-test (relève temporairement le rate limit US-12, restaure ensuite), rapport HTML+CSV dans outputs/load_test/. Vérifié bout-en-bout contre un backend local. Bloqué : aucun modèle entraîné dans data/models/ (dépend de dvc repro / US-08, hors périmètre) — sans modèle /predict répond 503, le P95 mesuré ne serait pas celui de l'inférence réelle."
+        description: "🔄 Outillage fonctionnel de bout en bout (2026-08-28) : scripts/load_test/requirements.txt était cassé (lock --require-hashes généré pour Python 3.11, mais le venv WSL utilise 3.10 — typing_extensions de flask-cors, conditionnel à python_version<3.11, absent du lock ; régénéré en ciblant 3.10, testé en conteneur jetable avant application). Exécuté pour de vrai contre un modèle entraîné réel (data/models/classification.keras, model_loaded=true) : 56 requêtes, 0 échec, mais P95=17000ms / P50=9200ms / min=6011ms — objectif <500ms non atteint, largement (34x). Latence élevée même à faible charge (première requête déjà 6s) : probablement structurel (inférence CPU-only, pas de GPU, segmentation U-Net 173 Mo + classification chaînées, 1 CPU alloué à chacun de backend/segmentation-service). Pertinent pour la démo live à la soutenance : prévoir plusieurs secondes de latence perçue. Optimisation (GPU, cache, parallélisation) hors périmètre de cette vérification."
         branch: US-15
         assignee: Steven
         depends_on: ["US-12"]
@@ -181,19 +181,19 @@ sprints:
         done: true
       - id: US-19
         title: "Grafana dashboard (≥5 panels + alertes)"
-        description: "Dashboard Grafana : latence P50/P95, error rate, throughput, confidence moyenne, distribution classes. Alertes : latence P95 > 1s, error rate > 5%. Provisioning automatique via docker-compose."
+        description: "✅ infrastructure/docker/monitoring/grafana/provisioning/dashboards/covid_backend.json : 10 panels (6 existants + 4 ajoutés — latence p50/p95, taux d'erreurs HTTP 5xx, distribution des prédictions par classe, % prédictions à faible confiance en proxy de la confiance moyenne, le backend ne loguant pas de score moyen brut). Alertes déjà présentes dans alert_rules.yml (InferenceLatencyHigh p95>1s, HighHttpErrorRate>5%, + bonus : auth failures, low confidence, class imbalance, no traffic). Provisioning automatique via docker-compose (updateIntervalSeconds: 30, pas de rebuild nécessaire)."
         depends_on: ["US-18"]
         points: 5
         priority: MUST
-        done: false
+        done: true
       - id: US-20
         title: "Evidently : détection dérive données"
-        description: "Rapport Evidently : PSI + Jensen-Shannon sur features d'entrée (distribution pixels, classes). Comparaison production vs train. Rapport HTML générable en 1 commande. Alerte si PSI > 0.2."
+        description: "✅ trainer/scripts/drift_report.py : Report Evidently (DataDriftPreset stattest=psi, seuil 0.2 + ColumnDriftMetric jensenshannon par classe), comparaison scores de prédiction production (log-service /v1/logs, logger app.predict.telemetry) vs référence train (échantillon 500 images). Rapport HTML en 1 commande, versionné DVC (outputs/drift/report.html.dvc, remote minio), embarqué en iframe sur demonstration :5051 /monitoring. Nuance vs formulation d'origine : dérive mesurée sur les scores de sortie par classe, pas sur la distribution brute des pixels d'entrée — approche standard pour du monitoring de classification, mais à noter si quelqu'un cherchait explicitement du pixel-level drift."
         depends_on: ["US-18"]
         blocks: ["US-21"]
         points: 5
         priority: MUST
-        done: false
+        done: true
       - id: US-21
         title: "Pipeline re-entraînement semi-automatique"
         description: "Script trigger_retrain.sh : détecte dérive (PSI > 0.2) → lance training → log MLflow → promeut modèle si accuracy ≥ 85%. Semi-auto : alerte + confirmation manuelle avant promotion."

@@ -463,10 +463,7 @@ monitoring-stop: ## Arrête Prometheus + Grafana
 monitoring-logs: ## Logs Prometheus + Grafana en direct (Ctrl+C arrête les services)
 	@trap '$(COMPOSE) --profile monitoring stop prometheus grafana 2>/dev/null; exit 0' INT; \
 	 $(COMPOSE) --profile monitoring logs -f prometheus grafana
- 
-clean-docker: ## Supprime les images et volumes Docker du projet
-	$(COMPOSE) down -v --rmi local 2>/dev/null || true
-	
+
 # ── Help ──────────────────────────────────────────────────────────────────────
 help: ## Affiche cette aide
 	@echo ""
