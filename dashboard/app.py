@@ -199,6 +199,13 @@ def conclusion():
     return render_template("conclusion.html")
 
 
+@app.route("/preprocessing")
+def preprocessing():
+    """Environnements/masking/déséquilibre/augmentation — condensé depuis
+    frontend/page/03_preprocessing (chantier point 15)."""
+    return render_template("preprocessing.html")
+
+
 @app.route("/sprint/<sprint_id>")
 def sprint_detail(sprint_id: str):
     backlog = load_backlog()
