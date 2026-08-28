@@ -385,7 +385,7 @@ jobs:
             image: ghcr.io/data-team-dst/covid-xray-streamlit
             context: frontend
             dockerfile: frontend/Dockerfile
-            build_args: BASE_IMAGE=ghcr.io/data-team-dst/covid-xray-base:latest
+            build_args: ""
           - service: data-service
             image: ghcr.io/data-team-dst/covid-xray-data-service
             context: data-service
@@ -405,16 +405,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # PAT nécessaire pour puller covid-xray-base (frontend uniquement)
-      - name: Log in to GHCR (pull base image)
-        if: matrix.service == 'frontend'
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
-        continue-on-error: true
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USER }}
-          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
