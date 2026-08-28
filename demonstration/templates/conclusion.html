@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DS_COVID — Conclusion critique</title>
+  <title>DS_COVID — Conclusion</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
           integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
@@ -31,81 +31,78 @@
   {% set nav_position = 'top' %}
   {% include '_nav_footer.html' %}
 
-  <h1>🧭 Conclusion critique et perspectives</h1>
+  <h1>🧭 Conclusion et perspectives</h1>
   <p style="color:#8b949e">
-    Synthèse de la phase Data Science exploratoire (repo <a href="https://github.com/Data-Team-DST/DS_COVID" target="_blank" rel="noopener">DS_COVID</a>) :
-    enseignements, limites méthodologiques, et avertissement éthique — condensé depuis
-    <code>frontend/page/07_conclusion_critique_perspective.py</code>.
+    Ce projet industrialise un modèle issu d'une phase Data Science exploratoire antérieure
+    (voir <a href="/contexte">Contexte DS</a>) — la conclusion ci-dessous porte sur
+    l'industrialisation MLOps elle-même (Phases 1→4), pas sur la phase exploratoire d'origine.
   </p>
 
-  <h2>1. Positionnement du projet</h2>
-  <div class="card">
-    <p>Objectif : évaluer la <b>faisabilité exploratoire</b> d'une classification automatique
-       de radiographies thoraciques.</p>
-    <p>→ <b>POC analytique</b>, système d'aide au diagnostic — pas un outil clinique.</p>
-  </div>
-
-  <h2>2. Enseignements principaux des données</h2>
+  <h2>1. Ce qui a été industrialisé</h2>
   <div class="card">
     <ul>
-      <li>Volume &gt; 21 000 images → analyse exploratoire robuste</li>
-      <li>Déséquilibre marqué entre les classes</li>
-      <li>Images majoritairement en faux RGB</li>
-      <li>Qualité visuelle globalement homogène</li>
-      <li>Aucun signal trivial exploitable directement pour une classification naïve</li>
-    </ul>
-    <p style="color:#8b949e">→ Classification non triviale, positif pour un POC sérieux.</p>
-  </div>
-
-  <h2>3. Limites et biais méthodologiques</h2>
-  <div class="card">
-    <ul>
-      <li>Déséquilibre pouvant biaiser le modèle</li>
-      <li>Faible volumétrie pour certaines classes rares</li>
-      <li>Absence de métadonnées cliniques</li>
-      <li>Sources hétérogènes → biais d'acquisition</li>
-      <li>Généralisation très limitée hors du jeu de données</li>
+      <li><span class="done">✅</span> Environnement reproductible, API FastAPI sécurisée
+        (clé <code>X-API-Key</code>, rate limiting, validation stricte des uploads)</li>
+      <li><span class="done">✅</span> Découpage en microservices HTTP-only (backend,
+        segmentation-service, data-service, dvc-service, log-service) — voir
+        <a href="/architecture">Architecture</a></li>
+      <li><span class="done">✅</span> Versionnage des données (DVC, remote MinIO) et des
+        modèles (MLflow tracking + Model Registry)</li>
+      <li><span class="done">✅</span> CI/CD complet : lint → tests → SonarCloud → build/push
+        GHCR (3 services) → smoke-test de déploiement</li>
+      <li><span class="done">✅</span> Docker Compose production-ready : healthchecks et
+        limites mémoire sur tous les services, 0 secret en dur</li>
+      <li><span class="done">✅</span> Monitoring : dashboard Grafana (latence p50/p95, taux
+        d'erreurs, distribution des prédictions par classe) + alertes Prometheus, rapport de
+        dérive Evidently générable à la demande — voir <a href="/monitoring">Monitoring</a></li>
     </ul>
   </div>
 
-  <h2>4. Préprocessing et choix analytiques</h2>
+  <h2>2. Limites et incidents rencontrés en cours de route</h2>
   <div class="card">
+    <p style="color:#8b949e; font-size:.85rem">
+      Assumés plutôt que masqués — une industrialisation MLOps se juge aussi à la façon dont
+      elle détecte et corrige ses propres angles morts :
+    </p>
     <ul>
-      <li>Normalisation des intensités → apprentissage stable</li>
-      <li>Redimensionnement → perte possible de détails fins</li>
-      <li>Transformations limitées jusqu'à gain clair en performance</li>
-      <li>Choix guidés par l'exploration, pas par une validation clinique</li>
+      <li><b>Train/serving skew</b> — l'ordre des classes dans le backend ne correspondait pas
+        à celui figé par le pipeline d'entraînement (<code>dvc.lock</code>). Détecté par test
+        batch réel (matrice de confusion), pas par un exemple isolé. Corrigé le 2026-08-28 :
+        accuracy 35 % → 78 % sur un lot de test.</li>
+      <li><b>Instabilité mémoire de segmentation-service</b> sous appels séquentiels — stopgap
+        appliqué (limite mémoire relevée), cause racine (gestion mémoire TensorFlow entre
+        appels <code>predict()</code>) non résolue.</li>
+      <li><b>CI "Deploy smoke-test" intermittente</b> — root-causée (retry MLflow trop lent
+        dans la fenêtre de test) et corrigée.</li>
+      <li><b>Pipeline DVC désynchronisé localement</b> (<code>dvc status</code> signale des
+        écarts entre <code>params.yaml</code>/données sur disque et le dernier
+        <code>dvc.lock</code> figé) — connu, pas encore traité.</li>
     </ul>
   </div>
 
-  <h2>5. Risques et limites d'usage</h2>
+  <h2>3. Backlog encore ouvert</h2>
   <div class="card">
     <table>
-      <tr><th>Risque</th><th>Mitigation</th></tr>
-      <tr><td>Surinterprétation</td><td>Approche prudente et critique</td></tr>
-      <tr><td>Généralisation abusive</td><td>Rester dans le périmètre du jeu de données</td></tr>
-      <tr><td>Sensibilité à l'acquisition</td><td>Tests robustes, contrôle des préprocesseurs</td></tr>
-      <tr><td>Usage clinique</td><td>Ne pas utiliser comme outil de diagnostic définitif</td></tr>
+      <tr><th>Story</th><th>Statut</th></tr>
+      <tr><td>US-15 — Load test /predict P95 &lt; 500 ms</td><td>Outillage prêt, bloqué sans modèle entraîné en local</td></tr>
+      <tr><td>US-21 — Ré-entraînement semi-automatique</td><td>Non démarré (dépendance US-20 désormais levée)</td></tr>
+      <tr><td>US-22 — Documentation finale (ADRs, runbooks)</td><td>Non démarré</td></tr>
+      <tr><td>Kubernetes (Phase 3)</td><td>Manifests présents, non déployé</td></tr>
     </table>
   </div>
   <div class="warning-box">
-    ⚠️ Ce projet n'est <b>pas destiné à un usage clinique</b> en l'état (disclaimer éthique).
+    ⚠️ Ce projet reste une démonstration MLOps — <b>pas un dispositif médical</b>, pas destiné
+    à un usage clinique en l'état.
   </div>
 
-  <h2>6. Perspectives et axes d'amélioration</h2>
+  <h2>4. Perspectives</h2>
   <div class="card">
-    <p style="color:#8b949e; font-size:.85rem">
-      Roadmap d'origine de la phase Data Science — mise à jour ici pour refléter ce que
-      l'industrialisation MLOps (Phases 1→4) a effectivement livré depuis :
-    </p>
     <ul>
-      <li>Court terme : rééquilibrage des classes, tests statistiques simples</li>
-      <li>Moyen terme : embeddings profonds hors ligne, analyses de similarité —
-          <span class="done">✅ versionnage des données fait</span> (DVC + remote DagsHub)</li>
-      <li>Long terme : validation multi-sources, explicabilité —
-          <span class="done">✅ pipeline MLOps fait</span> (DVC, MLflow tracking + Model Registry,
-          CI/CD, monitoring Prometheus/Grafana)</li>
-      <li>Futur : intégration de métadonnées cliniques, exploration d'autres modèles</li>
+      <li>Court terme : formaliser US-19 (panels/alertes Grafana), automatiser la génération
+        du rapport de dérive en continu (au-delà du script manuel actuel)</li>
+      <li>Moyen terme : US-21 (ré-entraînement semi-automatique déclenché par la dérive)</li>
+      <li>Déploiement Kubernetes (Phase 3, deadline dépassée — à re-planifier)</li>
+      <li>Documentation finale et runbooks (US-22) avant transfert d'équipe</li>
     </ul>
   </div>
 

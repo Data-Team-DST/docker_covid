@@ -62,7 +62,14 @@ _zip_extracted/
 
 # Dossiers générés localement (racine uniquement)
 /models/
-/outputs/
+# /outputs/* (pas /outputs/) : un pattern sur le dossier lui-même empêcherait toute
+# ré-inclusion d'un sous-dossier ensuite (limitation git — on ne peut pas ré-inclure un
+# chemin dont le parent est exclu). outputs/drift/ est ré-inclus ci-dessous : rapport de
+# dérive Evidently versionné via DVC (pointeur .dvc trackable par git, contenu réel
+# récupéré via `dvc pull` — évite de committer 3 Mo de HTML dans git). Le contenu réel
+# (report.html) reste ignoré via le .gitignore local que DVC génère dans outputs/drift/.
+/outputs/*
+!/outputs/drift/
 /tmp/
 
 # Claude Code (mémoire IA + config locale non partagée)

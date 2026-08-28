@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS_COVID — Architecture</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
+  <style>
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; }
+    h1 { color: #58a6ff; }
+    h2 { color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: .4rem; margin-top: 2rem; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .rule-box {
+      border-left: 3px solid #58a6ff; padding: .8rem 1rem; margin: 1rem 0;
+      background: #0f1520; font-size: .9rem;
+    }
+    .svc-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: .8rem; margin: 1rem 0 1.6rem;
+    }
+    .svc-card {
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem;
+    }
+    .svc-name { font-weight: bold; color: #c9d1d9; font-size: .95rem; }
+    .svc-port {
+      display: inline-block; background: #0d1117; border: 1px solid #30363d; color: #8b949e;
+      border-radius: 4px; padding: 1px 6px; font-size: .72rem; margin-left: .4rem;
+    }
+    .svc-role { color: #8b949e; font-size: .8rem; margin-top: .3rem; }
+    .svc-group-title { color: #58a6ff; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; margin: 1.6rem 0 .5rem; }
+    .flow {
+      display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin: 1rem 0;
+      font-size: .85rem;
+    }
+    .flow-step {
+      background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+      padding: 6px 12px; color: #c9d1d9;
+    }
+    .flow-arrow { color: #58a6ff; font-weight: bold; }
+    code { background: #161b22; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+  </style>
+
+  <div class="page-content">
+  {% set nav_position = 'top' %}
+  {% include '_nav_footer.html' %}
+
+  <h1>🏗 Architecture microservices</h1>
+  <p style="color:#8b949e">
+    Découpage en 11 services indépendants (Docker Compose), chacun avec son propre
+    <code>Dockerfile</code>, ses dépendances, et sa propre limite mémoire. Aucun ne partage
+    d'état ni de code Python avec un autre.
+  </p>
+
+  <div class="rule-box">
+    <b>Règle absolue du projet</b> : zéro import Python direct entre services. Toute
+    communication passe par HTTP — <code>/health</code>, <code>/v1/...</code>,
+    <code>/api/v1/...</code>. Ça permet à chaque service d'évoluer, de crasher ou de redémarrer
+    sans emporter les autres avec lui.
+  </div>
+
+  <div class="svc-group-title">Inférence</div>
+  <div class="svc-grid">
+    <div class="svc-card">
+      <div class="svc-name">backend <span class="svc-port">:8000</span></div>
+      <div class="svc-role">FastAPI — classification COVID/Normal/Lung Opacity/Viral
+        Pneumonia. Preprocessing identique à l'entraînement (réutilise le code du trainer,
+        copié au build).</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">segmentation-service <span class="svc-port">:8001</span></div>
+      <div class="svc-role">FastAPI — U-Net, isole le masque pulmonaire avant classification.
+        Appelé en HTTP par backend.</div>
+    </div>
+  </div>
+
+  <div class="svc-group-title">Données &amp; pipeline ML</div>
+  <div class="svc-grid">
+    <div class="svc-card">
+      <div class="svc-name">data-service <span class="svc-port">:5001</span></div>
+      <div class="svc-role">Lecture seule — stats et recherche sur le jeu de données
+        (42 330 images versionnées DVC).</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">dvc-service <span class="svc-port">:5003</span></div>
+      <div class="svc-role">Opérations DVC (status/pull/push/repro), séparé de data-service
+        (lecture vs mutation d'état).</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">trainer <span class="svc-port">:8888</span></div>
+      <div class="svc-role">Pipeline d'entraînement reproductible (<code>dvc repro</code>) —
+        preprocess → train → evaluate, orchestré par <code>dvc.yaml</code>/<code>params.yaml</code>.</div>
+    </div>
+  </div>
+
+  <div class="svc-group-title">Tracking &amp; stockage</div>
+  <div class="svc-grid">
+    <div class="svc-card">
+      <div class="svc-name">mlflow <span class="svc-port">:5000</span></div>
+      <div class="svc-role">Tracking server + Model Registry. backend/segmentation-service
+        chargent leur modèle depuis le stage <code>Production</code>, fallback fichier local
+        si indisponible.</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">postgres <span class="svc-port">interne</span></div>
+      <div class="svc-role">Backend de métadonnées MLflow (runs, métriques, paramètres).</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">minio <span class="svc-port">:9000 / :9001</span></div>
+      <div class="svc-role">Stockage S3 local — artefacts MLflow (modèles) et remote DVC
+        (dataset).</div>
+    </div>
+  </div>
+
+  <div class="svc-group-title">Observabilité</div>
+  <div class="svc-grid">
+    <div class="svc-card">
+      <div class="svc-name">log-service <span class="svc-port">:5002</span></div>
+      <div class="svc-role">Agrégateur JSON centralisé — reçoit les logs structurés de tous
+        les autres services.</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">prometheus <span class="svc-port">:9090</span></div>
+      <div class="svc-role">Scrape <code>/metrics</code> du backend (latence, volumétrie de
+        prédictions). Profil <code>monitoring</code>.</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">grafana <span class="svc-port">:3000</span></div>
+      <div class="svc-role">Dashboards provisionnés sur les métriques Prometheus. Profil
+        <code>monitoring</code>.</div>
+    </div>
+  </div>
+
+  <div class="svc-group-title">Interfaces</div>
+  <div class="svc-grid">
+    <div class="svc-card">
+      <div class="svc-name">streamlit <span class="svc-port">:8501</span></div>
+      <div class="svc-role">Frontend Streamlit multi-pages — exploration data science.</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">dashboard <span class="svc-port">:5050</span></div>
+      <div class="svc-role">Backlog agile + data explorer (outil interne équipe).</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">demonstration <span class="svc-port">:5051</span></div>
+      <div class="svc-role">Cette présentation — façade démo produit, appelle backend
+        directement.</div>
+    </div>
+  </div>
+
+  <h2>Pipeline d'entraînement (reproductible)</h2>
+  <p style="color:#8b949e">
+    <code>dvc repro</code> exécute les stages définis dans <code>dvc.yaml</code>, chacun figé
+    par les hyperparamètres de <code>params.yaml</code> et tracé dans <code>dvc.lock</code> —
+    ordre des classes, seed, split train/val/test : tout est reproductible à l'identique.
+  </p>
+  <div class="flow">
+    <span class="flow-step">data/raw.dvc<br><small style="color:#8b949e">42 330 images (MinIO)</small></span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">preprocess<br><small style="color:#8b949e">masking + augmentation</small></span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">train<br><small style="color:#8b949e">InceptionV3, logué MLflow</small></span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">evaluate<br><small style="color:#8b949e">métriques → Model Registry</small></span>
+  </div>
+  <p style="color:#8b949e; font-size:.85rem">
+    Voir l'onglet <a href="/modeles">Modèles</a> pour la provenance du modèle actuellement
+    chargé en production, et <a href="/monitoring">Monitoring</a> pour le suivi post-déploiement.
+  </p>
+
+  {% set nav_position = 'bottom' %}
+  {% include '_nav_footer.html' %}
+
+  </div>
+</body>
+</html>
