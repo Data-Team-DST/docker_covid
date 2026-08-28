@@ -188,12 +188,12 @@ sprints:
         done: false
       - id: US-20
         title: "Evidently : détection dérive données"
-        description: "Rapport Evidently : PSI + Jensen-Shannon sur features d'entrée (distribution pixels, classes). Comparaison production vs train. Rapport HTML générable en 1 commande. Alerte si PSI > 0.2."
+        description: "✅ trainer/scripts/drift_report.py : Report Evidently (DataDriftPreset stattest=psi, seuil 0.2 + ColumnDriftMetric jensenshannon par classe), comparaison scores de prédiction production (log-service /v1/logs, logger app.predict.telemetry) vs référence train (échantillon 500 images). Rapport HTML en 1 commande, versionné DVC (outputs/drift/report.html.dvc, remote minio), embarqué en iframe sur demonstration :5051 /monitoring. Nuance vs formulation d'origine : dérive mesurée sur les scores de sortie par classe, pas sur la distribution brute des pixels d'entrée — approche standard pour du monitoring de classification, mais à noter si quelqu'un cherchait explicitement du pixel-level drift."
         depends_on: ["US-18"]
         blocks: ["US-21"]
         points: 5
         priority: MUST
-        done: false
+        done: true
       - id: US-21
         title: "Pipeline re-entraînement semi-automatique"
         description: "Script trigger_retrain.sh : détecte dérive (PSI > 0.2) → lance training → log MLflow → promeut modèle si accuracy ≥ 85%. Semi-auto : alerte + confirmation manuelle avant promotion."

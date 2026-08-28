@@ -27,10 +27,10 @@ DAGSHUB_URL = os.getenv("DAGSHUB_URL", "https://dagshub.com/DST_Data_Team/docker
 PAGE_ORDER = [
     ("/", "Sommaire"),
     ("/contexte", "Contexte DS"),
-    ("/preprocessing", "Préprocessing"),
-    ("/predict", "Prédicteur"),
     ("/architecture", "Architecture"),
+    ("/preprocessing", "Préprocessing"),
     ("/modeles", "Modèles"),
+    ("/predict", "Prédicteur"),
     ("/monitoring", "Monitoring"),
     ("/conclusion", "Conclusion"),
 ]
