@@ -68,10 +68,12 @@ migré vers `dashboard` au fil de l'eau, pas de split de service ni de `demonstr
   `data-service` (pas directement dans `dashboard`, pour respecter la frontière de service
   déjà établie) — nouveaux endpoints `/v1/data/sample` et `/v1/data/metrics`, section dédiée
   sur `/data` + galerie d'anomalies (8 images statiques).
-- **Non fait** : 03 (captures d'écran statiques — env Windows/WSL/Colab, masking, augmentation ;
-  faible priorité, coût faible si repris plus tard). 06 (CI/CD) — **volontairement pas migré**,
-  contenu périmé (présente Docker/CD/monitoring comme absents alors qu'ils existent).
-- `frontend/` (Streamlit) devient supprimable une fois 03 traité ou explicitement abandonné.
+- **03 (préprocessing)** : migré → nouvelle page `/preprocessing` (env Windows/WSL/Colab,
+  masking avant/après, déséquilibre de classes, augmentation — 10 images statiques).
+- **Non fait, volontairement** : 06 (CI/CD) — contenu périmé (présente Docker/CD/monitoring
+  comme absents alors qu'ils existent). À réécrire ou abandonner, pas à migrer tel quel.
+- `frontend/` (Streamlit) devient supprimable dès que 06 est tranché (réécrit ou abandonné) —
+  c'est la seule page qui n'a plus d'équivalent dans `dashboard`.
 
 **Constat déjà établi** (audit du 2026-08-26, avant récupération de `raf5`) : sur les 7 pages
 streamlit, seules `01_accueil` et `02_données` ont un équivalent partiel dans `dashboard`. Les
