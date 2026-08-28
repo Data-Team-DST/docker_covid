@@ -1,10 +1,18 @@
-/* Nav séquentielle (Précédent/Suivant) — pied de page commun à toutes les pages,
-   partagé via le <link> en <head> (persiste à travers les swaps hx-boost, contrairement
-   aux <style> inline placés en <body> qui sont propres à chaque page). */
+/* Conteneur centré — toutes les pages ont un <body> en pleine largeur (fond
+   plein bord) mais le contenu réel vit dans .page-content, centré et plafonné.
+   padding vit ici (pas sur body) pour ne pas entrer en conflit avec le <style>
+   inline de chaque page (source order : il gagnerait sinon sur ce fichier). */
+.page-content { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+/* Nav séquentielle (Précédent/Suivant) — dupliquée en haut ET en bas de chaque
+   page, partagée via le <link> en <head> (persiste à travers les swaps hx-boost,
+   contrairement aux <style> inline placés en <body> qui sont propres à chaque page). */
 .nav-footer {
   display: flex; justify-content: space-between; align-items: center;
-  margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #21262d;
-  max-width: 900px;
+  padding: 1rem 0; border-bottom: 1px solid #21262d; margin-bottom: 1.5rem;
+}
+.nav-footer.nav-footer-bottom {
+  border-bottom: none; border-top: 1px solid #21262d; margin-top: 3rem; margin-bottom: 0;
 }
 .nav-btn {
   background: #1f6feb; color: #fff !important; padding: 8px 16px;
@@ -22,7 +30,7 @@
 
 .step-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem; max-width: 1000px; margin-top: 1.5rem;
+  gap: 1rem; margin-top: 1.5rem;
 }
 .step-card {
   display: block; background: #161b22; border: 1px solid #30363d; border-radius: 10px;

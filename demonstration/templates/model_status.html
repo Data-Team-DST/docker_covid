@@ -11,7 +11,7 @@
 </head>
 <body hx-boost="true">
   <style>
-    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; }
     h1 { color: #58a6ff; }
     a { color: #58a6ff; text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -32,6 +32,10 @@
       padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: .85rem; font-family: monospace; }
     .refresh:hover { background: #388bfd; }
   </style>
+
+  <div class="page-content">
+  {% set nav_position = 'top' %}
+  {% include '_nav_footer.html' %}
 
   <h1>🧪 Provenance des modèles</h1>
   <p style="color:#8b949e">
@@ -84,6 +88,9 @@
 
   <button class="refresh" onclick="location.reload()">🔄 Rafraîchir</button>
 
+  {% set nav_position = 'bottom' %}
   {% include '_nav_footer.html' %}
+
+  </div>
 </body>
 </html>

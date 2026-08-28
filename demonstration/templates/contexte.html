@@ -11,7 +11,7 @@
 </head>
 <body hx-boost="true">
   <style>
-    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; }
     h1 { color: #58a6ff; }
     h2 { color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: .4rem; margin-top: 2rem; }
     a { color: #58a6ff; text-decoration: none; }
@@ -34,6 +34,10 @@
     .img-gallery img { max-width: 100%; border-radius: 6px; border: 1px solid #30363d; }
     .img-gallery figcaption { color: #8b949e; font-size: .78rem; margin-top: .3rem; }
   </style>
+
+  <div class="page-content">
+  {% set nav_position = 'top' %}
+  {% include '_nav_footer.html' %}
 
   <h1>🫁 D'où part le projet — contexte Data Science</h1>
   <p style="color:#8b949e; max-width:720px">
@@ -154,6 +158,9 @@
     <a href="/conclusion">conclusion critique et perspectives</a> de la phase Data Science.
   </div>
 
+  {% set nav_position = 'bottom' %}
   {% include '_nav_footer.html' %}
+
+  </div>
 </body>
 </html>

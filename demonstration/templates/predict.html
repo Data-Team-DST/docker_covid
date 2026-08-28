@@ -11,7 +11,7 @@
 </head>
 <body hx-boost="true">
   <style>
-    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; }
     h1 { color: #58a6ff; }
     a { color: #58a6ff; text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -41,6 +41,10 @@
     .score-value { width: 50px; text-align: right; font-size: .85rem; color: #8b949e; }
     .latency { color: #8b949e; font-size: .8rem; margin-top: .8rem; }
   </style>
+
+  <div class="page-content">
+  {% set nav_position = 'top' %}
+  {% include '_nav_footer.html' %}
 
   <h1>🔬 Prédicteur — Classification de radiographies</h1>
   <p style="color:#8b949e">
@@ -80,7 +84,10 @@
   </div>
   {% endif %}
 
+  {% set nav_position = 'bottom' %}
   {% include '_nav_footer.html' %}
+
+  </div>
 
   <script>
     // var (pas const) : ce script se réexécute à chaque navigation/soumission hx-boost
