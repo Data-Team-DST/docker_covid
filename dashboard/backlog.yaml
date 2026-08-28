@@ -135,7 +135,7 @@ sprints:
         done: true
       - id: US-15
         title: "Load test /predict P95 < 500ms"
-        description: "🔄 Outillage fait : scripts/load_test/locustfile.py (10 req/s, 10 users), make load-test (relève temporairement le rate limit US-12, restaure ensuite), rapport HTML+CSV dans outputs/load_test/. Vérifié bout-en-bout contre un backend local. Bloqué : aucun modèle entraîné dans data/models/ (dépend de dvc repro / US-08, hors périmètre) — sans modèle /predict répond 503, le P95 mesuré ne serait pas celui de l'inférence réelle."
+        description: "🔄 Outillage fonctionnel de bout en bout (2026-08-28) : scripts/load_test/requirements.txt était cassé (lock --require-hashes généré pour Python 3.11, mais le venv WSL utilise 3.10 — typing_extensions de flask-cors, conditionnel à python_version<3.11, absent du lock ; régénéré en ciblant 3.10, testé en conteneur jetable avant application). Exécuté pour de vrai contre un modèle entraîné réel (data/models/classification.keras, model_loaded=true) : 56 requêtes, 0 échec, mais P95=17000ms / P50=9200ms / min=6011ms — objectif <500ms non atteint, largement (34x). Latence élevée même à faible charge (première requête déjà 6s) : probablement structurel (inférence CPU-only, pas de GPU, segmentation U-Net 173 Mo + classification chaînées, 1 CPU alloué à chacun de backend/segmentation-service). Pertinent pour la démo live à la soutenance : prévoir plusieurs secondes de latence perçue. Optimisation (GPU, cache, parallélisation) hors périmètre de cette vérification."
         branch: US-15
         assignee: Steven
         depends_on: ["US-12"]
