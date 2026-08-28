@@ -19,8 +19,11 @@
   border-radius: 6px; text-decoration: none !important; font-size: .9rem;
 }
 .nav-btn:hover { background: #388bfd; }
-.nav-backlog { color: #6e7681 !important; font-size: .8rem; text-decoration: none !important; }
-.nav-backlog:hover { color: #8b949e; text-decoration: underline !important; }
+.nav-backlog {
+  font-size: 1.3rem; text-decoration: none !important; opacity: .55;
+  line-height: 1; padding: 4px 8px; border-radius: 6px;
+}
+.nav-backlog:hover { opacity: 1; background: #21262d; }
 
 /* Sommaire (écran d'ouverture) */
 .title-block { margin-bottom: .5rem; }

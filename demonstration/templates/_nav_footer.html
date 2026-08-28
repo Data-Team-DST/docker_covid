@@ -4,7 +4,7 @@
     {% else %}
     <span></span>
     {% endif %}
-    <a href="{{ dashboard_url }}/" hx-boost="false" class="nav-backlog">Retour au backlog</a>
+    <a href="{{ dashboard_url }}/" hx-boost="false" class="nav-backlog" title="Retour au backlog" aria-label="Retour au backlog">🏠</a>
     {% if next_page %}
     <a href="{{ next_page[0] }}" class="nav-btn nav-next">{{ next_page[1] }} →</a>
     {% else %}
