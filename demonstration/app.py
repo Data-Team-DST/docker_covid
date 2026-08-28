@@ -1,9 +1,10 @@
 """Demonstration Flask — DS_COVID MLOps — facade demo produit (contexte, prédicteur, modèles)."""
 import base64
 import os
+from pathlib import Path
 
 import requests
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_file
 
 app = Flask(__name__)
 
@@ -11,13 +12,26 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:5050")
 API_KEY = os.getenv("API_KEY", "")
 
+# Rapport de dérive Evidently — versionné DVC (outputs/drift/report.html.dvc), récupéré via
+# `dvc pull` avant la démo. Chemin absolu : app.py tourne avec cwd=demonstration/ (make demonstration).
+DRIFT_REPORT_PATH = Path(__file__).resolve().parent.parent / "outputs" / "drift" / "report.html"
+
+# Liens outils de monitoring — mêmes ports par défaut que infrastructure/docker-compose.yml
+# (services sous profil "monitoring" pour prometheus/grafana : make monitoring-start).
+MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5000")
+GRAFANA_URL = os.getenv("GRAFANA_URL", "http://localhost:3000")
+PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
+DAGSHUB_URL = os.getenv("DAGSHUB_URL", "https://dagshub.com/DST_Data_Team/docker_covid")
+
 # Ordre de présentation (soutenance) — pilote la nav séquentielle Précédent/Suivant.
 PAGE_ORDER = [
     ("/", "Sommaire"),
     ("/contexte", "Contexte DS"),
     ("/preprocessing", "Préprocessing"),
     ("/predict", "Prédicteur"),
+    ("/architecture", "Architecture"),
     ("/modeles", "Modèles"),
+    ("/monitoring", "Monitoring"),
     ("/conclusion", "Conclusion"),
 ]
 
@@ -113,6 +127,38 @@ def predict():
         )
 
     return render_template("predict.html", result=r.json(), error=None, **nav, **image_ctx)
+
+
+@app.route("/architecture")
+def architecture():
+    """Architecture microservices — frontières HTTP, ports, pipeline DVC/MLflow."""
+    return render_template("architecture.html", **nav_context("/architecture"))
+
+
+@app.route("/monitoring")
+def monitoring():
+    """Outils de monitoring — MLflow, Prometheus/Grafana, DagsHub, Evidently."""
+    return render_template(
+        "monitoring.html",
+        mlflow_url=MLFLOW_URL,
+        grafana_url=GRAFANA_URL,
+        prometheus_url=PROMETHEUS_URL,
+        dagshub_url=DAGSHUB_URL,
+        **nav_context("/monitoring"),
+    )
+
+
+@app.route("/monitoring/drift-report")
+def drift_report():
+    """Sert le rapport Evidently tel quel (aucun reskin) pour l'iframe de /monitoring."""
+    if not DRIFT_REPORT_PATH.exists():
+        return (
+            "<p style='font-family:monospace;background:#0d1117;color:#ffb3b6;padding:2rem'>"
+            "Rapport introuvable localement — lancez <code>dvc pull</code> pour le récupérer."
+            "</p>",
+            404,
+        )
+    return send_file(DRIFT_REPORT_PATH)
 
 
 @app.route("/modeles")
