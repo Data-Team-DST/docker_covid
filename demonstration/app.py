@@ -2,7 +2,7 @@
 import os
 
 import requests
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request
 
 app = Flask(__name__)
 
@@ -15,6 +15,12 @@ API_KEY = os.getenv("API_KEY", "")
 def inject_dashboard_url():
     """Rend dashboard_url disponible dans tous les templates (lien croisé vers dashboard/)."""
     return {"dashboard_url": DASHBOARD_URL}
+
+
+@app.route("/")
+def index():
+    """Pas de page d'accueil dédiée — redirige vers la première page de la démo."""
+    return redirect("/contexte")
 
 
 @app.route("/contexte")
