@@ -322,7 +322,9 @@ def data_explorer():
         else:
             # Fallback 2 : scan filesystem (lent, dernier recours)
             stats = load_data_stats()
-    return render_template("data_explorer.html", stats=stats)
+    anomalies_dir = Path(__file__).parent / "static" / "img" / "anomalies"
+    anomaly_images = sorted(p.name for p in anomalies_dir.glob("*.png")) if anomalies_dir.exists() else []
+    return render_template("data_explorer.html", stats=stats, anomaly_images=anomaly_images)
 
 
 # ── API backlog ────────────────────────────────────────────────────────────
@@ -421,6 +423,32 @@ def ds_image_proxy():
             status=r.status_code,
             content_type=r.headers.get("content-type", "image/png"),
         )
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/sample")
+def ds_sample_proxy():
+    """Proxy vers /v1/data/sample (chantier point 15, portage de 02_donnees)."""
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/sample",
+            params=request.args, timeout=15,
+        )
+        return jsonify(r.json()), r.status_code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "data-service inaccessible"}), 503
+
+
+@app.route("/api/ds/metrics")
+def ds_metrics_proxy():
+    """Proxy vers /v1/data/metrics (chantier point 15, portage de 02_donnees)."""
+    try:
+        r = requests.get(
+            f"{DATA_SERVICE_URL}/v1/data/metrics",
+            params=request.args, timeout=15,
+        )
+        return jsonify(r.json()), r.status_code
     except requests.exceptions.ConnectionError:
         return jsonify({"error": "data-service inaccessible"}), 503
 
