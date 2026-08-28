@@ -1,15 +1,17 @@
-"""Router v1 — DS_COVID Data Service."""
+"""Router v1 — DS_COVID Data Service (lecture seule : stats, recherche, images).
+
+Les opérations DVC (pull/push/repro/status/remotes) vivent dans dvc-service
+depuis le chantier point 16 — séparation lecture / mutation d'état local."""
 import logging
 import mimetypes
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from PIL import Image
 
 from data_service.data_stats_service import (
-    CACHE_FILE,
     DATA_DIR,
     IMAGE_EXTS,
     dvc_file_info,
@@ -17,7 +19,6 @@ from data_service.data_stats_service import (
     local_dir_stats,
     save_cache,
 )
-from data_service.dvc_service import run_dvc
 from data_service.image_metrics_service import (
     compute_image_metrics,
     mask_coverage,
@@ -177,63 +178,3 @@ def image_metrics(path: str):
     coverage = mask_coverage(mask_candidate) if mask_candidate != candidate else None
 
     return {"path": path, "metrics": metrics, "mask_coverage": coverage}
-
-
-# ── DVC opérations ─────────────────────────────────────────────────────────
-
-@api_router.get("/dvc/status", tags=["dvc"])
-def dvc_status():
-    return run_dvc(["status"])
-
-
-@api_router.get("/dvc/remotes", tags=["dvc"])
-def dvc_remotes():
-    return run_dvc(["remote", "list"])
-
-
-@api_router.post("/dvc/pull", tags=["dvc"])
-def dvc_pull(background_tasks: BackgroundTasks, target: str | None = None):
-    cmd = ["pull"]
-    if target:
-        cmd.append(target)
-    result = run_dvc(cmd)
-    if not result["success"]:
-        stderr = result["stderr"] or ""
-        if "Missing cache files" in stderr or "not in cache" in stderr:
-            raise HTTPException(
-                status_code=404,
-                detail=(
-                    "Données absentes du remote MinIO — "
-                    "faire dvc push depuis une machine avec data/raw/ complet"
-                ),
-            )
-        raise HTTPException(
-            status_code=500, detail=stderr or "dvc pull échoué"
-        )
-    # Invalider le cache stats après un pull
-    if CACHE_FILE.exists():
-        CACHE_FILE.unlink(missing_ok=True)
-    return result
-
-
-@api_router.post("/dvc/push", tags=["dvc"])
-def dvc_push(target: str | None = None):
-    cmd = ["push"]
-    if target:
-        cmd.append(target)
-    result = run_dvc(cmd)
-    if not result["success"]:
-        raise HTTPException(
-            status_code=500, detail=result["stderr"] or "dvc push échoué"
-        )
-    return result
-
-
-@api_router.post("/dvc/repro", tags=["dvc"])
-def dvc_repro():
-    result = run_dvc(["repro"])
-    if not result["success"]:
-        raise HTTPException(
-            status_code=500, detail=result["stderr"] or "dvc repro échoué"
-        )
-    return result

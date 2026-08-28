@@ -148,7 +148,7 @@ trainer/                     Pipeline d'entraînement — service dédié (ex-sc
 
 infrastructure/
 ├── docker/                  Dockerfiles restants : mlflow, base (backend/frontend/trainer colocalisés)
-└── docker-compose.yml        stack complète (9 services : backend, data-service, streamlit,
+└── docker-compose.yml        stack complète (backend, data-service, dvc-service, streamlit,
                                trainer, mlflow, log-service, postgres, minio, minio-init).
                                `dashboard` (Flask) n'est pas dans ce compose, lancé à part.
 
@@ -201,7 +201,7 @@ Un sous-ensemble ciblé est fourni dans `.claude/skills/` :
 | Quand | Skill |
 |---|---|
 | API FastAPI (backend, data-service) | `/fastapi-patterns` |
-| Docker / docker-compose (9 services) | `/docker-patterns` |
+| Docker / docker-compose (stack multi-services) | `/docker-patterns` |
 | Tests pytest, coverage | `/python-testing` |
 | Code Python général | `/python-patterns` |
 | Pipeline ML, DVC, MLflow, reproductibilité | `/mle-workflow` |

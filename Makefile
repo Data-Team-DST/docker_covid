@@ -15,9 +15,10 @@
 #   make clean      → nettoie __pycache__, .coverage, tmp/
 #   make dvc-repro  → lance `dvc repro` dans le container trainer (GPU, sans dvc local)
 
-.PHONY: all setup setup-check setup-be setup-ds setup-fe setup-dashboard setup-segmentation start start-local start-docker start-all \
-        stop restart logs logs-all test test-be test-ds test-segmentation verify lint fix clean build shell help dashboard \
+.PHONY: all setup setup-check setup-be setup-ds setup-dvc setup-fe setup-dashboard setup-segmentation start start-local start-docker start-all \
+        stop restart logs logs-all test test-be test-ds test-dvc test-segmentation verify lint fix clean build shell help dashboard \
         data-build data-start data-stop data-logs data-test data-shell \
+        dvc-build dvc-start dvc-stop dvc-logs dvc-shell \
         dvc-setup dvc-setup-dagshub dvc-push dvc-pull dvc-push-dagshub dvc-pull-dagshub dvc-repro load-test setup-load-test
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
@@ -129,26 +130,26 @@ dvc-setup-dagshub: ## Configure DVC remote DagsHub (credentials locaux, gitignor
 	{ echo "[remote \"dagshub-storage\"]"; echo "    password = $$REMOTE_S3_ACCESS_KEY"; } >> .dvc/config.local
 	@echo "$(GREEN)✅ .dvc/config.local mis à jour (remotes dagshub + dagshub-storage)$(NC)"
 
-dvc-push: setup-ds dvc-setup ## Pousse les données vers MinIO (make start-all requis)
+dvc-push: setup-dvc dvc-setup ## Pousse les données vers MinIO (make start-all requis)
 	@echo "$(YELLOW)Push DVC → MinIO...$(NC)"
-	@data-service/.venv/bin/dvc push
+	@dvc-service/.venv/bin/dvc push
 	@echo "$(GREEN)✅ Données pushées$(NC)"
 
-dvc-pull: setup-ds ## Récupère les données depuis MinIO
+dvc-pull: setup-dvc ## Récupère les données depuis MinIO
 	@echo "$(YELLOW)Pull DVC ← MinIO...$(NC)"
-	@data-service/.venv/bin/dvc pull
+	@dvc-service/.venv/bin/dvc pull
 	@echo "$(GREEN)✅ Données récupérées$(NC)"
 
-dvc-push-dagshub: setup-ds dvc-setup-dagshub ## Pousse les données/modèles vers DagsHub (bucket S3 + DagsHub Storage natif)
+dvc-push-dagshub: setup-dvc dvc-setup-dagshub ## Pousse les données/modèles vers DagsHub (bucket S3 + DagsHub Storage natif)
 	@echo "$(YELLOW)Push DVC → DagsHub (bucket S3)...$(NC)"
-	@data-service/.venv/bin/dvc push -r dagshub
+	@dvc-service/.venv/bin/dvc push -r dagshub
 	@echo "$(YELLOW)Push DVC → DagsHub Storage (natif — nécessaire pour la prévisualisation sur dagshub.com)...$(NC)"
-	@data-service/.venv/bin/dvc push -r dagshub-storage
+	@dvc-service/.venv/bin/dvc push -r dagshub-storage
 	@echo "$(GREEN)✅ Données pushées vers DagsHub$(NC)"
 
-dvc-pull-dagshub: setup-ds dvc-setup-dagshub ## Récupère les données/modèles depuis DagsHub (dvc pull -r dagshub)
+dvc-pull-dagshub: setup-dvc dvc-setup-dagshub ## Récupère les données/modèles depuis DagsHub (dvc pull -r dagshub)
 	@echo "$(YELLOW)Pull DVC ← DagsHub...$(NC)"
-	@data-service/.venv/bin/dvc pull -r dagshub
+	@dvc-service/.venv/bin/dvc pull -r dagshub
 	@echo "$(GREEN)✅ Données récupérées depuis DagsHub$(NC)"
 
 dvc-repro: ## Lance dvc repro dans le container trainer (GPU + dvc préinstallés, pas besoin de dvc en local)
@@ -182,6 +183,17 @@ setup-ds: ## Crée/met à jour le venv data-service (data-service/.venv)
 		-r data-service/requirements.txt \
 		-r data-service/dev-requirements.txt
 	@echo "$(GREEN)✅ data-service/.venv prêt$(NC)"
+
+setup-dvc: ## Crée/met à jour le venv dvc-service (dvc-service/.venv) — CLI dvc pour les cibles dvc-*
+	@if [ ! -f dvc-service/.venv/bin/python ]; then \
+		echo "$(YELLOW)Création venv dvc-service...$(NC)"; \
+		$(PYTHON) -m venv dvc-service/.venv; \
+	fi
+	@echo "$(YELLOW)Installation deps dvc-service...$(NC)"
+	@dvc-service/.venv/bin/pip install -q --require-hashes \
+		-r dvc-service/requirements.txt \
+		-r dvc-service/dev-requirements.txt
+	@echo "$(GREEN)✅ dvc-service/.venv prêt$(NC)"
 
 setup-fe: ## Crée/met à jour le venv frontend (frontend/.venv)
 	@if [ -d frontend/.venv/Scripts ] && [ ! -f frontend/.venv/bin/python ]; then \
@@ -221,7 +233,7 @@ setup-dashboard: ## Crée/met à jour le venv dashboard (dashboard/.venv)
 	@echo "$(GREEN)✅ dashboard/.venv prêt$(NC)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
-test: test-be test-ds test-segmentation ## Lance les tests de tous les microservices (venvs isolés)
+test: test-be test-ds test-dvc test-segmentation ## Lance les tests de tous les microservices (venvs isolés)
 
 test-be: setup-be ## Tests backend dans son venv isolé
 	@echo "$(YELLOW)── Tests backend ──────────────────────────────────────$(NC)"
@@ -240,6 +252,15 @@ test-ds: setup-ds ## Tests data-service dans son venv isolé
 		--cov-report=xml:ds-coverage.xml \
 		--cov-fail-under=80
 	@echo "$(GREEN)✅ Tests data-service OK$(NC)"
+
+test-dvc: setup-dvc ## Tests dvc-service dans son venv isolé
+	@echo "$(YELLOW)── Tests dvc-service ───────────────────────────────────$(NC)"
+	@cd dvc-service && PYTHONPATH=src:.. .venv/bin/python -m pytest tests/ -v \
+		--cov=dvc_service \
+		--cov-report=term-missing \
+		--cov-report=xml:coverage.xml \
+		--cov-fail-under=80
+	@echo "$(GREEN)✅ Tests dvc-service OK$(NC)"
 
 test-segmentation: setup-segmentation ## Tests segmentation-service dans son venv isolé
 	@echo "$(YELLOW)── Tests segmentation-service ─────────────────────────$(NC)"
@@ -356,15 +377,34 @@ data-test: test-ds ## Tests data-service (alias → make test-ds)
 data-shell: ## Shell dans le container data-service
 	$(COMPOSE) exec data-service bash
 
+# ── DVC Service (opérations : status/pull/push/repro, cf. chantier point 16) ──
+dvc-build: ## Build l'image dvc-service
+	$(COMPOSE) build dvc-service
+
+dvc-start: ## Lance le dvc-service (port 5003)
+	@echo "$(YELLOW)Démarrage dvc-service → http://localhost:5003$(NC)"
+	$(COMPOSE) up -d --build dvc-service
+	@echo "$(GREEN)✅ dvc-service : http://localhost:5003/docs$(NC)"
+
+dvc-stop: ## Arrête le dvc-service
+	$(COMPOSE) stop dvc-service
+
+dvc-logs: ## Logs dvc-service en direct (Ctrl+C arrête le service)
+	@trap '$(COMPOSE) stop dvc-service 2>/dev/null; echo "$(GREEN)dvc-service arrêté$(NC)"; exit 0' INT; \
+	 $(COMPOSE) logs -f dvc-service
+
+dvc-shell: ## Shell dans le container dvc-service
+	$(COMPOSE) exec dvc-service bash
+
 # ── Dashboard ─────────────────────────────────────────────────────────────────
-dashboard: setup-dashboard ## Lance le dashboard agile + data-service sur :5050/:5001
-	@echo "$(YELLOW)Démarrage MinIO + data-service (DVC)...$(NC)"
+dashboard: setup-dashboard ## Lance le dashboard agile + data-service/dvc-service sur :5050/:5001/:5003
+	@echo "$(YELLOW)Démarrage MinIO + data-service + dvc-service...$(NC)"
 	@$(COMPOSE) up -d minio minio-init 2>/dev/null || true
 	@sleep 6
-	@$(COMPOSE) up -d --build data-service 2>/dev/null || echo "$(YELLOW)⚠ Docker non disponible — boutons DVC désactivés$(NC)"
+	@$(COMPOSE) up -d --build data-service dvc-service 2>/dev/null || echo "$(YELLOW)⚠ Docker non disponible — boutons DVC désactivés$(NC)"
 	@echo "$(YELLOW)Dashboard DS_COVID → http://localhost:5050$(NC)"
 	@echo "$(YELLOW)(Ctrl+C pour tout arrêter)$(NC)"
-	@trap '$(COMPOSE) stop data-service minio 2>/dev/null; exit 0' INT; \
+	@trap '$(COMPOSE) stop data-service dvc-service minio 2>/dev/null; exit 0' INT; \
 	 cd dashboard && .venv/bin/python app.py
 
 clean-docker: ## Supprime les images et volumes Docker du projet

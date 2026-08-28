@@ -9,9 +9,9 @@ from pathlib import Path
 
 import yaml
 
-from data_service.dvc_service import PROJECT_ROOT
-
 logger = logging.getLogger(__name__)
+
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", "/app"))
 
 DATA_DIR = Path(os.getenv("DATA_DIR", str(PROJECT_ROOT / "data")))
 CACHE_FILE = PROJECT_ROOT / "tmp" / "data_cache.json"

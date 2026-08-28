@@ -21,6 +21,7 @@ DVC_RAW_FILE = ROOT / "data" / "raw.dvc"
 MODELS_DIR = ROOT / "data" / "models"
 
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
+DVC_SERVICE_URL = os.getenv("DVC_SERVICE_URL", "http://localhost:5003")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 API_KEY = os.getenv("API_KEY", "")
 REPO_URL = "https://github.com/Data-Team-DST/docker_covid"
@@ -368,7 +369,7 @@ def api_data_stats():
     return jsonify(load_data_stats())
 
 
-# ── Proxy DVC → data-service ───────────────────────────────────────────────
+# ── Proxy DVC → dvc-service (chantier point 16 : extrait de data-service) ──
 
 @app.route("/api/dvc/<action>", methods=["GET", "POST"])
 def dvc_proxy(action: str):
@@ -378,15 +379,15 @@ def dvc_proxy(action: str):
     try:
         r = requests.request(
             method,
-            f"{DATA_SERVICE_URL}/v1/dvc/{action}",
+            f"{DVC_SERVICE_URL}/v1/dvc/{action}",
             timeout=310,
         )
         return jsonify(r.json()), r.status_code
     except requests.exceptions.ConnectionError:
         return jsonify({
-            "error": f"data-service inaccessible ({DATA_SERVICE_URL})",
+            "error": f"dvc-service inaccessible ({DVC_SERVICE_URL})",
             "stdout": "",
-            "stderr": "Lancer : make data-start",
+            "stderr": "Lancer : make start",
         }), 503
 
 

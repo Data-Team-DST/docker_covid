@@ -1,10 +1,7 @@
-import subprocess
-from unittest.mock import patch
-
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from data_service import data_stats_service, dvc_service
+from data_service import data_stats_service
 from data_service.api.v1 import router as router_module
 from data_service.main import app
 
@@ -22,8 +19,8 @@ def _patch_data_dir(monkeypatch, path):
 
 
 def _patch_cache_file(monkeypatch, path):
-    """Même piège que _patch_data_dir, pour CACHE_FILE."""
-    monkeypatch.setattr(router_module, "CACHE_FILE", path)
+    """CACHE_FILE n'est lu que par data_stats_service (load_cache/save_cache) —
+    router.py ne l'importe pas, contrairement à DATA_DIR."""
     monkeypatch.setattr(data_stats_service, "CACHE_FILE", path)
 
 
@@ -172,111 +169,10 @@ def test_image_metrics_path_traversal_rejected(tmp_path, monkeypatch):
     assert r.status_code == 400
 
 
-# ── /v1/dvc/* ─────────────────────────────────────────────────────────────
-
-def _fake_completed(returncode=0, stdout="ok", stderr=""):
-    return subprocess.CompletedProcess(
-        args=["dvc"], returncode=returncode, stdout=stdout, stderr=stderr
-    )
-
-
-def test_dvc_status_success():
-    with patch.object(dvc_service.subprocess, "run", return_value=_fake_completed()):
-        r = client.get("/v1/dvc/status")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["success"] is True
-    assert body["returncode"] == 0
-
-
-def test_dvc_remotes():
-    with patch.object(
-        dvc_service.subprocess, "run",
-        return_value=_fake_completed(stdout="minio\tremote"),
-    ):
-        r = client.get("/v1/dvc/remotes")
-    assert r.status_code == 200
-    assert "minio" in r.json()["stdout"]
-
-
-def test_dvc_pull_success(tmp_path, monkeypatch):
-    cache_file = tmp_path / "data_cache.json"
-    cache_file.write_text("{}")
-    _patch_cache_file(monkeypatch, cache_file)
-
-    with patch.object(dvc_service.subprocess, "run", return_value=_fake_completed()):
-        r = client.post("/v1/dvc/pull")
-
-    assert r.status_code == 200
-    assert r.json()["success"] is True
-    assert not cache_file.exists()  # cache invalidé après un pull
-
-
-def test_dvc_pull_missing_cache_files():
-    with patch.object(
-        dvc_service.subprocess, "run",
-        return_value=_fake_completed(returncode=1, stderr="Missing cache files"),
-    ):
-        r = client.post("/v1/dvc/pull")
-    assert r.status_code == 404
-
-
-def test_dvc_pull_generic_failure():
-    with patch.object(
-        dvc_service.subprocess, "run",
-        return_value=_fake_completed(returncode=1, stderr="boom"),
-    ):
-        r = client.post("/v1/dvc/pull")
-    assert r.status_code == 500
-
-
-def test_dvc_push_success():
-    with patch.object(dvc_service.subprocess, "run", return_value=_fake_completed()):
-        r = client.post("/v1/dvc/push")
-    assert r.status_code == 200
-
-
-def test_dvc_push_failure():
-    with patch.object(
-        dvc_service.subprocess, "run",
-        return_value=_fake_completed(returncode=1, stderr="boom"),
-    ):
-        r = client.post("/v1/dvc/push")
-    assert r.status_code == 500
-
-
-def test_dvc_repro_success():
-    with patch.object(dvc_service.subprocess, "run", return_value=_fake_completed()):
-        r = client.post("/v1/dvc/repro")
-    assert r.status_code == 200
-
-
-def test_dvc_repro_failure():
-    with patch.object(
-        dvc_service.subprocess, "run",
-        return_value=_fake_completed(returncode=1, stderr="boom"),
-    ):
-        r = client.post("/v1/dvc/repro")
-    assert r.status_code == 500
-
-
-def test_run_dvc_not_installed():
-    with patch.object(dvc_service.subprocess, "run", side_effect=FileNotFoundError):
-        r = client.get("/v1/dvc/status")
-    assert r.status_code == 500
-    assert "installé" in r.json()["detail"]
-
-
-def test_run_dvc_timeout():
-    with patch.object(
-        dvc_service.subprocess, "run",
-        side_effect=subprocess.TimeoutExpired(cmd="dvc", timeout=300),
-    ):
-        r = client.get("/v1/dvc/status")
-    assert r.status_code == 504
-
-
 # ── /v1/data/stats — refresh + cache ───────────────────────────────────────
+# Note : les opérations DVC (status/pull/push/repro) ont été extraites vers
+# dvc-service (chantier point 16) — leurs tests vivent maintenant dans
+# dvc-service/tests/test_router.py.
 
 def test_data_stats_refresh_bypasses_cache(tmp_path, monkeypatch):
     _patch_data_dir(monkeypatch, tmp_path)

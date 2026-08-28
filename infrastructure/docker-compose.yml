@@ -88,7 +88,7 @@ services:
     networks:
       - covid-net
 
-  # ── Data Service (DVC + stats données) ────────────────────────────────────
+  # ── Data Service (lecture seule : stats/recherche/images données) ─────────
   data-service:
     build:
       context: ./data-service
@@ -99,6 +99,41 @@ services:
       - "5001:5001"
     volumes:
       - ./data:/app/data
+      - ./tmp/logs:/app/tmp/logs
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATA_SERVICE_PORT=5001
+      - LOG_SERVICE_URL=http://log-service:5002/v1/log
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    networks:
+      - covid-net
+
+  # ── DVC Service (opérations : status/pull/push/repro) ─────────────────────
+  # Extrait de data-service (chantier point 16) : lecture vs mutation d'état
+  # local separees. Appelle data-service en HTTP pour invalider son cache
+  # stats apres un pull/repro (R8 - jamais de partage de filesystem/etat).
+  dvc-service:
+    build:
+      context: ./dvc-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY}/${GITHUB_USER}/covid-xray-dvc-service:${IMAGE_TAG:-latest}
+    container_name: covid-xray-dvc-service
+    ports:
+      - "5003:5003"
+    volumes:
+      - ./data:/app/data
       - ./.dvc:/app/.dvc
       - ./.git:/app/.git:ro
       - ./tmp/logs:/app/tmp/logs
@@ -106,14 +141,15 @@ services:
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
-      - DATA_SERVICE_PORT=5001
+      - DVC_SERVICE_PORT=5003
+      - DATA_SERVICE_URL=http://data-service:5001
       - DVC_REMOTE_MINIO_ENDPOINTURL=http://minio:9000
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - AWS_DEFAULT_REGION=us-east-1
       - LOG_SERVICE_URL=http://log-service:5002/v1/log
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/health')"]
       interval: 30s
       timeout: 5s
       retries: 3

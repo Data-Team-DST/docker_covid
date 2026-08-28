@@ -109,7 +109,61 @@ graphiques régénérables) vs ce qui était de l'exploration jetable.
 
 ## 3. DVC — pourquoi pas son propre conteneur comme mlflow, et la même critique "single responsibility"
 
-**Constat.** DVC n'est pas un serveur (pas de process qui écoute un port en continu) — c'est
+**Résolu le 2026-08-28.** Steven a tranché pour le split malgré la priorité la plus faible
+signalée ci-dessous : nouveau service `dvc-service` (port 5003) créé sur le même patron que
+`data-service`/`segmentation-service` (FastAPI, `main.py`/`api/v1/router.py`,
+`logging_config.py` dupliqué, lockfile hash-locké régénéré en conteneur Linux jetable —
+CLAUDE.md règle 9). `data-service` redevient strictement lecture seule (`/data/stats`,
+`/data/image`, `/data/search`, `/data/sample`, `/data/metrics`) : `dvc[s3]` retiré de ses
+dépendances (vérifié `grep dvc== requirements.txt` → 0 occurrence), `dvc_service.py` et
+`entrypoint.sh` (config remote MinIO) supprimés, Dockerfile simplifié (plus de `git` ni
+d'entrypoint). `dvc-service` porte `/v1/dvc/status`, `/v1/dvc/remotes`, `/v1/dvc/pull`,
+`/v1/dvc/push`, `/v1/dvc/repro`.
+
+**Frontière respectée (R8)** : les deux services ne partagent aucun filesystem/état — après
+un `pull`/`repro` qui change les fichiers sur disque, `dvc-service` appelle `data-service` en
+HTTP (`GET /v1/data/stats?refresh=true`, best-effort, `_invalidate_data_service_cache()`) pour
+forcer un re-scan plutôt que de dépendre d'un montage partagé.
+
+**Vérifié en conditions réelles** (jamais dans le repo réel, toujours en conteneur jetable ou
+via `docker compose`, cf. CLAUDE.md règle 9) :
+- `dvc-service` : build OK, démarre, `/health` répond, `/v1/dvc/status` exécute réellement
+  `dvc status` en subprocess et retourne un résultat cohérent. Tests 14/14 verts, coverage
+  92,57 % (≥80 %). `ruff check` propre.
+- `data-service` : build OK (confirmé `dvc` absent des deps installées), démarre, `/health` et
+  `/v1/data/stats` répondent (200, scan réel de 42 330 fichiers). Tests 26/26 verts, coverage
+  83,27 % (≥80 %). `ruff check` propre.
+- `docker compose up data-service dvc-service` (depuis la racine, `--project-directory .` —
+  piège découvert : lancer depuis `infrastructure/` sans ce flag cherche `.env` au mauvais
+  endroit) : les deux conteneurs démarrent sains, connectivité réseau interne confirmée
+  (`dvc-service` → `http://data-service:5001` répond 200 via le nom de service Compose).
+- `dashboard/app.py` : `DVC_SERVICE_URL` ajouté, `dvc_proxy()` cible bien `dvc-service:5003`.
+
+**Bug réel trouvé et corrigé pendant la vérification** (pas un problème du split lui-même) :
+`data_stats_service.py` importait encore `PROJECT_ROOT` depuis le `dvc_service.py` supprimé —
+`ModuleNotFoundError` au démarrage de `data-service`. Corrigé en redéfinissant `PROJECT_ROOT`
+localement dans `data_stats_service.py` (valeur identique, `Path(os.getenv("PROJECT_ROOT",
+"/app"))`). Un deuxième bug était dans les **tests**, pas le code : `test_router.py` patchait
+`router_module.CACHE_FILE`, qui n'a jamais existé sur `router.py` (seul `data_stats_service`
+lit `CACHE_FILE` — `router.py` n'importe que `DATA_DIR`) — corrigé en ne patchant que
+`data_stats_service.CACHE_FILE`, conforme au piège documenté dans
+`.claude/rules/python/import_cascade.md` R13.
+
+**Signalé, non traité ici (hors périmètre du split, CLAUDE.md règle 3)** : le cache JSON de
+`/v1/data/stats` (`data_stats_service.py::save_cache`) ne persiste jamais en conditions
+`docker compose` réelles — `/app/tmp` est créé par Docker en `root:root` (755) au moment du
+bind-mount de `./tmp/logs:/app/tmp/logs` (le sous-dossier `logs` est en 777, mais pas son
+parent), et `appuser` n'a pas le droit d'y écrire `data_cache.json`. `save_cache()` avale
+l'`OSError` silencieusement (`except OSError: pass`) donc l'échec est invisible — chaque appel
+à `/v1/data/stats` re-scanne intégralement les 42 330 fichiers (~140s) au lieu de servir le
+cache. **Bug préexistant, confirmé identique avant le split** (même montage `./tmp/logs` dans
+`git show HEAD:infrastructure/docker-compose.yml`, même chemin `PROJECT_ROOT/tmp/data_cache.json`)
+— découvert seulement maintenant car c'est la première vérification bout-en-bout réelle de ce
+endpoint en conteneur. À reproposer : soit créer `/app/tmp` avec les bonnes permissions dans
+le Dockerfile (`RUN mkdir -p /app/tmp && chown appuser:appuser /app/tmp`), soit monter
+`./tmp:/app/tmp` au lieu de `./tmp/logs:/app/tmp/logs` seul.
+
+**Constat d'origine.** DVC n'est pas un serveur (pas de process qui écoute un port en continu) — c'est
 un CLI, comme `git`. Il ne peut donc pas prendre la forme d'un conteneur autonome de la même
 façon que `mlflow` (qui *est* un serveur). Ce que fait `data-service` — wrapper HTTP autour
 du CLI `dvc` en `subprocess.run` (`GET /dvc/status`, `POST /dvc/pull`, `POST /dvc/push`,
@@ -117,18 +171,10 @@ du CLI `dvc` en `subprocess.run` (`GET /dvc/status`, `POST /dvc/pull`, `POST /dv
 a aussi `dvc[s3]` installé, mais uniquement parce que c'est là que `dvc repro` s'exécute
 réellement (GPU requis pour les stages `train`/`train_segmentation`).
 
-**Le problème** (même famille que le point 2) : `data-service` mélange deux concerns —
-lecture/consultation (stats dataset, recherche, browsing d'images) et opérations DVC
-(pull/push/repro — potentiellement longues, mutent l'état local). Ce n'est pas la même
-"masse" de mélange que `dashboard` (moins visible, pas de UI produit dedans), mais le
-principe est identique.
-
-**Piste** : scinder en `data-service` (lecture seule : stats, recherche, images) et un
-service séparé (`pipeline-service` ou `dvc-service`) pour les opérations DVC — **si ça vaut
-le coût d'un conteneur de plus** pour un projet école. Pas évident que ce soit prioritaire ;
-à soupeser avec le point 2 (est-ce qu'on multiplie les microservices pour la pureté
-architecturale, ou est-ce qu'on accepte un mélange raisonnable dans un service utilitaire
-interne ?).
+**Le problème qui a motivé le split** (même famille que le point 2) : `data-service` mélangeait
+deux concerns — lecture/consultation (stats dataset, recherche, browsing d'images) et
+opérations DVC (pull/push/repro — potentiellement longues, mutent l'état local). Résolu ci-
+dessus.
 
 ## 4. `mlflow` — câblé, mais à sens unique ; la question du "où le ranger" mal posée au départ
 
@@ -158,19 +204,19 @@ rangement de dossier.
 
 ## Ordre suggéré (à confirmer avec Steven une fois la soutenance passée)
 
+Points 1, 2 et 3 sont résolus (voir sections ci-dessus). Reste :
+
 1. **Point 4 (mlflow)** — clarifier d'abord l'intention : reste-t-il un outil d'observation
    pure, ou veut-on un vrai flux retour (registry → déploiement) ? Ça conditionne si ça vaut
-   la peine d'y toucher du tout.
-2. **Point 1 (base)** — le plus mécanique des quatre une fois le point 2 tranché (si
-   `frontend` disparaît au profit de `dashboard`/`demonstration`, la question "frontend a-t-il
-   besoin de GPU" devient sans objet différemment).
-3. **Point 2 (frontend/dashboard)** — le plus gros chantier, nécessite l'inventaire page par
-   page avant toute décision de structure.
-4. **Point 3 (DVC/data-service)** — indépendant des trois autres, priorité la plus faible
-   (le split n'est pas évident d'être rentable pour la taille du projet).
+   la peine d'y toucher du tout. **Note** : le Model Registry mlflow (chargement backend +
+   segmentation-service avec fallback local) a été implémenté depuis la rédaction de la
+   section 4 — le constat "`backend` ne lit jamais depuis mlflow" y est obsolète, à
+   recroiser avec le code courant avant d'y retravailler (CLAUDE.md règle 5).
 
 ## Non traité ici
 
-Aucune action prise — audit et options seulement, comme `CHANTIER_ARCHITECTURE.md`. Toute
-correction repasse par la Validation humaine obligatoire (CLAUDE.md) et une confirmation
-explicite du périmètre avant chaque étape, une fois la soutenance du 04/09/2026 passée.
+Points 1-3 résolus (voir sections dédiées) — le split DVC (point 3) a laissé un point
+signalé mais non corrigé : le bug de permissions sur `/app/tmp` empêchant le cache
+`/v1/data/stats` de persister (détail dans la section 3 ci-dessus). Point 4 (mlflow) reste
+audit/options seulement. Toute correction repasse par la Validation humaine obligatoire
+(CLAUDE.md) et une confirmation explicite du périmètre avant chaque étape.

@@ -1,5 +1,5 @@
-"""Exécution des commandes DVC (status/pull/push/repro) — extrait du router
-pour respecter la limite de taille/rôle des fichiers `*_router.py`."""
+"""Exécution des commandes DVC (status/pull/push/repro) — extrait de
+data-service (chantier point 16, split lecture/opérations DVC)."""
 
 import logging
 import os

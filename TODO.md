@@ -66,9 +66,9 @@ d'abord / créer un service `demonstration/` dédié / migrer le contenu tel que
 
 ### 16. `data-service` — mélange lecture (stats/recherche) et opérations DVC (pull/push/repro)
 
-Même famille de problème que le point 15, moins visible. Piste : scinder en `data-service`
-(lecture seule) + `pipeline-service`/`dvc-service` (opérations DVC) — pas évident que ce
-soit rentable pour la taille du projet, priorité la plus faible des 4.
+**Résolu le 2026-08-28** — `dvc-service` (port 5003) créé, `data-service` redevenu lecture
+seule. Détail (vérifications réelles, bugs trouvés/corrigés, point signalé non traité) dans
+`CHANTIER_INFRA_SERVICES.md` § 3.
 
 ### 17. `mlflow` — câblé en écriture seule, aucun flux retour vers le déploiement
 
