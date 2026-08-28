@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DS_COVID — Préprocessing</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
   <style>
     body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
     h1 { color: #58a6ff; }
@@ -24,10 +29,8 @@
     .env-box h3 { color: #79c0ff; margin: 0 0 .5rem 0; font-size: .95rem; }
     .ok { color: #3fb950; } .warn { color: #d29922; } .bad { color: #f85149; }
   </style>
-</head>
-<body>
 
-  <p><a href="{{ dashboard_url }}/">← Retour au backlog</a> · <a href="/contexte">🫁 Contexte DS</a> · <a href="/conclusion">🧭 Conclusion</a></p>
+  <p><a href="{{ dashboard_url }}/" hx-boost="false">← Retour au backlog</a> · <a href="/contexte">🫁 Contexte DS</a> · <a href="/conclusion">🧭 Conclusion</a></p>
   <h1>🧫 Préprocessing — phase Data Science</h1>
   <p style="color:#8b949e; max-width:900px">
     Environnements de travail, masking, gestion du déséquilibre de classes et augmentation —

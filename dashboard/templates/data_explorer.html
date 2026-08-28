@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <title>DS_COVID — Data Explorer</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
   <style>
     body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
     h1 { color: #58a6ff; }
@@ -100,10 +105,8 @@
     }
     .anomaly-gallery img:hover { border-color:#58a6ff; }
   </style>
-</head>
-<body>
   <h1>🗂 DS_COVID — Data Explorer</h1>
-  <p><a href="/">← Retour au backlog</a> · <a href="{{ demonstration_url }}/predict">🔬 Prédicteur</a></p>
+  <p><a href="/">← Retour au backlog</a> · <a href="{{ demonstration_url }}/predict" hx-boost="false">🔬 Prédicteur</a></p>
 
   <h2>📦 DVC — Opérations</h2>
   <div class="card">
@@ -276,8 +279,10 @@
     }
 
     // ── Image search ─────────────────────────────────────────────────────────
-    let _debounceTimer = null;
-    let _lastQuery = '';
+    // var (pas const/let) : ce script se réexécute à chaque navigation hx-boost
+    // sans rechargement complet de page — une redéclaration const/let planterait.
+    var _debounceTimer = null;
+    var _lastQuery = '';
 
     function clearResults() {
       document.getElementById('search-results').innerHTML = '';
@@ -435,8 +440,8 @@
     }
 
     // ── Modal & zoom ─────────────────────────────────────────────────────────
-    let _zoom = 0;
-    const _dlg = () => document.getElementById('modal-overlay');
+    var _zoom = 0;
+    var _dlg = () => document.getElementById('modal-overlay');
 
     function setZoom(level) {
       _zoom = level;

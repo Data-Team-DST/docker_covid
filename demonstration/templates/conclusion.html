@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DS_COVID — Conclusion critique</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
   <style>
     body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
     h1 { color: #58a6ff; }
@@ -21,10 +26,8 @@
     th { color: #79c0ff; background: #161b22; }
     .done { color: #3fb950; }
   </style>
-</head>
-<body>
 
-  <p><a href="{{ dashboard_url }}/">← Retour au backlog</a> · <a href="/contexte">🫁 Contexte DS</a></p>
+  <p><a href="{{ dashboard_url }}/" hx-boost="false">← Retour au backlog</a> · <a href="/contexte">🫁 Contexte DS</a></p>
   <h1>🧭 Conclusion critique et perspectives</h1>
   <p style="color:#8b949e; max-width:720px">
     Synthèse de la phase Data Science exploratoire (repo <a href="https://github.com/Data-Team-DST/DS_COVID" target="_blank" rel="noopener">DS_COVID</a>) :

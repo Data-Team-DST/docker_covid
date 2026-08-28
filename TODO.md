@@ -72,9 +72,38 @@ port 5051) porte Contexte/Prédicteur/Préprocessing/Modèles/Conclusion. Split 
 sans écrire dans le repo) : les deux services démarrent, les 7 pages rendent 200, liens
 croisés inter-services résolus (`demonstration_url`/`dashboard_url` injectés via
 `context_processor`), assets statiques (style.css, images) accessibles, `/predict` retombe
-bien sur le message "Backend inaccessible" attendu sans backend démarré. Phase 2 (nav fluide
-htmx, indépendante) **pas encore faite** — reste à traiter, cf. `CHANTIER_DASHBOARD_SPLIT.md`
-avant sa clôture définitive.
+bien sur le message "Backend inaccessible" attendu sans backend démarré.
+
+**Phase 2 (nav fluide htmx) faite et vérifiée le 2026-08-28** — `hx-boost="true"` sur
+`<body>` des 8 templates (dashboard : index/data_explorer/sprint_detail ; demonstration :
+contexte/conclusion/preprocessing/predict/modeles), script htmx 1.9.12 en CDN (SRI épinglé).
+Vérifié avec un vrai navigateur headless (Playwright, conteneur
+`mcr.microsoft.com/playwright/python`, jamais sur cette machine) : 20/20 checks verts,
+zéro erreur console JS — navigation same-service sans reload complet (marker JS + absence
+de `framenavigated`), navigation cross-service (port différent) laissée en navigation
+normale, upload `/predict` fonctionnel sous boost, aucune duplication d'appel réseau après
+un aller-retour de navigation.
+
+Deux bugs réels trouvés par ce test navigateur (invisibles à une simple vérification HTML/curl) et corrigés :
+1. **htmx compare `hostname` seul, pas l'origine complète** (port exclu) → les liens
+   croisés `localhost:5050`↔`localhost:5051` étaient boostés à tort (AJAX cross-origin,
+   bloqué par CORS, navigation silencieusement cassée). Fix : `hx-boost="false"` explicite
+   sur les 12 liens croisés inter-services.
+2. **`const`/`let` en portée globale de script plantent à la réexécution** : sans reload
+   complet de page, le realm JS persiste entre navigations boostées — un script réexécuté
+   (retour sur une page déjà visitée, ou resoumission d'un formulaire boosté) redéclare les
+   mêmes identifiants → `Identifier 'X' has already been declared`. Fix : `const`/`let` →
+   `var` pour les déclarations top-level de script dans `index.html`, `data_explorer.html`,
+   `predict.html` (fonctions `function foo(){}` inchangées, pas concernées).
+
+**Limitation connue, non corrigée** (cosmétique, pas un bug bloquant) : dans
+`data_explorer.html`, deux `document.addEventListener(...)` (fermeture des suggestions de
+recherche au clic extérieur, zoom clavier de la modale) s'accumulent silencieusement à
+chaque aller-retour vers cette page dans la même session navigateur — sans effet visible
+(handlers idempotents), juste des appels redondants. Pas corrigé pour rester dans le
+périmètre minimal du fix htmx (CLAUDE.md règle #3) ; à reprendre si ça devient gênant.
+
+Chantier clos, `CHANTIER_DASHBOARD_SPLIT.md` supprimé.
 
 ### 16. `data-service` — mélange lecture (stats/recherche) et opérations DVC (pull/push/repro)
 

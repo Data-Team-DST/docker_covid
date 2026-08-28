@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DS_COVID — Prédicteur</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
   <style>
     body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 2rem; }
     h1 { color: #58a6ff; }
@@ -36,10 +41,8 @@
     .score-value { width: 50px; text-align: right; font-size: .85rem; color: #8b949e; }
     .latency { color: #8b949e; font-size: .8rem; margin-top: .8rem; }
   </style>
-</head>
-<body>
 
-  <p><a href="{{ dashboard_url }}/">← Retour au backlog</a> · <a href="/modeles">🧪 Modèles</a></p>
+  <p><a href="{{ dashboard_url }}/" hx-boost="false">← Retour au backlog</a> · <a href="/modeles">🧪 Modèles</a></p>
   <h1>🔬 Prédicteur — Classification de radiographies</h1>
   <p style="color:#8b949e">
     Upload d'une radiographie pulmonaire (JPEG/PNG) → classification en direct via
@@ -79,11 +82,13 @@
   {% endif %}
 
   <script>
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
-    const preview = document.getElementById('preview');
-    const dropLabel = document.getElementById('drop-label');
-    const submitBtn = document.getElementById('submit-btn');
+    // var (pas const) : ce script se réexécute à chaque navigation/soumission hx-boost
+    // sans rechargement complet de page — une redéclaration const/let planterait.
+    var dropZone = document.getElementById('drop-zone');
+    var fileInput = document.getElementById('file-input');
+    var preview = document.getElementById('preview');
+    var dropLabel = document.getElementById('drop-label');
+    var submitBtn = document.getElementById('submit-btn');
 
     function showPreview(file) {
       if (!file) return;
