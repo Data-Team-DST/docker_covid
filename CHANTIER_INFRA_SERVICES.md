@@ -149,19 +149,32 @@ lit `CACHE_FILE` — `router.py` n'importe que `DATA_DIR`) — corrigé en ne pa
 `data_stats_service.CACHE_FILE`, conforme au piège documenté dans
 `.claude/rules/python/import_cascade.md` R13.
 
-**Signalé, non traité ici (hors périmètre du split, CLAUDE.md règle 3)** : le cache JSON de
-`/v1/data/stats` (`data_stats_service.py::save_cache`) ne persiste jamais en conditions
-`docker compose` réelles — `/app/tmp` est créé par Docker en `root:root` (755) au moment du
-bind-mount de `./tmp/logs:/app/tmp/logs` (le sous-dossier `logs` est en 777, mais pas son
-parent), et `appuser` n'a pas le droit d'y écrire `data_cache.json`. `save_cache()` avale
-l'`OSError` silencieusement (`except OSError: pass`) donc l'échec est invisible — chaque appel
-à `/v1/data/stats` re-scanne intégralement les 42 330 fichiers (~140s) au lieu de servir le
-cache. **Bug préexistant, confirmé identique avant le split** (même montage `./tmp/logs` dans
-`git show HEAD:infrastructure/docker-compose.yml`, même chemin `PROJECT_ROOT/tmp/data_cache.json`)
-— découvert seulement maintenant car c'est la première vérification bout-en-bout réelle de ce
-endpoint en conteneur. À reproposer : soit créer `/app/tmp` avec les bonnes permissions dans
-le Dockerfile (`RUN mkdir -p /app/tmp && chown appuser:appuser /app/tmp`), soit monter
-`./tmp:/app/tmp` au lieu de `./tmp/logs:/app/tmp/logs` seul.
+**Résolu le 2026-08-28 (suite immédiate).** Le cache JSON de `/v1/data/stats`
+(`data_stats_service.py::save_cache`) ne persistait jamais en conditions `docker compose`
+réelles — `/app/tmp` était créé par Docker en `root:root` (755) au moment du bind-mount de
+`./tmp/logs:/app/tmp/logs` (le sous-dossier `logs` est en 777, mais pas son parent), et
+`appuser` n'avait pas le droit d'y écrire `data_cache.json`. `save_cache()` avalait l'`OSError`
+silencieusement (`except OSError: pass`) donc l'échec était invisible — chaque appel à
+`/v1/data/stats` re-scannait intégralement les 42 330 fichiers (~140-170s) au lieu de servir
+le cache. **Bug préexistant, confirmé identique avant le split** (même montage `./tmp/logs`
+dans `git show HEAD:infrastructure/docker-compose.yml`, même chemin
+`PROJECT_ROOT/tmp/data_cache.json`) — découvert seulement lors de la première vérification
+bout-en-bout réelle de ce endpoint en conteneur.
+
+**Fix appliqué** : une ligne dans `data-service/Dockerfile`
+(`RUN mkdir -p /app/tmp && chown -R appuser:appuser /app`, juste avant le `COPY src/`) —
+`/app/tmp` existe et appartient à `appuser` dès le build de l'image ; au runtime, Docker ne
+remplace que le sous-dossier `logs` monté, `/app/tmp` lui-même garde la propriété baked dans
+l'image. Pas de base de données envisagée (question posée par Steven) : ce fichier n'est
+qu'un cache mémoïsé d'un scan filesystem, invalidé automatiquement par hash DVC — aucun besoin
+de SQLite/Postgres/PVC pour ça (YAGNI), et PVC n'aurait de toute façon pas de sens hors
+Kubernetes (Phase 3 non déployée).
+
+**Vérifié en conteneur réel** : `docker compose build data-service` + recreate, `/app/tmp`
+appartient bien à `appuser` après rebuild. Round-trip confirmé : premier appel
+`?refresh=true` → 200 en 172,6s (scan complet), second appel → 200 en 0,56s,
+`"cached":true`, fichier `/app/tmp/data_cache.json` bien présent sur disque. Non-régression :
+26/26 tests verts, coverage 83,27 %, `ruff check` propre.
 
 **Constat d'origine.** DVC n'est pas un serveur (pas de process qui écoute un port en continu) — c'est
 un CLI, comme `git`. Il ne peut donc pas prendre la forme d'un conteneur autonome de la même
@@ -215,8 +228,6 @@ Points 1, 2 et 3 sont résolus (voir sections ci-dessus). Reste :
 
 ## Non traité ici
 
-Points 1-3 résolus (voir sections dédiées) — le split DVC (point 3) a laissé un point
-signalé mais non corrigé : le bug de permissions sur `/app/tmp` empêchant le cache
-`/v1/data/stats` de persister (détail dans la section 3 ci-dessus). Point 4 (mlflow) reste
-audit/options seulement. Toute correction repasse par la Validation humaine obligatoire
-(CLAUDE.md) et une confirmation explicite du périmètre avant chaque étape.
+Points 1-3 résolus (voir sections dédiées). Point 4 (mlflow) reste audit/options seulement.
+Toute correction repasse par la Validation humaine obligatoire (CLAUDE.md) et une confirmation
+explicite du périmètre avant chaque étape.

@@ -9,7 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
-RUN chown -R appuser:appuser /app
+RUN mkdir -p /app/tmp && chown -R appuser:appuser /app
 
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
