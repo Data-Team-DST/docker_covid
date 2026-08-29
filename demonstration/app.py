@@ -10,6 +10,7 @@ app = Flask(__name__)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:5050")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
 API_KEY = os.getenv("API_KEY", "")
 
 # Rapport de dérive Evidently — versionné DVC (outputs/drift/report.html.dvc), récupéré via
@@ -30,6 +31,7 @@ PAGE_ORDER = [
     ("/architecture", "Architecture"),
     ("/preprocessing", "Préprocessing"),
     ("/modeles", "Modèles"),
+    ("/modelisation", "Modélisation"),
     ("/predict", "Prédicteur"),
     ("/monitoring", "Monitoring"),
     ("/conclusion", "Conclusion"),
@@ -177,6 +179,28 @@ def model_status():
 
     return render_template(
         "model_status.html", health=health, error=error, **nav_context("/modeles")
+    )
+
+
+@app.route("/modelisation")
+def modelisation():
+    """Modélisation : pipeline DVC (dvc.yaml), architecture des deux modèles
+    (classification, segmentation) et illustrations qualité — complète /modeles
+    (provenance runtime) et /architecture (microservices) sans les dupliquer."""
+    try:
+        r = requests.get(f"{DATA_SERVICE_URL}/v1/data/stats", timeout=10)
+        r.raise_for_status()
+        dvc_stats = r.json()
+        dvc_error = None
+    except requests.exceptions.RequestException as e:
+        dvc_stats = None
+        dvc_error = f"data-service inaccessible ({DATA_SERVICE_URL}) — {e}"
+
+    return render_template(
+        "modelisation.html",
+        dvc_stats=dvc_stats,
+        dvc_error=dvc_error,
+        **nav_context("/modelisation"),
     )
 
 

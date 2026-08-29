@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS_COVID — Modélisation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"
+          integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+          crossorigin="anonymous"></script>
+</head>
+<body hx-boost="true">
+  <style>
+    body { font-family: monospace; background: #0d1117; color: #c9d1d9; }
+    h1 { color: #58a6ff; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.2rem; margin: 1rem 0; }
+    .error-box {
+      background: #2d1214; border: 1px solid #b62324; border-radius: 6px;
+      padding: .8rem 1rem; color: #ffb3b6; margin: 1rem 0;
+    }
+    .hint { color: #8b949e; font-size: .82rem; margin-top: .4rem; }
+    .refresh { display: inline-block; margin-top: 1rem; background: #1f6feb; color: #fff; border: none;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: .85rem; font-family: monospace; }
+    .refresh:hover { background: #388bfd; }
+    .stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: .6rem 0; }
+    .stat { text-align: center; }
+    .stat .value { font-size: 1.3rem; font-weight: bold; color: #58a6ff; }
+    .stat .label { font-size: .78rem; color: #8b949e; }
+    .hash { font-size: .78rem; color: #8b949e; word-break: break-all; }
+    .dag-scroll { overflow-x: auto; background: #0d1117; border-radius: 6px; }
+    .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 900px) { .arch-grid { grid-template-columns: 1fr; } }
+    .arch-card h3 { margin: 0 0 .3rem 0; color: #c9d1d9; font-size: 1rem; }
+    .arch-tag { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: .72rem;
+      font-weight: bold; margin-bottom: .6rem; }
+    .arch-tag-scratch { background: #2d2410; color: #d29922; border: 1px solid #9e6a03; }
+    .arch-tag-transfer { background: #0d3320; color: #56d364; border: 1px solid #238636; }
+    .arch-row { display: flex; justify-content: space-between; gap: .8rem; padding: .3rem 0;
+      border-bottom: 1px solid #21262d; font-size: .85rem; }
+    .arch-row:last-child { border-bottom: none; }
+    .arch-row .k { color: #8b949e; }
+    .arch-row .v { text-align: right; }
+    .img-gallery { display: flex; gap: .8rem; flex-wrap: wrap; margin-top: .8rem; }
+    .img-gallery figure { margin: 0; max-width: 400px; }
+    .img-gallery figure.img-wide { max-width: 100%; width: 100%; }
+    .img-gallery img { max-width: 100%; border-radius: 6px; border: 1px solid #30363d; }
+    .img-gallery figcaption { color: #8b949e; font-size: .78rem; margin-top: .3rem; }
+  </style>
+
+  <div class="page-content">
+  {% set nav_position = 'top' %}
+  {% include '_nav_footer.html' %}
+
+  <h1>🧪 Modélisation</h1>
+  <p style="color:#8b949e">
+    Données et modèles sont versionnés par <strong>DVC</strong> (remote MinIO) : dataset brut,
+    modèles entraînés et pipeline de production reproductible (<code>dvc repro</code>). Provenance
+    runtime des modèles (MLflow Registry vs local) sur la page <a href="/modeles">Modèles</a>.
+  </p>
+
+  <h2 style="color:#58a6ff; font-size:1.05rem">📦 Données versionnées (DVC)</h2>
+  {% if dvc_error %}
+  <div class="error-box">{{ dvc_error }}</div>
+  {% elif dvc_stats %}
+  <div class="card">
+    {% set raw_dvc = dvc_stats.raw.dvc if dvc_stats.raw else None %}
+    {% if raw_dvc and raw_dvc.md5 %}
+    <div class="stat-row">
+      <div class="stat"><div class="value">{{ raw_dvc.nfiles }}</div><div class="label">images trackées (raw)</div></div>
+      <div class="stat"><div class="value">{{ raw_dvc.size_mb }} MB</div><div class="label">taille totale</div></div>
+      <div class="stat"><div class="value">{{ dvc_stats.models.local.nfiles if dvc_stats.models else 0 }}</div><div class="label">modèles (.keras)</div></div>
+      <div class="stat"><div class="value">{{ dvc_stats.models.local.size_mb if dvc_stats.models else 0 }} MB</div><div class="label">taille modèles</div></div>
+    </div>
+    <div class="hash">Hash MD5 (data/raw.dvc) : {{ raw_dvc.md5 }}</div>
+    {% else %}
+    <p class="hint">data/raw.dvc introuvable — lancer <code>dvc pull</code> ou <code>make dvc-pull</code></p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <h2 style="color:#58a6ff; font-size:1.05rem; margin-top:1.5rem">🧬 Pipeline DVC (dvc.yaml)</h2>
+  <div class="card dag-scroll">
+    <img src="{{ url_for('static', filename='img/pipeline_dvc.jpeg') }}"
+         alt="DAG du pipeline DVC : augment → preprocess/preprocess_segmentation → train/train_segmentation → evaluate/evaluate_segmentation"
+         style="max-width:100%; display:block; border-radius:6px;">
+  </div>
+
+  <h2 style="color:#58a6ff; font-size:1.05rem; margin-top:1.5rem">🏗️ Architecture des modèles</h2>
+  <div class="arch-grid">
+
+    <div class="card arch-card">
+      <h3>Classification — classification.keras</h3>
+      <span class="arch-tag arch-tag-scratch">From scratch</span>
+      <div class="arch-row"><span class="k">Entrée</span><span class="v">256×256×1 (grayscale)</span></div>
+      <div class="arch-row"><span class="k">Architecture</span><span class="v">4× (Conv2D → BatchNorm → MaxPool)<br>32/64/128/256 filtres</span></div>
+      <div class="arch-row"><span class="k">Tête</span><span class="v">GAP → Dense(128) → Dropout(0.5) → Dense(4, softmax)</span></div>
+      <div class="arch-row"><span class="k">Loss</span><span class="v">sparse_categorical_crossentropy</span></div>
+      <div class="arch-row"><span class="k">Entraînement</span><span class="v">30 epochs (EarlyStopping p=5), batch 32, lr 0.001</span></div>
+      <div class="arch-row"><span class="k">Rééquilibrage</span><span class="v">class_weight balanced (via sample_weight)</span></div>
+      <div class="arch-row"><span class="k">Sortie</span><span class="v">COVID · Normal · Viral_Pneumonia · Lung_Opacity</span></div>
+    </div>
+
+    <div class="card arch-card">
+      <h3>Segmentation — segmentation.keras</h3>
+      <span class="arch-tag arch-tag-transfer">Transfer learning</span>
+      <div class="arch-row"><span class="k">Encoder</span><span class="v">MobileNetV2 (ImageNet)</span></div>
+      <div class="arch-row"><span class="k">Decoder</span><span class="v">Conv2DTranspose + 4 skip connections</span></div>
+      <div class="arch-row"><span class="k">Sortie</span><span class="v">mask 256×256×1 (sigmoid)</span></div>
+      <div class="arch-row"><span class="k">Loss</span><span class="v">binary_crossentropy + dice_loss</span></div>
+      <div class="arch-row"><span class="k">Phase 1 — freeze</span><span class="v">8 epochs, lr 0.001, batch 16</span></div>
+      <div class="arch-row"><span class="k">Phase 2 — fine-tune</span><span class="v">25 epochs, lr 0.00001, batch 8</span></div>
+      <div class="arch-row"><span class="k">Post-traitement</span><span class="v">2 + grandes composantes + fermeture morpho.</span></div>
+      <div class="arch-row"><span class="k">Seuil registry</span><span class="v">val_dice ≥ 0.5</span></div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 .3rem 0; color:#c9d1d9; font-size:1rem;">Qualité de la segmentation (U-Net)</h3>
+    <div class="img-gallery">
+      <figure>
+        <img src="{{ url_for('static', filename='img/unet.png') }}" alt="Mask réel vs prédit (brut et nettoyé), 4 exemples">
+        <figcaption>Mask réel vs prédit (brut et nettoyé) — 4 exemples du test set</figcaption>
+      </figure>
+    </div>
+    <div class="img-gallery">
+      <figure class="img-wide">
+        <img src="{{ url_for('static', filename='img/unet2.png') }}" alt="Overlay mask réel en rouge vs prédit nettoyé en vert, 50 exemples du test set">
+        <figcaption>Overlay mask réel (rouge) vs prédit nettoyé (vert) — 50 exemples du test set</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <h2 style="color:#58a6ff; font-size:1.05rem; margin-top:1.5rem">🖼️ Avant / après preprocessing &amp; augmentation</h2>
+  <div class="card">
+    <div class="img-gallery">
+      <figure>
+        <img src="{{ url_for('static', filename='img/masking-before.png') }}" alt="Avant masque">
+        <figcaption>Avant masking (image brute)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/masking-after.png') }}" alt="Après masque">
+        <figcaption>Après masking + crop poumons (mask généré par le U-Net ci-dessus)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/config-data-augmentation.png') }}" alt="Configuration augmentation">
+        <figcaption>Configuration de la data augmentation (stage DVC <code>augment</code>)</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ url_for('static', filename='img/visu-augmentation.png') }}" alt="Visualisation augmentation">
+        <figcaption>Visualisation des augmentations générées</figcaption>
+      </figure>
+    </div>
+    <p class="hint">
+      Détail complet du pipeline (CLAHE, déséquilibre de classes) sur la page
+      <a href="/preprocessing">Préprocessing</a>.
+    </p>
+  </div>
+
+  <button class="refresh" onclick="location.reload()">🔄 Rafraîchir</button>
+
+  {% set nav_position = 'bottom' %}
+  {% include '_nav_footer.html' %}
+
+  </div>
+</body>
+</html>
