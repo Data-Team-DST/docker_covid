@@ -31,7 +31,7 @@ PAGE_ORDER = [
     ("/architecture", "Architecture"),
     ("/preprocessing", "Préprocessing"),
     ("/modeles", "Modèles"),
-    ("/modelisation", "Modélisation"),
+    ("/modelisation", "Pipeline (DVC & Models)"),
     ("/predict", "Prédicteur"),
     ("/monitoring", "Monitoring"),
     ("/conclusion", "Conclusion"),
