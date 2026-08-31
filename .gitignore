@@ -87,3 +87,6 @@ infrastructure/kubernetes/secrets.yaml
 # Bilan perso (git log/PR par personne) — usage strictement personnel, jamais partagé
 bilan_contribution_docker_covid.html
 bilan_contribution_ds_covid.html
+
+# Notes de présentation perso — usage strictement personnel, jamais partagé
+notes_soutenance_steven.html
