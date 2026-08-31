@@ -430,6 +430,10 @@ demonstration: setup-demonstration ## Lance la démo produit (contexte/prédicte
 presentation: demonstration ## Alias de 'make demonstration' — nom plus parlant pour la soutenance
 
 presentation-all: setup-dashboard setup-demonstration ## Lance tout pour la soutenance : backend + dashboard (:5050) + demonstration (:5051)
+	@for p in 5050 5051; do \
+		pid=$$(ss -ltnp 2>/dev/null | grep ":$$p " | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+' | head -1); \
+		[ -n "$$pid" ] && kill $$pid 2>/dev/null && echo "$(YELLOW)Port $$p déjà occupé (pid $$pid) — libéré$(NC)" || true; \
+	done
 	@echo "$(YELLOW)Démarrage backend...$(NC)"
 	@$(COMPOSE) up -d --build backend
 	@echo "$(YELLOW)Dashboard (arrière-plan)   → http://localhost:5050$(NC)"

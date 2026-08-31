@@ -42,6 +42,21 @@ avec `backend`/`data-service`/`segmentation-service`. `trainer/Dockerfile` n'a p
 d'ajouter `--require-hashes` explicitement — dès qu'une ligne du fichier a un hash, pip
 bascule automatiquement en mode vérification pour tout le fichier (protection gratuite).
 
+## Chantier jour J (2026-08-31) — retape contenu avant soutenance
+
+Retour Léna sur `/contexte` et `/conclusion` (pages Steven) : trop scolaire, pas assez
+professionnel. `/predict` (Steven aussi) : bon sur le fond, veut aller plus loin (c'est
+l'écran que verra l'utilisateur final).
+
+- [x] `/contexte` : retirer la grille S.M.A.R.T. (framework de classe, se voit à l'œil),
+      remplacer par 2-3 phrases posant l'enjeu terrain avant la méthode. Comparatif
+      SVM/kNN/RF réduit à une phrase au lieu de la galerie de 5 matrices.
+- [x] `/conclusion` : titres numérotés "1. 2. 3." → titres narratifs. Section incidents
+      reformulée en histoire (preuve de maturité MLOps) plutôt que liste d'aveux. Tableau
+      backlog ouvert retiré de la slide live (reste dans le repo, pas dans la démo).
+- [x] `/predict` : overlay du masque de segmentation U-Net sur la radio ("ce que l'IA
+      regarde"), + scores des 4 classes affichés (pas juste la prédiction gagnante).
+
 ## Chantier post-soutenance — rôles et frontières des services
 
 Ouvert le 2026-08-26. Les 4 points ci-dessous sont désormais résolus — chantier clos, doc

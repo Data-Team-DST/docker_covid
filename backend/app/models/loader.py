@@ -91,6 +91,13 @@ class ModelLoader:
         preds = self._model.predict(img_array, verbose=0)
         return preds[0]
 
+    def get_model(self):
+        """Expose le modèle Keras brut — usage réservé à Grad-CAM (nécessite le graphe
+        complet pour le calcul de gradient, pas juste predict())."""
+        if not self.is_loaded:
+            raise RuntimeError("Modèle non chargé")
+        return self._model
+
 
 # Instance globale importée par les endpoints
 model_loader = ModelLoader()
