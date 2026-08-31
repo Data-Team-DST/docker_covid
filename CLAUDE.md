@@ -77,9 +77,15 @@ pour chaque erreur mineure, sous peine de gonfler ce fichier de cas hyper-spéci
 
 ## Validation humaine obligatoire
 
-Avant toute action irréversible, **stopper et demander une confirmation explicite** :
+**`git push` : jamais exécuté par Claude, sans exception.** C'est systématiquement Steven qui
+pousse. Un "go" ou "vas-y" sur le fond du travail ne vaut pas autorisation de push — préparer
+le commit, le laisser prêt localement, et le dire explicitement plutôt que d'enchaîner sur un
+push. *(Retour d'expérience 2026-08-31 : plusieurs push faits dans la foulée d'un commit sans
+redemander, alors que la règle — en version "demander confirmation" — existait déjà plus bas.)*
 
-- `git push`, `git pull`, `git merge`, `git reset`, `git rebase`
+Avant toute autre action irréversible, **stopper et demander une confirmation explicite** :
+
+- `git pull`, `git merge`, `git reset`, `git rebase`
 - Suppression de fichiers ou répertoires
 - Opérations DVC destructives (`dvc gc`, force-push sur le remote MinIO)
 - Modification de `.env`, credentials, clés API
