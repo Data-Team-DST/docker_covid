@@ -31,8 +31,6 @@ PAGE_ORDER = [
     ("/", "Sommaire"),
     ("/contexte", "Contexte DS"),
     ("/architecture", "Architecture"),
-    ("/preprocessing", "Préprocessing"),
-    ("/modeles", "Modèles"),
     ("/modelisation", "Pipeline (DVC & Models)"),
     ("/predict", "Prédicteur"),
     ("/monitoring", "Monitoring"),
@@ -71,13 +69,6 @@ def conclusion():
     """Conclusion critique et perspectives — condensé depuis
     frontend/page/07_conclusion_critique_perspective.py (chantier point 15)."""
     return render_template("conclusion.html", **nav_context("/conclusion"))
-
-
-@app.route("/preprocessing")
-def preprocessing():
-    """Environnements/masking/déséquilibre/augmentation — condensé depuis
-    frontend/page/03_preprocessing (chantier point 15)."""
-    return render_template("preprocessing.html", **nav_context("/preprocessing"))
 
 
 def _fetch_mask_data_uri(file_bytes: bytes, filename: str, mimetype: str) -> str | None:
@@ -225,25 +216,6 @@ def drift_report():
             404,
         )
     return send_file(DRIFT_REPORT_PATH)
-
-
-@app.route("/modeles")
-def model_status():
-    """Provenance des modèles chargés (MLflow Registry vs fichier local, cf. US
-    chantier infra #17) — interroge /health du backend, qui interroge lui-même
-    celui du segmentation-service."""
-    try:
-        r = requests.get(f"{BACKEND_URL}/health", timeout=5)
-        r.raise_for_status()
-        health = r.json()
-        error = None
-    except requests.exceptions.RequestException as e:
-        health = None
-        error = f"Backend inaccessible ({BACKEND_URL}) — {e}"
-
-    return render_template(
-        "model_status.html", health=health, error=error, **nav_context("/modeles")
-    )
 
 
 @app.route("/modelisation")
