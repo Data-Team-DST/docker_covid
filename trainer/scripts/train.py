@@ -1,3 +1,10 @@
+from ds_covid.mlflow_utils import (  # noqa: E402
+    DualMlflowRun,
+    MlflowEpochLogger,
+    build_final_metrics,
+    collect_run_tags,
+    flatten_params,
+)
 """Stage DVC 3/4 — Entraînement CNN + tracking MLflow.
 
 Lit  : data/processed/{X,y}_train.npy (re-split en train/val en interne)
@@ -102,7 +109,7 @@ def main() -> None:
     mlflow.set_registry_uri(tracking_uri)
     mlflow.set_experiment(mlp["experiment_name"])
 
-    flat_params = flatten_dict(p)
+    flat_params = flatten_params(p)
     flat_params["train.epochs"] = tp["epochs"]
     flat_params["train.batch_size"] = tp["batch_size"]
     flat_params["train.learning_rate"] = tp["learning_rate"]
@@ -154,6 +161,7 @@ def main() -> None:
             "val_loss":     val_loss,
             "epochs":       len(history.epoch),  # peut être < tp["epochs"] (early stopping)
         }
+        tracking.log_metrics(build_final_metrics(metrics))
         METRICS_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(METRICS_FILE, "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2)

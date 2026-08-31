@@ -56,8 +56,8 @@ segmentation:
                                     # volontairement hors scope, cf. CHANTIER_INFRA_SERVICES.md #4)
 
 mlflow:
-  experiment_name: classification
+  experiment_name: COVID19_Classification
   tracking_uri: http://mlflow:5000
   model_name: classification
-  segmentation_experiment_name: segmentation
+  segmentation_experiment_name: COVID19_Segmentation
   segmentation_model_name: segmentation

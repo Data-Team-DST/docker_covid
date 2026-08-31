@@ -15,8 +15,8 @@ DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
 SEGMENTATION_SERVICE_URL = os.getenv("SEGMENTATION_SERVICE_URL", "http://localhost:8001")
 API_KEY = os.getenv("API_KEY", "")
 
-# Rapport de dérive Evidently — versionné DVC (outputs/drift/report.html.dvc), récupéré via
-# `dvc pull` avant la démo. Chemin absolu : app.py tourne avec cwd=demonstration/ (make demonstration).
+# Rapport de dérive Evidently, généré localement avant la démo. Chemin absolu : app.py
+# tourne avec cwd=demonstration/ (make demonstration).
 DRIFT_REPORT_PATH = Path(__file__).resolve().parent.parent / "outputs" / "drift" / "report.html"
 
 # Liens outils de monitoring — mêmes ports par défaut que infrastructure/docker-compose.yml
@@ -231,7 +231,8 @@ def drift_report():
     if not DRIFT_REPORT_PATH.exists():
         return (
             "<p style='font-family:monospace;background:#0d1117;color:#ffb3b6;padding:2rem'>"
-            "Rapport introuvable localement — lancez <code>dvc pull</code> pour le récupérer."
+            "Rapport introuvable localement — générez-le avec "
+            "<code>python trainer/scripts/drift_report.py</code>."
             "</p>",
             404,
         )

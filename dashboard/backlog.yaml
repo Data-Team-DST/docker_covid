@@ -188,7 +188,7 @@ sprints:
         done: true
       - id: US-20
         title: "Evidently : détection dérive données"
-        description: "✅ trainer/scripts/drift_report.py : Report Evidently (DataDriftPreset stattest=psi, seuil 0.2 + ColumnDriftMetric jensenshannon par classe), comparaison scores de prédiction production (log-service /v1/logs, logger app.predict.telemetry) vs référence train (échantillon 500 images). Rapport HTML en 1 commande, versionné DVC (outputs/drift/report.html.dvc, remote minio), embarqué en iframe sur demonstration :5051 /monitoring. Nuance vs formulation d'origine : dérive mesurée sur les scores de sortie par classe, pas sur la distribution brute des pixels d'entrée — approche standard pour du monitoring de classification, mais à noter si quelqu'un cherchait explicitement du pixel-level drift."
+        description: "✅ trainer/scripts/drift_report.py : Report Evidently (DataDriftPreset stattest=psi, seuil 0.2 + ColumnDriftMetric jensenshannon par classe), comparaison scores de prédiction production (log-service /v1/logs, logger app.predict.telemetry) vs référence train (échantillon 500 images). Rapport HTML généré localement en 1 commande dans outputs/drift/report.html, embarqué en iframe sur demonstration :5051 /monitoring. Nuance vs formulation d'origine : dérive mesurée sur les scores de sortie par classe, pas sur la distribution brute des pixels d'entrée — approche standard pour du monitoring de classification, mais à noter si quelqu'un cherchait explicitement du pixel-level drift."
         depends_on: ["US-18"]
         blocks: ["US-21"]
         points: 5
