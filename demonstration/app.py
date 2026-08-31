@@ -167,6 +167,34 @@ def predict():
     )
 
 
+@app.route("/predict/explain", methods=["POST"])
+def predict_explain():
+    """Grad-CAM à la demande — bouton dédié sur /predict, pas embarqué dans le flux
+    principal (cf. TODO.md § Chantier jour J : /explain recalcule classification +
+    segmentation en interne, éviter de tripler la charge sur segmentation-service à
+    chaque clic par défaut)."""
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return {"error": "Aucun fichier fourni."}, 400
+
+    file_bytes = file.read()
+    try:
+        r = requests.post(
+            f"{BACKEND_URL}/api/v1/explain",
+            files={"file": (file.filename, file_bytes, file.mimetype)},
+            headers={"X-API-Key": API_KEY},
+            timeout=30,
+        )
+        r.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Grad-CAM indisponible ({BACKEND_URL}) — {e}"}, 502
+
+    gradcam_data_uri = "data:image/png;base64," + base64.b64encode(r.content).decode(
+        "ascii"
+    )
+    return {"gradcam_data_uri": gradcam_data_uri}
+
+
 @app.route("/architecture")
 def architecture():
     """Architecture microservices — frontières HTTP, ports, pipeline DVC/MLflow."""

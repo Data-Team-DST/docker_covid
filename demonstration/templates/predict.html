@@ -59,6 +59,18 @@
     .mask-col { flex: 1; min-width: 160px; text-align: center; }
     .mask-col img { max-width: 100%; max-height: 200px; border-radius: 6px; border: 1px solid #30363d; background: #000; }
     .mask-caption { font-size: .75rem; color: #8b949e; margin-top: .4rem; }
+    .btn-explain {
+      display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.2rem;
+      background: transparent; border: 1px solid #30363d; color: #c9d1d9;
+      padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: .85rem;
+      font-family: monospace; transition: border-color .15s, color .15s;
+    }
+    .btn-explain:hover { border-color: #58a6ff; color: #58a6ff; }
+    .btn-explain:disabled { opacity: .6; cursor: not-allowed; }
+    #explain-result { margin-top: 1rem; }
+    #explain-result img { max-width: 100%; max-height: 280px; border-radius: 6px; border: 1px solid #30363d; }
+    #explain-result .explain-caption { font-size: .75rem; color: #8b949e; margin-top: .4rem; }
+    #explain-result .explain-error { color: #ffb3b6; font-size: .85rem; }
   </style>
 
   <div class="page-content">
@@ -123,6 +135,11 @@
       </div>
     </div>
     {% endif %}
+
+    <div id="explain-block">
+      <button type="button" class="btn-explain" id="explain-btn">🔍 Expliquer cette prédiction (Grad-CAM)</button>
+      <div id="explain-result"></div>
+    </div>
   </div>
   {% endif %}
 
@@ -140,6 +157,8 @@
     var dropLabel = document.getElementById('drop-label');
     var submitBtn = document.getElementById('submit-btn');
     var filenameEl = document.getElementById('filename');
+    var explainBtn = document.getElementById('explain-btn');
+    var explainResult = document.getElementById('explain-result');
 
     function showPreview(file) {
       if (!file) return;
@@ -178,6 +197,44 @@
         fileInput.click();
       }
     });
+
+    // Grad-CAM à la demande — n'existe dans le DOM que quand un résultat est affiché.
+    if (explainBtn) {
+      explainBtn.addEventListener('click', () => {
+        // fileInput.files est vide ici : après un submit boosté par htmx, le DOM est
+        // remplacé et le nouvel <input type="file"> repart à zéro (ne porte jamais le
+        // fichier de l'ancien). On réutilise plutôt l'image déjà affichée (data URI).
+        if (!preview.src || !preview.src.startsWith('data:')) return;
+        explainBtn.disabled = true;
+        explainBtn.textContent = 'Calcul en cours…';
+        explainResult.innerHTML = '';
+
+        fetch(preview.src)
+          .then(r => r.blob())
+          .then(blob => {
+            const formData = new FormData();
+            formData.append('file', blob, 'image.png');
+            return fetch('/predict/explain', { method: 'POST', body: formData });
+          })
+          .then(r => r.json().then(data => ({ ok: r.ok, data })))
+          .then(({ ok, data }) => {
+            if (!ok || !data.gradcam_data_uri) {
+              throw new Error(data.error || 'Erreur inconnue');
+            }
+            explainResult.innerHTML =
+              '<img src="' + data.gradcam_data_uri + '" alt="Heatmap Grad-CAM">' +
+              '<div class="explain-caption">🔥 Grad-CAM — zones ayant motivé la prédiction ' +
+              '(rouge/jaune = forte influence)</div>';
+          })
+          .catch(err => {
+            explainResult.innerHTML = '<div class="explain-error">' + err.message + '</div>';
+          })
+          .finally(() => {
+            explainBtn.disabled = false;
+            explainBtn.textContent = '🔍 Expliquer cette prédiction (Grad-CAM)';
+          });
+      });
+    }
 
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
