@@ -28,7 +28,7 @@ DRIFT_DIR  = REPO_ROOT / "outputs" / "drift"
 # Ordre et orthographe doivent correspondre à backend/app/config.py::class_names
 # (ordre de sortie du modèle) — pas à trainer/scripts/evaluate.py::CLASS_NAMES,
 # qui sert uniquement à l'affichage de la matrice de confusion, pas au contrat API.
-CLASS_NAMES = ["COVID", "Lung_Opacity", "Normal", "Viral_Pneumonia"]
+CLASS_NAMES = ["COVID", "Normal", "Viral_Pneumonia", "Lung_Opacity"]
 
 TELEMETRY_LOGGER_NAME = "app.predict.telemetry"
 PSI_ALERT_THRESHOLD = 0.2

@@ -63,6 +63,8 @@ def main() -> None:
 
     classes = prep_params["classes"]
     max_samples_per_class = prep_params["max_samples_per_class"]
+    if max_samples_per_class is not None and max_samples_per_class <= 0:
+        raise ValueError("preprocess.max_samples_per_class must be null/None or a positive integer")
     test_split = prep_params["test_split"]
     split_seed = prep_params["random_seed"]
 
@@ -77,7 +79,7 @@ def main() -> None:
             continue
 
         files = sorted(images_dir.glob("*.png"))
-        if max_samples_per_class:
+        if max_samples_per_class is not None:
             files = files[:max_samples_per_class]
 
         train_files, test_files = train_test_split(
