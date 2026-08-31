@@ -55,6 +55,22 @@
     .score-bar { background: #1f6feb; height: 100%; }
     .score-value { width: 50px; text-align: right; font-size: .85rem; color: #8b949e; }
     .latency { color: #8b949e; font-size: .8rem; margin-top: .8rem; }
+    .mask-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid #21262d; }
+    .mask-col { flex: 1; min-width: 160px; text-align: center; }
+    .mask-col img { max-width: 100%; max-height: 200px; border-radius: 6px; border: 1px solid #30363d; background: #000; }
+    .mask-caption { font-size: .75rem; color: #8b949e; margin-top: .4rem; }
+    .btn-explain {
+      display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.2rem;
+      background: transparent; border: 1px solid #30363d; color: #c9d1d9;
+      padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: .85rem;
+      font-family: monospace; transition: border-color .15s, color .15s;
+    }
+    .btn-explain:hover { border-color: #58a6ff; color: #58a6ff; }
+    .btn-explain:disabled { opacity: .6; cursor: not-allowed; }
+    #explain-result { margin-top: 1rem; }
+    #explain-result img { max-width: 100%; max-height: 280px; border-radius: 6px; border: 1px solid #30363d; }
+    #explain-result .explain-caption { font-size: .75rem; color: #8b949e; margin-top: .4rem; }
+    #explain-result .explain-error { color: #ffb3b6; font-size: .85rem; }
   </style>
 
   <div class="page-content">
@@ -87,12 +103,13 @@
       <div class="classes-hint">
         <span>COVID</span><span>Lung Opacity</span><span>Normal</span><span>Viral Pneumonia</span>
       </div>
-      <button type="submit" class="btn-predict" id="submit-btn">{% if filename %}Classer une autre image →{% else %}Classer l'image{% endif %}</button>
+      <button type="{{ 'button' if result else 'submit' }}" class="btn-predict" id="submit-btn"
+              data-mode="{{ 'reset' if result else 'submit' }}">{% if result %}Classer une autre image →{% else %}Classer l'image{% endif %}</button>
     </form>
   </div>
 
   {% if result %}
-  <div class="card">
+  <div class="card" id="result-card">
     <div class="result-class">{{ result.predicted_class }}</div>
     <div style="color:#8b949e; margin-bottom: .8rem">
       Confiance : {{ (result.confidence * 100) | round(1) }}%
@@ -105,6 +122,24 @@
     </div>
     {% endfor %}
     <div class="latency">Latence : {{ result.latency_ms }} ms</div>
+
+    {% if mask_data_uri %}
+    <div class="mask-row">
+      <div class="mask-col">
+        <img src="{{ image_data_uri }}" alt="Radiographie originale">
+        <div class="mask-caption">Radiographie envoyée</div>
+      </div>
+      <div class="mask-col">
+        <img src="{{ mask_data_uri }}" alt="Masque pulmonaire détecté">
+        <div class="mask-caption">🫁 Masque pulmonaire détecté (U-Net) — ce que le modèle isole avant classification</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="explain-block">
+      <button type="button" class="btn-explain" id="explain-btn">🔍 Expliquer cette prédiction (Grad-CAM)</button>
+      <div id="explain-result"></div>
+    </div>
   </div>
   {% endif %}
 
@@ -122,6 +157,9 @@
     var dropLabel = document.getElementById('drop-label');
     var submitBtn = document.getElementById('submit-btn');
     var filenameEl = document.getElementById('filename');
+    var explainBtn = document.getElementById('explain-btn');
+    var explainResult = document.getElementById('explain-result');
+    var resultCard = document.getElementById('result-card');
 
     function showPreview(file) {
       if (!file) return;
@@ -136,7 +174,72 @@
       reader.readAsDataURL(file);
     }
 
-    fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+    fileInput.addEventListener('change', () => {
+      showPreview(fileInput.files[0]);
+      // Une nouvelle image a été choisie après un "Classer une autre image →" (mode
+      // reset) : le bouton redevient un vrai submit pour cette nouvelle sélection.
+      if (submitBtn.dataset.mode === 'reset') {
+        submitBtn.type = 'submit';
+        submitBtn.dataset.mode = 'submit';
+        submitBtn.textContent = "Classer l'image";
+      }
+    });
+
+    // Mode "reset" (après un résultat) : le clic ne soumet pas le fichier déjà classé,
+    // il vide la sélection et rouvre directement l'explorateur de fichiers.
+    submitBtn.addEventListener('click', e => {
+      if (submitBtn.dataset.mode === 'reset') {
+        e.preventDefault();
+        fileInput.value = '';
+        preview.src = '';
+        preview.style.display = 'none';
+        dropLabel.style.display = '';
+        filenameEl.style.display = 'none';
+        // La carte résultat (classe, scores, masque, Grad-CAM) vient de la précédente
+        // classification — la cacher, sinon elle reste affichée pendant qu'on choisit
+        // une nouvelle image, comme si elle s'appliquait déjà à celle-ci.
+        if (resultCard) resultCard.style.display = 'none';
+        fileInput.click();
+      }
+    });
+
+    // Grad-CAM à la demande — n'existe dans le DOM que quand un résultat est affiché.
+    if (explainBtn) {
+      explainBtn.addEventListener('click', () => {
+        // fileInput.files est vide ici : après un submit boosté par htmx, le DOM est
+        // remplacé et le nouvel <input type="file"> repart à zéro (ne porte jamais le
+        // fichier de l'ancien). On réutilise plutôt l'image déjà affichée (data URI).
+        if (!preview.src || !preview.src.startsWith('data:')) return;
+        explainBtn.disabled = true;
+        explainBtn.textContent = 'Calcul en cours…';
+        explainResult.innerHTML = '';
+
+        fetch(preview.src)
+          .then(r => r.blob())
+          .then(blob => {
+            const formData = new FormData();
+            formData.append('file', blob, 'image.png');
+            return fetch('/predict/explain', { method: 'POST', body: formData });
+          })
+          .then(r => r.json().then(data => ({ ok: r.ok, data })))
+          .then(({ ok, data }) => {
+            if (!ok || !data.gradcam_data_uri) {
+              throw new Error(data.error || 'Erreur inconnue');
+            }
+            explainResult.innerHTML =
+              '<img src="' + data.gradcam_data_uri + '" alt="Heatmap Grad-CAM">' +
+              '<div class="explain-caption">🔥 Grad-CAM — zones ayant motivé la prédiction ' +
+              '(rouge/jaune = forte influence)</div>';
+          })
+          .catch(err => {
+            explainResult.innerHTML = '<div class="explain-error">' + err.message + '</div>';
+          })
+          .finally(() => {
+            explainBtn.disabled = false;
+            explainBtn.textContent = '🔍 Expliquer cette prédiction (Grad-CAM)';
+          });
+      });
+    }
 
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));

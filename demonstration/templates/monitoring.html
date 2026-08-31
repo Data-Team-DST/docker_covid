@@ -31,6 +31,30 @@
       font-size: .82rem;
     }
     .tool-link:hover { background: #388bfd; }
+
+    /* ── AJOUT : schéma explicatif du flux de données ─────────────────── */
+    .schema-wrap {
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      padding: 1.2rem; margin: 1rem 0 1.6rem; overflow-x: auto;
+    }
+    .schema-wrap svg { display: block; min-width: 700px; }
+    .schema-legend { display: flex; gap: 1.6rem; margin-top: .9rem; font-size: .8rem; color: #8b949e; }
+    .schema-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+    .schema-legend i { width: 14px; height: 3px; display: inline-block; border-radius: 2px; }
+    .schema-steps {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: .9rem; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid #30363d;
+    }
+    .schema-step { display: flex; gap: .7rem; align-items: flex-start; }
+    .schema-step .num {
+      flex: none; width: 22px; height: 22px; border-radius: 50%;
+      background: #1f6feb; color: #fff; font-size: .74rem; font-weight: bold;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .schema-step.warn .num { background: #9e6a03; }
+    .schema-step p { margin: 0; font-size: .83rem; color: #8b949e; line-height: 1.4; }
+    .schema-step code { color: #c9d1d9; }
+
     .drift-card {
       background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.2rem;
       margin: 1rem 0;
@@ -65,10 +89,12 @@
 
   <div class="tool-grid">
     <div class="tool-card">
-      <div class="tool-title">🧪 MLflow</div>
-      <div class="tool-desc">Model Registry — versions, stages (Production/Staging), métriques
-        et paramètres de chaque run d'entraînement.</div>
-      <a href="{{ mlflow_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir MLflow →</a>
+      <div class="tool-title">🔥 Prometheus</div>
+      <div class="tool-desc">Collecte les métriques exposées par le backend
+        (<code>/metrics</code>) toutes les 10s et les stocke dans sa base de séries
+        temporelles.</div>
+      <a href="{{ prometheus_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir Prometheus →</a>
+      <div class="hint">Nécessite <code>make monitoring-start</code>.</div>
     </div>
     <div class="tool-card">
       <div class="tool-title">📊 Grafana</div>
@@ -77,11 +103,103 @@
       <a href="{{ grafana_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir Grafana →</a>
       <div class="hint">Nécessite <code>make monitoring-start</code>.</div>
     </div>
-    <div class="tool-card">
-      <div class="tool-title">🔗 DagsHub</div>
-      <div class="tool-desc">Miroir du repo avec suivi natif des expériences DVC (commits,
-        métriques par run) — complémentaire à MLflow.</div>
-      <a href="{{ dagshub_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir DagsHub →</a>
+  </div>
+  <p style="color:#8b949e; font-size:.85rem">
+    MLflow et DagsHub (tracking des runs et versionnage) sont sur l'onglet
+    <a href="/architecture">Architecture</a> — ici, uniquement la santé du service en production.
+  </p>
+
+  <!-- AJOUT : schéma explicatif — comment Prometheus/Grafana et Evidently
+       récupèrent réellement leurs données, pour la présentation à l'oral -->
+  <h2>D'où viennent ces métriques ?</h2>
+  <p style="color:#8b949e">
+    Un seul endpoint backend, deux usages différents : la santé du service
+    (Prometheus/Grafana) et la santé statistique du modèle (Evidently).
+  </p>
+  <div class="schema-wrap">
+    <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Flux de données du monitoring DS_COVID">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#58a6ff"/>
+        </marker>
+        <marker id="arr-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#d29922"/>
+        </marker>
+      </defs>
+
+      <rect x="15" y="95" width="150" height="60" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="90" y="120" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="bold">Backend FastAPI</text>
+      <text x="90" y="136" text-anchor="middle" fill="#8b949e" font-size="9">/predict</text>
+
+      <path d="M165,110 C210,110 210,70 250,70" stroke="#58a6ff" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+      <rect x="250" y="45" width="160" height="50" rx="8" fill="#161b22" stroke="#30363d"/>
+      <text x="330" y="65" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="bold">/metrics</text>
+      <text x="330" y="80" text-anchor="middle" fill="#8b949e" font-size="9">format texte Prometheus</text>
+
+      <path d="M410,70 H450" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr)"/>
+      <rect x="450" y="45" width="140" height="50" rx="8" fill="#161b22" stroke="#30363d"/>
+      <text x="520" y="65" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="bold">Prometheus</text>
+      <text x="520" y="80" text-anchor="middle" fill="#8b949e" font-size="9">scrape / 10s</text>
+
+      <path d="M590,70 H630" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr)"/>
+      <rect x="630" y="45" width="130" height="50" rx="8" fill="#161b22" stroke="#30363d"/>
+      <text x="695" y="65" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="bold">Grafana</text>
+      <text x="695" y="80" text-anchor="middle" fill="#8b949e" font-size="9">dashboards</text>
+
+      <path d="M165,140 C210,140 210,180 250,180" stroke="#d29922" stroke-width="1.5" fill="none" marker-end="url(#arr-warn)"/>
+      <rect x="250" y="155" width="160" height="50" rx="8" fill="#161b22" stroke="#30363d"/>
+      <text x="330" y="175" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="bold">log-service</text>
+      <text x="330" y="190" text-anchor="middle" fill="#8b949e" font-size="9">/v1/logs (JSON)</text>
+
+      <path d="M410,180 H450" stroke="#d29922" stroke-width="1.5" marker-end="url(#arr-warn)"/>
+      <rect x="450" y="155" width="140" height="50" rx="8" fill="#161b22" stroke="#9e6a03" stroke-width="1.5"/>
+      <text x="520" y="175" text-anchor="middle" fill="#d29922" font-size="11" font-weight="bold">Evidently</text>
+      <text x="520" y="190" text-anchor="middle" fill="#8b949e" font-size="9">vs référence figée</text>
+
+      <path d="M590,180 H630" stroke="#d29922" stroke-width="1.5" marker-end="url(#arr-warn)"/>
+      <rect x="630" y="155" width="130" height="50" rx="8" fill="#161b22" stroke="#30363d"/>
+      <text x="695" y="175" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="bold">drift-report</text>
+      <text x="695" y="190" text-anchor="middle" fill="#8b949e" font-size="9">HTML (iframe)</text>
+    </svg>
+    <div class="schema-legend">
+      <span><i style="background:#58a6ff"></i> santé du service (technique)</span>
+      <span><i style="background:#d29922"></i> santé du modèle (statistique)</span>
+    </div>
+
+    <!-- AJOUT : explication pas à pas sous le schéma, pour parler dessus à l'oral -->
+    <div class="schema-steps">
+      <div class="schema-step">
+        <div class="num">1</div>
+        <p>Le backend expose <code>GET /metrics</code> : un texte au format Prometheus
+          (uptime, modèle chargé ou non, nombre total de prédictions).</p>
+      </div>
+      <div class="schema-step">
+        <div class="num">2</div>
+        <p>Prometheus scrape cette URL toutes les 10 secondes et stocke chaque valeur comme
+          série temporelle dans sa base interne.</p>
+      </div>
+      <div class="schema-step">
+        <div class="num">3</div>
+        <p>Grafana interroge Prometheus en PromQL — jamais le backend directement — et affiche
+          le résultat dans les dashboards.</p>
+      </div>
+      <div class="schema-step warn">
+        <div class="num">4</div>
+        <p>En parallèle, chaque prédiction est loguée par <code>log-service</code>
+          (scores par classe, JSON structuré, endpoint <code>/v1/logs</code>) — la donnée
+          "courante".</p>
+      </div>
+      <div class="schema-step warn">
+        <div class="num">5</div>
+        <p>Evidently compare ce lot courant à une référence figée : un échantillon d'images
+          d'entraînement.</p>
+      </div>
+      <div class="schema-step warn">
+        <div class="num">6</div>
+        <p>Le rapport HTML généré est servi par <code>/monitoring/drift-report</code> et affiché
+          plus bas en <code>&lt;iframe&gt;</code>.</p>
+      </div>
     </div>
   </div>
 

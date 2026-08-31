@@ -137,11 +137,27 @@ def clean_mask(mask: np.ndarray, n_components: int = 2, closing_kernel_size: int
     return cleaned
 
 
+def smooth_mask_contour(mask: np.ndarray, blur_kernel_size: int = 31) -> np.ndarray:
+    """Lisse le contour d'un mask déjà nettoyé (flou gaussien + reseuillage) — purement
+    cosmétique pour l'affichage. N'améliore pas la précision du contour, juste son rendu
+    visuel : à ne JAMAIS utiliser pour le pipeline de classification (le masking/crop
+    utilise le contour exact prédit, pas une version esthétisée — cf. apply_pipeline).
+
+    Testé manuellement : closing_kernel plus grand (25/35) dans clean_mask() ne change
+    quasiment rien au contour (il ne comble que les petits trous internes) ; un flou
+    gaussien avec reseuillage lisse vraiment la silhouette.
+    """
+    blurred = cv2.GaussianBlur(mask, (blur_kernel_size, blur_kernel_size), 0)
+    _, smoothed = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY)
+    return smoothed
+
+
 def predict_lung_mask(
     image_bytes: bytes,
     img_size: int,
     clean_components: int,
     clean_kernel: int,
+    smooth: bool = False,
 ) -> bytes:
     """Décode l'image reçue, prédit le mask via le U-Net, le nettoie, le redimensionne
     à la taille d'origine de l'image, puis l'encode en PNG.
@@ -151,6 +167,9 @@ def predict_lung_mask(
             décodable par OpenCV)
         img_size: résolution carrée attendue en entrée du U-Net
         clean_components / clean_kernel: cf. `clean_mask`
+        smooth: lissage cosmétique du contour (cf. `smooth_mask_contour`) — réservé à
+            l'affichage (demonstration/), jamais utilisé par le pipeline de classification
+            (backend/app/features/preprocessing.py n'active jamais ce paramètre)
 
     Returns:
         bytes - PNG du mask binaire {0, 255}, mêmes largeur/hauteur que l'image reçue
@@ -171,6 +190,8 @@ def predict_lung_mask(
     mask = (pred > 0.5).astype(np.uint8) * 255
     mask = clean_mask(mask, n_components=clean_components, closing_kernel_size=clean_kernel)
     mask = cv2.resize(mask, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_NEAREST)
+    if smooth:
+        mask = smooth_mask_contour(mask)
 
     ok, png = cv2.imencode(".png", mask)
     if not ok:

@@ -34,16 +34,12 @@
     }
     .svc-role { color: #8b949e; font-size: .8rem; margin-top: .3rem; }
     .svc-group-title { color: #58a6ff; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; margin: 1.6rem 0 .5rem; }
-    .flow {
-      display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin: 1rem 0;
-      font-size: .85rem;
-    }
-    .flow-step {
-      background: #161b22; border: 1px solid #30363d; border-radius: 6px;
-      padding: 6px 12px; color: #c9d1d9;
-    }
-    .flow-arrow { color: #58a6ff; font-weight: bold; }
     code { background: #161b22; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+    .svc-link {
+      display: inline-block; margin-top: .5rem; background: #1f6feb; color: #fff !important;
+      text-decoration: none !important; padding: 4px 12px; border-radius: 14px; font-size: .78rem;
+    }
+    .svc-link:hover { background: #388bfd; }
   </style>
 
   <div class="page-content">
@@ -105,6 +101,7 @@
       <div class="svc-role">Tracking server + Model Registry. backend/segmentation-service
         chargent leur modèle depuis le stage <code>Production</code>, fallback fichier local
         si indisponible.</div>
+      <a href="{{ mlflow_url }}" target="_blank" rel="noopener" class="svc-link" hx-boost="false">Ouvrir MLflow →</a>
     </div>
     <div class="svc-card">
       <div class="svc-name">postgres <span class="svc-port">interne</span></div>
@@ -114,6 +111,12 @@
       <div class="svc-name">minio <span class="svc-port">:9000 / :9001</span></div>
       <div class="svc-role">Stockage S3 local — artefacts MLflow (modèles) et remote DVC
         (dataset).</div>
+    </div>
+    <div class="svc-card">
+      <div class="svc-name">DagsHub <span class="svc-port">externe</span></div>
+      <div class="svc-role">Miroir du repo — suivi natif des expériences DVC (commits, métriques
+        par run), complémentaire à MLflow.</div>
+      <a href="{{ dagshub_url }}" target="_blank" rel="noopener" class="svc-link" hx-boost="false">Ouvrir DagsHub →</a>
     </div>
   </div>
 
@@ -153,24 +156,12 @@
     </div>
   </div>
 
-  <h2>Pipeline d'entraînement (reproductible)</h2>
+  <h2>Pipeline d'entraînement</h2>
   <p style="color:#8b949e">
-    <code>dvc repro</code> exécute les stages définis dans <code>dvc.yaml</code>, chacun figé
-    par les hyperparamètres de <code>params.yaml</code> et tracé dans <code>dvc.lock</code> —
-    ordre des classes, seed, split train/val/test : tout est reproductible à l'identique.
-  </p>
-  <div class="flow">
-    <span class="flow-step">data/raw.dvc<br><small style="color:#8b949e">42 330 images (MinIO)</small></span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">preprocess<br><small style="color:#8b949e">masking + augmentation</small></span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">train<br><small style="color:#8b949e">InceptionV3, logué MLflow</small></span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">evaluate<br><small style="color:#8b949e">métriques → Model Registry</small></span>
-  </div>
-  <p style="color:#8b949e; font-size:.85rem">
-    Voir l'onglet <a href="/modeles">Modèles</a> pour la provenance du modèle actuellement
-    chargé en production, et <a href="/monitoring">Monitoring</a> pour le suivi post-déploiement.
+    Pipeline DVC reproductible (<code>dvc repro</code>, figé par <code>dvc.lock</code>) —
+    détail complet (stages, architecture des modèles, preprocessing) sur l'onglet
+    <a href="/modelisation">Pipeline (DVC &amp; Models)</a>. Voir aussi
+    <a href="/monitoring">Monitoring</a> pour le suivi post-déploiement.
   </p>
 
   {% set nav_position = 'bottom' %}

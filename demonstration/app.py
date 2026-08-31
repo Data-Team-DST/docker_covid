@@ -1,5 +1,6 @@
 """Demonstration Flask — DS_COVID MLOps — facade demo produit (contexte, prédicteur, modèles)."""
 import base64
+import concurrent.futures
 import os
 from pathlib import Path
 
@@ -10,6 +11,8 @@ app = Flask(__name__)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:5050")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
+SEGMENTATION_SERVICE_URL = os.getenv("SEGMENTATION_SERVICE_URL", "http://localhost:8001")
 API_KEY = os.getenv("API_KEY", "")
 
 # Rapport de dérive Evidently — versionné DVC (outputs/drift/report.html.dvc), récupéré via
@@ -28,8 +31,7 @@ PAGE_ORDER = [
     ("/", "Sommaire"),
     ("/contexte", "Contexte DS"),
     ("/architecture", "Architecture"),
-    ("/preprocessing", "Préprocessing"),
-    ("/modeles", "Modèles"),
+    ("/modelisation", "Pipeline (DVC & Models)"),
     ("/predict", "Prédicteur"),
     ("/monitoring", "Monitoring"),
     ("/conclusion", "Conclusion"),
@@ -69,11 +71,25 @@ def conclusion():
     return render_template("conclusion.html", **nav_context("/conclusion"))
 
 
-@app.route("/preprocessing")
-def preprocessing():
-    """Environnements/masking/déséquilibre/augmentation — condensé depuis
-    frontend/page/03_preprocessing (chantier point 15)."""
-    return render_template("preprocessing.html", **nav_context("/preprocessing"))
+def _fetch_mask_data_uri(file_bytes: bytes, filename: str, mimetype: str) -> str | None:
+    """Masque pulmonaire (U-Net, segmentation-service) pour l'overlay pédagogique de
+    /predict — "ce que l'IA regarde". Best-effort : ne bloque jamais la classification
+    si le service est indisponible ou lent.
+
+    smooth=true : lissage cosmétique du contour, affichage uniquement — la classification
+    (backend/app/features/preprocessing.py) appelle ce même endpoint sans ce paramètre,
+    donc utilise toujours le contour exact, jamais la version esthétisée."""
+    try:
+        r = requests.post(
+            f"{SEGMENTATION_SERVICE_URL}/v1/segment",
+            params={"smooth": "true"},
+            files={"file": (filename, file_bytes, mimetype)},
+            timeout=15,
+        )
+        r.raise_for_status()
+    except requests.exceptions.RequestException:
+        return None
+    return "data:image/png;base64," + base64.b64encode(r.content).decode("ascii")
 
 
 @app.route("/predict", methods=["GET", "POST"])
@@ -97,21 +113,32 @@ def predict():
         + base64.b64encode(file_bytes).decode("ascii"),
     }
 
-    try:
-        r = requests.post(
+    # Classification (backend) et masque de segmentation (affichage pédagogique) en
+    # parallèle — évite de doubler une latence déjà élevée (inférence CPU-only).
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        classify_future = pool.submit(
+            requests.post,
             f"{BACKEND_URL}/api/v1/predict",
             files={"file": (file.filename, file_bytes, file.mimetype)},
             headers={"X-API-Key": API_KEY},
             timeout=30,
         )
-    except requests.exceptions.ConnectionError:
-        return render_template(
-            "predict.html",
-            result=None,
-            error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
-            **nav,
-            **image_ctx,
+        mask_future = pool.submit(
+            _fetch_mask_data_uri, file_bytes, file.filename, file.mimetype
         )
+
+        try:
+            r = classify_future.result()
+        except requests.exceptions.ConnectionError:
+            return render_template(
+                "predict.html",
+                result=None,
+                error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
+                **nav,
+                **image_ctx,
+            )
+
+        mask_data_uri = mask_future.result()
 
     if r.status_code != 200:
         try:
@@ -126,24 +153,62 @@ def predict():
             **image_ctx,
         )
 
-    return render_template("predict.html", result=r.json(), error=None, **nav, **image_ctx)
+    return render_template(
+        "predict.html",
+        result=r.json(),
+        error=None,
+        mask_data_uri=mask_data_uri,
+        **nav,
+        **image_ctx,
+    )
+
+
+@app.route("/predict/explain", methods=["POST"])
+def predict_explain():
+    """Grad-CAM à la demande — bouton dédié sur /predict, pas embarqué dans le flux
+    principal (cf. TODO.md § Chantier jour J : /explain recalcule classification +
+    segmentation en interne, éviter de tripler la charge sur segmentation-service à
+    chaque clic par défaut)."""
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return {"error": "Aucun fichier fourni."}, 400
+
+    file_bytes = file.read()
+    try:
+        r = requests.post(
+            f"{BACKEND_URL}/api/v1/explain",
+            files={"file": (file.filename, file_bytes, file.mimetype)},
+            headers={"X-API-Key": API_KEY},
+            timeout=30,
+        )
+        r.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Grad-CAM indisponible ({BACKEND_URL}) — {e}"}, 502
+
+    gradcam_data_uri = "data:image/png;base64," + base64.b64encode(r.content).decode(
+        "ascii"
+    )
+    return {"gradcam_data_uri": gradcam_data_uri}
 
 
 @app.route("/architecture")
 def architecture():
-    """Architecture microservices — frontières HTTP, ports, pipeline DVC/MLflow."""
-    return render_template("architecture.html", **nav_context("/architecture"))
+    """Architecture microservices — frontières HTTP, ports, tracking DVC/MLflow/DagsHub."""
+    return render_template(
+        "architecture.html",
+        mlflow_url=MLFLOW_URL,
+        dagshub_url=DAGSHUB_URL,
+        **nav_context("/architecture"),
+    )
 
 
 @app.route("/monitoring")
 def monitoring():
-    """Outils de monitoring — MLflow, Prometheus/Grafana, DagsHub, Evidently."""
+    """Outils de monitoring — Prometheus/Grafana (santé service), Evidently (dérive)."""
     return render_template(
         "monitoring.html",
-        mlflow_url=MLFLOW_URL,
         grafana_url=GRAFANA_URL,
         prometheus_url=PROMETHEUS_URL,
-        dagshub_url=DAGSHUB_URL,
         **nav_context("/monitoring"),
     )
 
@@ -161,22 +226,25 @@ def drift_report():
     return send_file(DRIFT_REPORT_PATH)
 
 
-@app.route("/modeles")
-def model_status():
-    """Provenance des modèles chargés (MLflow Registry vs fichier local, cf. US
-    chantier infra #17) — interroge /health du backend, qui interroge lui-même
-    celui du segmentation-service."""
+@app.route("/modelisation")
+def modelisation():
+    """Modélisation : pipeline DVC (dvc.yaml), architecture des deux modèles
+    (classification, segmentation) et illustrations qualité — complète /modeles
+    (provenance runtime) et /architecture (microservices) sans les dupliquer."""
     try:
-        r = requests.get(f"{BACKEND_URL}/health", timeout=5)
+        r = requests.get(f"{DATA_SERVICE_URL}/v1/data/stats", timeout=10)
         r.raise_for_status()
-        health = r.json()
-        error = None
+        dvc_stats = r.json()
+        dvc_error = None
     except requests.exceptions.RequestException as e:
-        health = None
-        error = f"Backend inaccessible ({BACKEND_URL}) — {e}"
+        dvc_stats = None
+        dvc_error = f"data-service inaccessible ({DATA_SERVICE_URL}) — {e}"
 
     return render_template(
-        "model_status.html", health=health, error=error, **nav_context("/modeles")
+        "modelisation.html",
+        dvc_stats=dvc_stats,
+        dvc_error=dvc_error,
+        **nav_context("/modelisation"),
     )
 
 

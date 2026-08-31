@@ -7,7 +7,9 @@ N_PER_CLASS_DEFAULT = 6
 THUMBNAIL_MAX = (512, 512)
 IMG_EXTS = {".png"}
 KAGGLE_SLUG = "tawsifurrahman/covid19-radiography-database"
-CLASS_NAMES = ["COVID", "Lung_Opacity", "Normal", "Viral Pneumonia"]
+# Ordre = params.yaml § preprocess.classes (figé par dvc.lock) — pas l'ordre alphabétique
+# (cf. backend/app/config.py, corrigé dans dec30ab après un train/serving skew).
+CLASS_NAMES = ["COVID", "Normal", "Viral Pneumonia", "Lung_Opacity"]
 
 DEFAULT_CLASS_COUNTS = {
     "COVID": 3616,

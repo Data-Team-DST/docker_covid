@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from app.api.explain import router as explain_router
 from app.api.health import router as health_router
 from app.api.metrics import router as metrics_router
 from app.api.predict import router as predict_router
@@ -49,6 +50,7 @@ app.middleware("http")(track_http_metrics)
 
 app.include_router(health_router, tags=["Health"])
 app.include_router(predict_router, prefix="/api/v1", tags=["Prediction"])
+app.include_router(explain_router, prefix="/api/v1", tags=["Prediction"])
 app.include_router(metrics_router, tags=["Monitoring"])
 
 

@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
 
 from segmentation_service.config import settings
 from segmentation_service.model import model_loader, predict_lung_mask
@@ -23,6 +23,14 @@ api_router = APIRouter()
 )
 async def segment(
     file: UploadFile = File(..., description="Radiographie thoracique (JPEG/PNG)"),
+    smooth: bool = Query(
+        False,
+        description=(
+            "Lissage cosmétique du contour (affichage uniquement — jamais utilisé par le "
+            "pipeline de classification, qui appelle predict_lung_mask() directement en "
+            "Python sans passer par ce paramètre HTTP)."
+        ),
+    ),
 ):
     """
     Prédit le mask binaire des poumons via le U-Net et le renvoie en PNG, aux mêmes
@@ -39,6 +47,7 @@ async def segment(
             img_size=settings.img_size,
             clean_components=settings.clean_mask_components,
             clean_kernel=settings.clean_mask_closing_kernel,
+            smooth=smooth,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
