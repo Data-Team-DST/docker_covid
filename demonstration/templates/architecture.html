@@ -40,6 +40,27 @@
       text-decoration: none !important; padding: 4px 12px; border-radius: 14px; font-size: .78rem;
     }
     .svc-link:hover { background: #388bfd; }
+    .overview-fig { margin: 1.2rem 0 1.6rem; text-align: center; }
+    .overview-fig button {
+      background: none; border: none; padding: 0; cursor: zoom-in; display: inline-block;
+    }
+    .overview-fig img {
+      max-width: 100%; border: 1px solid #30363d; border-radius: 8px;
+    }
+    .overview-fig figcaption {
+      color: #8b949e; font-size: .8rem; margin-top: .5rem;
+    }
+    .overview-fig .caveat { color: #d29922; }
+    dialog#lightbox {
+      border: none; background: none; padding: 2rem; max-width: 100vw; max-height: 100vh;
+      cursor: zoom-out;
+    }
+    dialog#lightbox::backdrop { background: rgba(1,4,9,.92); }
+    dialog#lightbox img { max-width: 96vw; max-height: 92vh; border-radius: 6px; display: block; }
+    .lightbox-hint {
+      position: fixed; top: 1rem; right: 1.2rem; color: #8b949e; font-size: .8rem;
+      z-index: 1001;
+    }
   </style>
 
   <div class="page-content">
@@ -59,6 +80,19 @@
     <code>/api/v1/...</code>. Ça permet à chaque service d'évoluer, de crasher ou de redémarrer
     sans emporter les autres avec lui.
   </div>
+
+  <figure class="overview-fig">
+    <button type="button" onclick="openLightbox(this.querySelector('img').src)" aria-label="Agrandir l'infographie">
+      <img src="{{ url_for('static', filename='img/architecture-infographie.png') }}"
+           alt="Vue d'ensemble de l'architecture microservices">
+    </button>
+    <figcaption>
+      Vue d'ensemble — cliquer pour zoomer.
+      <span class="caveat">⚠️ La case "train" affiche InceptionV3 à titre illustratif : le
+      modèle réellement industrialisé est un CNN plus léger (voir
+      <a href="/modelisation">Pipeline</a>).</span>
+    </figcaption>
+  </figure>
 
   <div class="svc-group-title">Inférence</div>
   <div class="svc-grid">
@@ -170,5 +204,21 @@
   {% include '_nav_footer.html' %}
 
   </div>
+
+  <dialog id="lightbox" aria-label="Infographie agrandie" onclick="closeLightbox()"
+          onkeydown="if (event.key === 'Escape') closeLightbox()">
+    <span class="lightbox-hint">Cliquer n'importe où (ou Échap) pour fermer</span>
+    <img id="lightbox-img" src="" alt="Vue d'ensemble de l'architecture microservices (zoom)">
+  </dialog>
+  <script>
+    var lightbox = document.getElementById('lightbox');
+    function openLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      lightbox.showModal();
+    }
+    function closeLightbox() {
+      lightbox.close();
+    }
+  </script>
 </body>
 </html>
