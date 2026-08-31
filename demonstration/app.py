@@ -1,5 +1,6 @@
 """Demonstration Flask — DS_COVID MLOps — facade demo produit (contexte, prédicteur, modèles)."""
 import base64
+import concurrent.futures
 import os
 from pathlib import Path
 
@@ -11,6 +12,7 @@ app = Flask(__name__)
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:5050")
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:5001")
+SEGMENTATION_SERVICE_URL = os.getenv("SEGMENTATION_SERVICE_URL", "http://localhost:8001")
 API_KEY = os.getenv("API_KEY", "")
 
 # Rapport de dérive Evidently — versionné DVC (outputs/drift/report.html.dvc), récupéré via
@@ -78,6 +80,22 @@ def preprocessing():
     return render_template("preprocessing.html", **nav_context("/preprocessing"))
 
 
+def _fetch_mask_data_uri(file_bytes: bytes, filename: str, mimetype: str) -> str | None:
+    """Masque pulmonaire (U-Net, segmentation-service) pour l'overlay pédagogique de
+    /predict — "ce que l'IA regarde". Best-effort : ne bloque jamais la classification
+    si le service est indisponible ou lent."""
+    try:
+        r = requests.post(
+            f"{SEGMENTATION_SERVICE_URL}/v1/segment",
+            files={"file": (filename, file_bytes, mimetype)},
+            timeout=15,
+        )
+        r.raise_for_status()
+    except requests.exceptions.RequestException:
+        return None
+    return "data:image/png;base64," + base64.b64encode(r.content).decode("ascii")
+
+
 @app.route("/predict", methods=["GET", "POST"])
 def predict():
     nav = nav_context("/predict")
@@ -99,21 +117,32 @@ def predict():
         + base64.b64encode(file_bytes).decode("ascii"),
     }
 
-    try:
-        r = requests.post(
+    # Classification (backend) et masque de segmentation (affichage pédagogique) en
+    # parallèle — évite de doubler une latence déjà élevée (inférence CPU-only).
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        classify_future = pool.submit(
+            requests.post,
             f"{BACKEND_URL}/api/v1/predict",
             files={"file": (file.filename, file_bytes, file.mimetype)},
             headers={"X-API-Key": API_KEY},
             timeout=30,
         )
-    except requests.exceptions.ConnectionError:
-        return render_template(
-            "predict.html",
-            result=None,
-            error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
-            **nav,
-            **image_ctx,
+        mask_future = pool.submit(
+            _fetch_mask_data_uri, file_bytes, file.filename, file.mimetype
         )
+
+        try:
+            r = classify_future.result()
+        except requests.exceptions.ConnectionError:
+            return render_template(
+                "predict.html",
+                result=None,
+                error=f"Backend inaccessible ({BACKEND_URL}) — lancer : make start",
+                **nav,
+                **image_ctx,
+            )
+
+        mask_data_uri = mask_future.result()
 
     if r.status_code != 200:
         try:
@@ -128,7 +157,14 @@ def predict():
             **image_ctx,
         )
 
-    return render_template("predict.html", result=r.json(), error=None, **nav, **image_ctx)
+    return render_template(
+        "predict.html",
+        result=r.json(),
+        error=None,
+        mask_data_uri=mask_data_uri,
+        **nav,
+        **image_ctx,
+    )
 
 
 @app.route("/architecture")

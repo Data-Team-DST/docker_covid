@@ -21,10 +21,6 @@
       background: #2d2410; border: 1px solid #9e6a03; border-radius: 6px;
       padding: .8rem 1rem; color: #d29922; margin: 1rem 0;
     }
-    table { border-collapse: collapse; width: 100%; margin: .6rem 0; font-size: .88rem; }
-    th, td { border: 1px solid #30363d; padding: .5rem .7rem; text-align: left; }
-    th { color: #79c0ff; background: #161b22; }
-    .done { color: #3fb950; }
   </style>
 
   <div class="page-content">
@@ -38,72 +34,56 @@
     l'industrialisation MLOps elle-même (Phases 1→4), pas sur la phase exploratoire d'origine.
   </p>
 
-  <h2>1. Ce qui a été industrialisé</h2>
+  <h2>Ce qu'on a construit</h2>
   <div class="card">
-    <ul>
-      <li><span class="done">✅</span> Environnement reproductible, API FastAPI sécurisée
-        (clé <code>X-API-Key</code>, rate limiting, validation stricte des uploads)</li>
-      <li><span class="done">✅</span> Découpage en microservices HTTP-only (backend,
-        segmentation-service, data-service, dvc-service, log-service) — voir
-        <a href="/architecture">Architecture</a></li>
-      <li><span class="done">✅</span> Versionnage des données (DVC, remote MinIO) et des
-        modèles (MLflow tracking + Model Registry)</li>
-      <li><span class="done">✅</span> CI/CD complet : lint → tests → SonarCloud → build/push
-        GHCR (3 services) → smoke-test de déploiement</li>
-      <li><span class="done">✅</span> Docker Compose production-ready : healthchecks et
-        limites mémoire sur tous les services, 0 secret en dur</li>
-      <li><span class="done">✅</span> Monitoring : dashboard Grafana (latence p50/p95, taux
-        d'erreurs, distribution des prédictions par classe) + alertes Prometheus, rapport de
-        dérive Evidently générable à la demande — voir <a href="/monitoring">Monitoring</a></li>
-    </ul>
-  </div>
-
-  <h2>2. Limites et incidents rencontrés en cours de route</h2>
-  <div class="card">
-    <p style="color:#8b949e; font-size:.85rem">
-      Assumés plutôt que masqués — une industrialisation MLOps se juge aussi à la façon dont
-      elle détecte et corrige ses propres angles morts :
+    <p style="color:#8b949e">
+      Un notebook de recherche ne suffit pas à mettre un modèle entre les mains d'un
+      utilisateur réel. Il a fallu le découper en <a href="/architecture">microservices</a>
+      qui communiquent par HTTP plutôt que par imports Python, versionner les données et les
+      modèles au lieu de les balader en pièce jointe, sécuriser l'API (clé, rate limiting,
+      validation stricte des uploads), automatiser le lint/tests/build via CI/CD jusqu'au
+      déploiement, et enfin instrumenter le tout pour savoir s'il tient la route une fois en
+      prod — <a href="/monitoring">latence, taux d'erreurs, dérive des prédictions</a>.
+      C'est ce système-là, pas seulement le modèle, qu'on présente aujourd'hui.
     </p>
-    <ul>
-      <li><b>Train/serving skew</b> — l'ordre des classes dans le backend ne correspondait pas
-        à celui figé par le pipeline d'entraînement (<code>dvc.lock</code>). Détecté par test
-        batch réel (matrice de confusion), pas par un exemple isolé. Corrigé le 2026-08-28 :
-        accuracy 35 % → 78 % sur un lot de test.</li>
-      <li><b>Instabilité mémoire de segmentation-service</b> sous appels séquentiels — stopgap
-        appliqué (limite mémoire relevée), cause racine (gestion mémoire TensorFlow entre
-        appels <code>predict()</code>) non résolue.</li>
-      <li><b>CI "Deploy smoke-test" intermittente</b> — root-causée (retry MLflow trop lent
-        dans la fenêtre de test) et corrigée.</li>
-      <li><b>Pipeline DVC désynchronisé localement</b> (<code>dvc status</code> signale des
-        écarts entre <code>params.yaml</code>/données sur disque et le dernier
-        <code>dvc.lock</code> figé) — connu, pas encore traité.</li>
-    </ul>
   </div>
 
-  <h2>3. Backlog encore ouvert</h2>
+  <h2>Ce qu'on a appris en le construisant</h2>
   <div class="card">
-    <table>
-      <tr><th>Story</th><th>Statut</th></tr>
-      <tr><td>US-15 — Load test /predict P95 &lt; 500 ms</td><td>Outillage prêt, bloqué sans modèle entraîné en local</td></tr>
-      <tr><td>US-21 — Ré-entraînement semi-automatique</td><td>Non démarré (dépendance US-20 désormais levée)</td></tr>
-      <tr><td>US-22 — Documentation finale (ADRs, runbooks)</td><td>Non démarré</td></tr>
-      <tr><td>Kubernetes (Phase 3)</td><td>Manifests présents, non déployé</td></tr>
-    </table>
+    <p>
+      Le moment le plus révélateur : un test en lot sur des radios réelles a montré que le
+      backend confondait systématiquement trois classes sur quatre — l'ordre des classes
+      codé en dur ne correspondait plus à celui figé par le pipeline d'entraînement. Invisible
+      sur un exemple isolé, flagrant sur une matrice de confusion. Correction en une ligne,
+      mais le vrai enseignement est méthodologique : <b>un modèle qui répond n'est pas un
+      modèle qui répond juste</b> — sans test de bout en bout sur des données réelles, ce bug
+      serait passé inaperçu jusqu'à la démo.
+    </p>
+    <p style="color:#8b949e; font-size:.9rem">
+      D'autres frictions, plus ordinaires, ont jalonné le projet : une fuite mémoire du
+      service de segmentation sous charge (contournée, cause racine encore ouverte), un test
+      de déploiement automatisé intermittent (root-causé et corrigé), un pipeline de données
+      localement désynchronisé de son propre historique figé. Rien de dramatique — le genre
+      de choses qu'on ne voit qu'en poussant le système au-delà du cas nominal.
+    </p>
   </div>
+
   <div class="warning-box">
     ⚠️ Ce projet reste une démonstration MLOps — <b>pas un dispositif médical</b>, pas destiné
     à un usage clinique en l'état.
   </div>
 
-  <h2>4. Perspectives</h2>
+  <h2>La suite</h2>
   <div class="card">
-    <ul>
-      <li>Court terme : formaliser US-19 (panels/alertes Grafana), automatiser la génération
-        du rapport de dérive en continu (au-delà du script manuel actuel)</li>
-      <li>Moyen terme : US-21 (ré-entraînement semi-automatique déclenché par la dérive)</li>
-      <li>Déploiement Kubernetes (Phase 3, deadline dépassée — à re-planifier)</li>
-      <li>Documentation finale et runbooks (US-22) avant transfert d'équipe</li>
-    </ul>
+    <p>
+      Le monitoring en place (Grafana, alertes Prometheus, rapport de dérive Evidently)
+      donne déjà de la visibilité — la prochaine étape logique est de le rendre continu
+      plutôt que déclenché à la main, puis d'y brancher un ré-entraînement semi-automatique
+      quand la dérive dépasse un seuil. Le déploiement Kubernetes, préparé mais pas encore
+      lancé, et une documentation de transfert (ADRs, runbooks) restent les deux chantiers
+      qui feraient passer ce projet de « démonstration convaincante » à « système que
+      l'équipe suivante peut reprendre sans nous ».
+    </p>
   </div>
 
   {% set nav_position = 'bottom' %}

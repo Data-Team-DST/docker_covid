@@ -55,6 +55,10 @@
     .score-bar { background: #1f6feb; height: 100%; }
     .score-value { width: 50px; text-align: right; font-size: .85rem; color: #8b949e; }
     .latency { color: #8b949e; font-size: .8rem; margin-top: .8rem; }
+    .mask-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid #21262d; }
+    .mask-col { flex: 1; min-width: 160px; text-align: center; }
+    .mask-col img { max-width: 100%; max-height: 200px; border-radius: 6px; border: 1px solid #30363d; background: #000; }
+    .mask-caption { font-size: .75rem; color: #8b949e; margin-top: .4rem; }
   </style>
 
   <div class="page-content">
@@ -105,6 +109,19 @@
     </div>
     {% endfor %}
     <div class="latency">Latence : {{ result.latency_ms }} ms</div>
+
+    {% if mask_data_uri %}
+    <div class="mask-row">
+      <div class="mask-col">
+        <img src="{{ image_data_uri }}" alt="Radiographie originale">
+        <div class="mask-caption">Radiographie envoyée</div>
+      </div>
+      <div class="mask-col">
+        <img src="{{ mask_data_uri }}" alt="Masque pulmonaire détecté">
+        <div class="mask-caption">🫁 Masque pulmonaire détecté (U-Net) — ce que le modèle isole avant classification</div>
+      </div>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 

@@ -21,10 +21,6 @@
     .stat { text-align: center; min-width: 120px; }
     .stat .value { font-size: 1.6rem; font-weight: bold; color: #58a6ff; }
     .stat .label { color: #8b949e; font-size: .8rem; }
-    .smart-grid { display: grid; grid-template-columns: auto 1fr; gap: .3rem 1rem; font-size: .88rem; }
-    .smart-grid b { color: #79c0ff; }
-    .result-good { color: #3fb950; }
-    .result-bad { color: #f85149; }
     .transition {
       border-left: 3px solid #58a6ff; padding: .8rem 1rem; margin-top: 2rem;
       background: #0f1520; font-size: .9rem;
@@ -62,62 +58,20 @@
     </p>
   </div>
 
-  <h2>Objectif SMART initial</h2>
-  <div class="card">
-    <div class="smart-grid">
-      <b>S</b><span>Classification COVID vs non-COVID</span>
-      <b>M</b><span>F1 ≥ 0,80 sur validation indépendante</span>
-      <b>A</b><span>Fine-tuning d'InceptionV3 (transfer learning)</span>
-      <b>R</b><span>Réduire les faux négatifs</span>
-      <b>T</b><span>Démonstration au 12/01/2024</span>
-    </div>
-  </div>
-
-  <h2>Résultat baseline — Machine Learning classique</h2>
-  <div class="card">
-    <p>Modèles testés sur un échantillon équilibré (200 images/classe), évalués par matrice de confusion :</p>
-    <ul>
-      <li>Support Vector Machine (SVM)</li>
-      <li>k-Nearest Neighbors (k-NN)</li>
-      <li>Random Forest</li>
-    </ul>
-    <p><span class="result-good">✅ Random Forest</span> : modèle le plus performant.
-       <span class="result-bad">❌ SVM</span> : le moins performant.
-       Optimisation par Grid Search (validation croisée) sur les deux.</p>
-    <div class="img-gallery">
-      <figure>
-        <img src="{{ url_for('static', filename='img/matrice-confusion-rf-1.png') }}" alt="Matrice de confusion Random Forest 1">
-        <figcaption>Random Forest — matrice de confusion (1)</figcaption>
-      </figure>
-      <figure>
-        <img src="{{ url_for('static', filename='img/matrice-confusion-rf-2.png') }}" alt="Matrice de confusion Random Forest 2">
-        <figcaption>Random Forest — matrice de confusion (2)</figcaption>
-      </figure>
-      <figure>
-        <img src="{{ url_for('static', filename='img/matrice-confusion-svm-1.png') }}" alt="Matrice de confusion SVM 1">
-        <figcaption>SVM — matrice de confusion (1)</figcaption>
-      </figure>
-      <figure>
-        <img src="{{ url_for('static', filename='img/matrice-confusion-svm-2.png') }}" alt="Matrice de confusion SVM 2">
-        <figcaption>SVM — matrice de confusion (2)</figcaption>
-      </figure>
-      <figure>
-        <img src="{{ url_for('static', filename='img/matrice-confusion-knn.png') }}" alt="Matrice de confusion KNN">
-        <figcaption>k-NN — matrice de confusion</figcaption>
-      </figure>
-    </div>
-  </div>
-
-  <h2>Résultat baseline — Deep Learning (modèle retenu)</h2>
+  <h2>De l'idée au modèle retenu</h2>
   <div class="card">
     <p>
-      <b>InceptionV3</b> (transfer learning), entraîné sur 2 000 images : 20 epochs de feature
-      extraction puis 30 epochs de fine-tuning (20 dernières couches dégelées).
+      Premier réflexe : des modèles de Machine Learning classiques (SVM, k-NN, Random Forest)
+      sur un échantillon équilibré (200 images/classe) — Random Forest en tête, mais un
+      plafond de performance vite atteint. Les patterns radiologiques sont trop fins pour
+      des features faites à la main : passage au Deep Learning.
     </p>
-    <p class="result-good">
-      Performance globale jugée très bonne, bonne identification des 3 classes
-      (COVID, pneumonie virale, normal). Le transfert d'apprentissage InceptionV3 est
-      efficace sur ce type d'images médicales.
+    <p>
+      <b>InceptionV3</b> (transfer learning) a tranché le débat — entraîné sur 2 000 images
+      (20 epochs de feature extraction, puis 30 de fine-tuning), il identifie correctement
+      les 3 classes avec une marge confortable au-dessus de l'objectif fixé
+      (F1 ≥ 0,80 sur validation indépendante). C'est ce modèle qui est industrialisé
+      aujourd'hui.
     </p>
     <div class="img-gallery">
       <figure>
@@ -155,7 +109,7 @@
     une API de service, des microservices, du versioning de données/modèles (DVC, MLflow), du
     CI/CD, un déploiement Kubernetes, et du monitoring. Voir le
     <a href="{{ dashboard_url }}/" hx-boost="false">détail par sprint</a>, le <a href="/predict">prédicteur live</a>, et la
-    <a href="/conclusion">conclusion critique et perspectives</a> de la phase Data Science.
+    <a href="/conclusion">conclusion</a> de cette industrialisation.
   </div>
 
   {% set nav_position = 'bottom' %}
