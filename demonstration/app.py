@@ -32,6 +32,7 @@ PAGE_ORDER = [
     ("/contexte", "Contexte DS"),
     ("/architecture", "Architecture"),
     ("/modelisation", "Pipeline (DVC & Models)"),
+    ("/experiences", "Expériences (MLflow & DagsHub)"),
     ("/predict", "Prédicteur"),
     ("/monitoring", "Monitoring"),
     ("/conclusion", "Conclusion"),
@@ -210,6 +211,17 @@ def monitoring():
         grafana_url=GRAFANA_URL,
         prometheus_url=PROMETHEUS_URL,
         **nav_context("/monitoring"),
+    )
+
+
+@app.route("/experiences")
+def experiences():
+    """Présente le tracking local MLflow et son miroir DagsHub."""
+    return render_template(
+        "experiences.html",
+        mlflow_url=MLFLOW_URL,
+        dagshub_url=DAGSHUB_URL,
+        **nav_context("/experiences"),
     )
 
 

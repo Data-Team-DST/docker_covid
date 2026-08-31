@@ -29,7 +29,11 @@ sys.path.insert(0, str(TRAINER_ROOT / "src"))
 load_dotenv(REPO_ROOT / ".env")
 
 from ds_covid.data import MemmapSequence  # noqa: E402
-from ds_covid.mlflow_utils import DualMlflowRun, MlflowEpochLogger  # noqa: E402
+from ds_covid.mlflow_utils import (  # noqa: E402
+    DualMlflowRun,
+    MlflowEpochLogger,
+    collect_run_tags,
+)
 from ds_covid.models import build_cnn  # noqa: E402
 
 PARAMS_FILE  = REPO_ROOT / "params.yaml"
@@ -98,9 +102,6 @@ def main() -> None:
     mlflow.set_registry_uri(tracking_uri)
     mlflow.set_experiment(mlp["experiment_name"])
 
-    remote_tracking_uri = os.getenv("DAGSHUB_MLFLOW_TRACKING_URI")
-    remote_registry_uri = remote_tracking_uri if remote_tracking_uri else None
-
     flat_params = flatten_dict(p)
     flat_params["train.epochs"] = tp["epochs"]
     flat_params["train.batch_size"] = tp["batch_size"]
@@ -110,6 +111,8 @@ def main() -> None:
 
     with DualMlflowRun(mlp["experiment_name"]) as tracking:
         tracking.log_params(flat_params)
+        tracking.log_tags(collect_run_tags(PARAMS_FILE, p, mlp["model_name"]))
+        tracking.log_config_artifact(PARAMS_FILE)
 
         model = build_cnn(
             input_shape=(img_h, img_w, 1), num_classes=4, learning_rate=tp["learning_rate"],
@@ -137,29 +140,14 @@ def main() -> None:
         model_path = MODELS_DIR / "classification.keras"
         model.save(model_path)
 
-        local_tracking_uri = mlflow.get_tracking_uri()
-        local_registry_uri = mlflow.get_registry_uri()
-
         try:
             mlflow.keras.log_model(model, name="model",
                                    registered_model_name=mlp["model_name"])
         except Exception as error:
             print(f"[WARN] Enregistrement local MLflow ignoré : {error}", flush=True)
 
-        if remote_registry_uri:
-            try:
-                mlflow.set_tracking_uri(remote_registry_uri)
-                mlflow.set_registry_uri(remote_registry_uri)
-                mlflow.keras.log_model(model, name="model_remote",
-                                       registered_model_name=mlp["model_name"])
-                print(f"[INFO] Modèle enregistré dans le registry DagsHub : {mlp['model_name']}", flush=True)
-            except Exception as error:
-                print(f"[WARN] Enregistrement distant MLflow (DagsHub) ignoré : {error}", flush=True)
-            finally:
-                mlflow.set_tracking_uri(local_tracking_uri)
-                mlflow.set_registry_uri(local_registry_uri)
-
         tracking.log_model(model, "model")
+        tracking.register_model(mlp["model_name"])
 
         metrics = {
             "val_accuracy": val_acc,
