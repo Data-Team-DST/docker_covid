@@ -188,19 +188,22 @@ def predict_explain():
 
 @app.route("/architecture")
 def architecture():
-    """Architecture microservices — frontières HTTP, ports, pipeline DVC/MLflow."""
-    return render_template("architecture.html", **nav_context("/architecture"))
+    """Architecture microservices — frontières HTTP, ports, tracking DVC/MLflow/DagsHub."""
+    return render_template(
+        "architecture.html",
+        mlflow_url=MLFLOW_URL,
+        dagshub_url=DAGSHUB_URL,
+        **nav_context("/architecture"),
+    )
 
 
 @app.route("/monitoring")
 def monitoring():
-    """Outils de monitoring — MLflow, Prometheus/Grafana, DagsHub, Evidently."""
+    """Outils de monitoring — Prometheus/Grafana (santé service), Evidently (dérive)."""
     return render_template(
         "monitoring.html",
-        mlflow_url=MLFLOW_URL,
         grafana_url=GRAFANA_URL,
         prometheus_url=PROMETHEUS_URL,
-        dagshub_url=DAGSHUB_URL,
         **nav_context("/monitoring"),
     )
 

@@ -89,12 +89,6 @@
 
   <div class="tool-grid">
     <div class="tool-card">
-      <div class="tool-title">🧪 MLflow</div>
-      <div class="tool-desc">Model Registry — versions, stages (Production/Staging), métriques
-        et paramètres de chaque run d'entraînement.</div>
-      <a href="{{ mlflow_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir MLflow →</a>
-    </div>
-    <div class="tool-card">
       <div class="tool-title">🔥 Prometheus</div>
       <div class="tool-desc">Collecte les métriques exposées par le backend
         (<code>/metrics</code>) toutes les 10s et les stocke dans sa base de séries
@@ -109,13 +103,11 @@
       <a href="{{ grafana_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir Grafana →</a>
       <div class="hint">Nécessite <code>make monitoring-start</code>.</div>
     </div>
-    <div class="tool-card">
-      <div class="tool-title">🔗 DagsHub</div>
-      <div class="tool-desc">Miroir du repo avec suivi natif des expériences DVC (commits,
-        métriques par run) — complémentaire à MLflow.</div>
-      <a href="{{ dagshub_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir DagsHub →</a>
-    </div>
   </div>
+  <p style="color:#8b949e; font-size:.85rem">
+    MLflow et DagsHub (tracking des runs et versionnage) sont sur l'onglet
+    <a href="/architecture">Architecture</a> — ici, uniquement la santé du service en production.
+  </p>
 
   <!-- AJOUT : schéma explicatif — comment Prometheus/Grafana et Evidently
        récupèrent réellement leurs données, pour la présentation à l'oral -->
