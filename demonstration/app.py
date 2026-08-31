@@ -74,10 +74,15 @@ def conclusion():
 def _fetch_mask_data_uri(file_bytes: bytes, filename: str, mimetype: str) -> str | None:
     """Masque pulmonaire (U-Net, segmentation-service) pour l'overlay pédagogique de
     /predict — "ce que l'IA regarde". Best-effort : ne bloque jamais la classification
-    si le service est indisponible ou lent."""
+    si le service est indisponible ou lent.
+
+    smooth=true : lissage cosmétique du contour, affichage uniquement — la classification
+    (backend/app/features/preprocessing.py) appelle ce même endpoint sans ce paramètre,
+    donc utilise toujours le contour exact, jamais la version esthétisée."""
     try:
         r = requests.post(
             f"{SEGMENTATION_SERVICE_URL}/v1/segment",
+            params={"smooth": "true"},
             files={"file": (filename, file_bytes, mimetype)},
             timeout=15,
         )
