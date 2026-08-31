@@ -109,7 +109,7 @@
   </div>
 
   {% if result %}
-  <div class="card">
+  <div class="card" id="result-card">
     <div class="result-class">{{ result.predicted_class }}</div>
     <div style="color:#8b949e; margin-bottom: .8rem">
       Confiance : {{ (result.confidence * 100) | round(1) }}%
@@ -159,6 +159,7 @@
     var filenameEl = document.getElementById('filename');
     var explainBtn = document.getElementById('explain-btn');
     var explainResult = document.getElementById('explain-result');
+    var resultCard = document.getElementById('result-card');
 
     function showPreview(file) {
       if (!file) return;
@@ -194,6 +195,10 @@
         preview.style.display = 'none';
         dropLabel.style.display = '';
         filenameEl.style.display = 'none';
+        // La carte résultat (classe, scores, masque, Grad-CAM) vient de la précédente
+        // classification — la cacher, sinon elle reste affichée pendant qu'on choisit
+        // une nouvelle image, comme si elle s'appliquait déjà à celle-ci.
+        if (resultCard) resultCard.style.display = 'none';
         fileInput.click();
       }
     });
