@@ -9,7 +9,6 @@ rapide, pas d'impact notable sur la latence déjà mesurée.
 
 import cv2
 import numpy as np
-import tensorflow as tf
 
 
 def _find_last_conv_layer(model) -> str:
@@ -33,6 +32,11 @@ def compute_gradcam_png(model, img_array: np.ndarray) -> bytes:
     Returns:
         bytes PNG (heatmap couleur superposée à l'image en niveaux de gris)
     """
+    import tensorflow as tf  # noqa: PLC0415 — import paresseux, cf. models/loader.py :
+    # backend/requirements-dev.txt (CI tests) n'installe pas tensorflow, seul
+    # backend/requirements.txt (prod) l'a. Un import en tête de module casserait la
+    # collection des tests qui font `from app.main import app`.
+
     last_conv_layer = _find_last_conv_layer(model)
     grad_model = tf.keras.models.Model(
         model.inputs, [model.get_layer(last_conv_layer).output, model.output]
