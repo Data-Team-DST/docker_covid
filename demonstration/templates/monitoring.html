@@ -87,8 +87,13 @@
     comporte toujours comme attendu face au trafic réel.
   </p>
 
-  <!-- AJOUT : la <div class="tool-grid"> d'ouverture manquait dans le code original -->
   <div class="tool-grid">
+    <div class="tool-card">
+      <div class="tool-title">🧪 MLflow</div>
+      <div class="tool-desc">Model Registry — versions, stages (Production/Staging), métriques
+        et paramètres de chaque run d'entraînement.</div>
+      <a href="{{ mlflow_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir MLflow →</a>
+    </div>
     <div class="tool-card">
       <div class="tool-title">🔥 Prometheus</div>
       <div class="tool-desc">Collecte les métriques exposées par le backend
@@ -103,6 +108,12 @@
         latence des prédictions, volumétrie.</div>
       <a href="{{ grafana_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir Grafana →</a>
       <div class="hint">Nécessite <code>make monitoring-start</code>.</div>
+    </div>
+    <div class="tool-card">
+      <div class="tool-title">🔗 DagsHub</div>
+      <div class="tool-desc">Miroir du repo avec suivi natif des expériences DVC (commits,
+        métriques par run) — complémentaire à MLflow.</div>
+      <a href="{{ dagshub_url }}" target="_blank" rel="noopener" class="tool-link" hx-boost="false">Ouvrir DagsHub →</a>
     </div>
   </div>
 
@@ -146,8 +157,8 @@
 
       <path d="M165,140 C210,140 210,180 250,180" stroke="#d29922" stroke-width="1.5" fill="none" marker-end="url(#arr-warn)"/>
       <rect x="250" y="155" width="160" height="50" rx="8" fill="#161b22" stroke="#30363d"/>
-      <text x="330" y="175" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="bold">predictions_log.csv</text>
-      <text x="330" y="190" text-anchor="middle" fill="#8b949e" font-size="9">1 ligne / prédiction</text>
+      <text x="330" y="175" text-anchor="middle" fill="#c9d1d9" font-size="11" font-weight="bold">log-service</text>
+      <text x="330" y="190" text-anchor="middle" fill="#8b949e" font-size="9">/v1/logs (JSON)</text>
 
       <path d="M410,180 H450" stroke="#d29922" stroke-width="1.5" marker-end="url(#arr-warn)"/>
       <rect x="450" y="155" width="140" height="50" rx="8" fill="#161b22" stroke="#9e6a03" stroke-width="1.5"/>
@@ -183,13 +194,14 @@
       </div>
       <div class="schema-step warn">
         <div class="num">4</div>
-        <p>En parallèle, chaque prédiction est aussi écrite dans <code>predictions_log.csv</code>
-          (scores par classe) — la donnée "courante".</p>
+        <p>En parallèle, chaque prédiction est loguée par <code>log-service</code>
+          (scores par classe, JSON structuré, endpoint <code>/v1/logs</code>) — la donnée
+          "courante".</p>
       </div>
       <div class="schema-step warn">
         <div class="num">5</div>
-        <p>Evidently compare ce lot courant à une référence figée manuellement quand le modèle
-          tournait en régime jugé normal.</p>
+        <p>Evidently compare ce lot courant à une référence figée : un échantillon d'images
+          d'entraînement.</p>
       </div>
       <div class="schema-step warn">
         <div class="num">6</div>
