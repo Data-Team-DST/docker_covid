@@ -91,7 +91,8 @@
       <div class="classes-hint">
         <span>COVID</span><span>Lung Opacity</span><span>Normal</span><span>Viral Pneumonia</span>
       </div>
-      <button type="submit" class="btn-predict" id="submit-btn">{% if filename %}Classer une autre image →{% else %}Classer l'image{% endif %}</button>
+      <button type="{{ 'button' if result else 'submit' }}" class="btn-predict" id="submit-btn"
+              data-mode="{{ 'reset' if result else 'submit' }}">{% if result %}Classer une autre image →{% else %}Classer l'image{% endif %}</button>
     </form>
   </div>
 
@@ -153,7 +154,30 @@
       reader.readAsDataURL(file);
     }
 
-    fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+    fileInput.addEventListener('change', () => {
+      showPreview(fileInput.files[0]);
+      // Une nouvelle image a été choisie après un "Classer une autre image →" (mode
+      // reset) : le bouton redevient un vrai submit pour cette nouvelle sélection.
+      if (submitBtn.dataset.mode === 'reset') {
+        submitBtn.type = 'submit';
+        submitBtn.dataset.mode = 'submit';
+        submitBtn.textContent = "Classer l'image";
+      }
+    });
+
+    // Mode "reset" (après un résultat) : le clic ne soumet pas le fichier déjà classé,
+    // il vide la sélection et rouvre directement l'explorateur de fichiers.
+    submitBtn.addEventListener('click', e => {
+      if (submitBtn.dataset.mode === 'reset') {
+        e.preventDefault();
+        fileInput.value = '';
+        preview.src = '';
+        preview.style.display = 'none';
+        dropLabel.style.display = '';
+        filenameEl.style.display = 'none';
+        fileInput.click();
+      }
+    });
 
     dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
