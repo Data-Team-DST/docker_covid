@@ -94,7 +94,7 @@ class DualMlflowRun:
                 )
                 self.remote_run_id = self.remote_client.create_run(
                     experiment_id=experiment_id,
-                    tags={"mlflow.runName": self.run_name} if self.run_name else None,
+                    tags={"mlflow.runName": self.run_name} if self.run_name else {},
                 ).info.run_id
         except Exception as error:  # Remote tracking must not stop local training.
             print(f"[WARN] DagsHub MLflow indisponible : {error}", flush=True)
