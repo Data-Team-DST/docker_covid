@@ -28,7 +28,11 @@ sys.path.insert(0, str(TRAINER_ROOT / "src"))
 load_dotenv(REPO_ROOT / ".env")
 
 from ds_covid.data import MemmapSequence  # noqa: E402
-from ds_covid.mlflow_utils import DualMlflowRun, MlflowEpochLogger  # noqa: E402
+from ds_covid.mlflow_utils import (  # noqa: E402
+    DualMlflowRun,
+    MlflowEpochLogger,
+    collect_run_tags,
+)
 from ds_covid.segmentation import (  # noqa: E402
     build_unet,
     combined_loss,
@@ -87,6 +91,10 @@ def main() -> None:
             "val_split":           sp["val_split"],
             "img_size":            prep["img_size"],
         })
+        tracking.log_tags(
+            collect_run_tags(PARAMS_FILE, p, mlp["segmentation_model_name"])
+        )
+        tracking.log_config_artifact(PARAMS_FILE)
 
         model, encoder = build_unet(input_shape=(img_h, img_w, 1))
 
@@ -192,6 +200,8 @@ def main() -> None:
                 flush=True,
             )
         tracking.log_model(model, "model")
+        if promoted:
+            tracking.register_model(mlp["segmentation_model_name"])
         mlflow.log_metric("registered", int(promoted))
 
         metrics = {
