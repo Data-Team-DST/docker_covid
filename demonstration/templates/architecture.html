@@ -101,7 +101,6 @@
       <div class="svc-role">Tracking server + Model Registry. backend/segmentation-service
         chargent leur modèle depuis le stage <code>Production</code>, fallback fichier local
         si indisponible.</div>
-      <a href="{{ mlflow_url }}" target="_blank" rel="noopener" class="svc-link" hx-boost="false">Ouvrir MLflow →</a>
     </div>
     <div class="svc-card">
       <div class="svc-name">postgres <span class="svc-port">interne</span></div>
@@ -116,9 +115,12 @@
       <div class="svc-name">DagsHub <span class="svc-port">externe</span></div>
       <div class="svc-role">Miroir du repo — suivi natif des expériences DVC (commits, métriques
         par run), complémentaire à MLflow.</div>
-      <a href="{{ dagshub_url }}" target="_blank" rel="noopener" class="svc-link" hx-boost="false">Ouvrir DagsHub →</a>
     </div>
   </div>
+  <p style="color:#8b949e; font-size:.85rem">
+    Accès direct aux outils de tracking (MLflow local, DagsHub) : voir l'onglet
+    <a href="/experiences">Expériences</a>.
+  </p>
 
   <div class="svc-group-title">Observabilité</div>
   <div class="svc-grid">

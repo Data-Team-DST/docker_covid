@@ -197,8 +197,6 @@ def architecture():
     """Architecture microservices — frontières HTTP, ports, tracking DVC/MLflow/DagsHub."""
     return render_template(
         "architecture.html",
-        mlflow_url=MLFLOW_URL,
-        dagshub_url=DAGSHUB_URL,
         **nav_context("/architecture"),
     )
 
