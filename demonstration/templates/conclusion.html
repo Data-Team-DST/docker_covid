@@ -60,11 +60,13 @@
       serait passé inaperçu jusqu'à la démo.
     </p>
     <p style="color:#8b949e; font-size:.9rem">
-      D'autres frictions, plus ordinaires, ont jalonné le projet : une fuite mémoire du
-      service de segmentation sous charge (contournée, cause racine encore ouverte), un test
-      de déploiement automatisé intermittent (root-causé et corrigé), un pipeline de données
-      localement désynchronisé de son propre historique figé. Rien de dramatique — le genre
-      de choses qu'on ne voit qu'en poussant le système au-delà du cas nominal.
+      D'autres frictions, plus ordinaires, ont jalonné le projet : un test de déploiement CI
+      intermittent (root-causé et corrigé — résolution DNS MLflow avec un backoff trop lent),
+      une image Docker périmée qui masquait une régression invisible en docker-compose et
+      révélée seulement sous Kubernetes, un service MLflow qui dépasse sa limite mémoire dès
+      que le nombre de cœurs CPU augmente (cause identifiée, correctif pas encore appliqué).
+      Rien de dramatique — le genre de choses qu'on ne voit qu'en poussant le système au-delà
+      du cas nominal.
     </p>
   </div>
 
