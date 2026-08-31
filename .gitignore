@@ -83,3 +83,7 @@ _zip_extracted/
 plan_de_base.txt
 *.docx
 infrastructure/kubernetes/secrets.yaml
+
+# Bilan perso (git log/PR par personne) — usage strictement personnel, jamais partagé
+bilan_contribution_docker_covid.html
+bilan_contribution_ds_covid.html
