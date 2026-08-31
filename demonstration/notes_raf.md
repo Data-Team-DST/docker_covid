@@ -148,6 +148,19 @@ Architecture encoder/decoder en forme de "U" (Ronneberger et al., 2015, imagerie
 - **Skip connections** (l'idée clé) : chaque niveau de l'encoder est directement connecté (concaténé) au niveau correspondant du decoder, en plus du flux principal via le bottleneck. Sans ça, le decoder ne repartirait que du bottleneck — trop compressé pour reconstruire des contours précis. Les skip connections réinjectent le détail spatial fin (bords, contours) perdu pendant la descente.
 - Ici, l'encoder n'est pas entraîné from scratch comme dans le papier original : c'est un MobileNetV2 pré-entraîné (transfer learning) — même principe d'architecture en U, mais on réutilise des features ImageNet déjà apprises plutôt que de tout apprendre depuis zéro.
 
+### Décoder les noms : "Up" et "block_N_expand_relu"
+
+**"Up"** = **upsampling**, l'opération qui augmente la résolution spatiale — l'inverse du `MaxPooling` de l'encoder. Implémenté ici par `Conv2DTranspose` : contrairement à un simple resize/interpolation, c'est une convolution transposée dont l'upsampling est **appris** (poids entraînables), pas une interpolation géométrique fixe. Chaque `Conv2DTranspose(strides=2)` double la résolution : 8×8 → 16×16 → 32×32 → 64×64 → 128×128 → 256×256, symétrique à la descente de l'encoder.
+
+Donc "Up + concat skip1 + 2×Conv2D" = 3 étapes en séquence à chaque niveau du decoder :
+1. **Up** (`Conv2DTranspose`) — double la résolution
+2. **+ concat skip1** — recolle le détail spatial de l'encoder à ce niveau (la skip connection)
+3. **+ 2×Conv2D** — deux convolutions classiques pour fusionner/affiner après la concaténation
+
+**"block_N_expand_relu"** = nom de layer interne à **MobileNetV2** (nommage Keras officiel, pas choisi par nous). MobileNetV2 empile des blocs "inverted residual", chacun structuré en 3 étapes : **expand** (conv 1×1 qui augmente les canaux) → **depthwise** (conv 3×3 par canal) → **project** (conv 1×1 qui réduit les canaux). `block_N_expand_relu` = l'activation ReLU6 juste après la conv d'expansion du bloc n°N.
+
+Pourquoi ces 4 layers précisément (`block_1/3/6/13_expand_relu`) sont choisis comme points de skip : ce sont les **dernières activations à pleine résolution juste avant chaque downsampling** (stride 2) du réseau — le point idéal pour une skip connection, puisque la résolution y correspond exactement à ce que le decoder doit retrouver à la remontée.
+
 ### Rôle de chaque callback
 
 | Callback | Rôle |
