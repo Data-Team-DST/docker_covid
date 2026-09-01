@@ -110,7 +110,37 @@
     <a href="/architecture">Architecture</a>.
   </p>
 
-  <!-- AJOUT : schéma explicatif — comment Prometheus/Grafana et Evidently
+
+  <h2>Détection de dérive — Evidently</h2>
+  <p style="color:#8b949e">
+    Compare la distribution des scores de confiance en production à celle de référence
+    (entraînement), classe par classe, via l'indice PSI (Population Stability Index — seuil
+    d'alerte : 0,2).
+  </p>
+  <div class="drift-card">
+    <div class="drift-stats">
+      <div class="drift-stat"><div class="value">500</div><div class="label">images de référence (train)</div></div>
+      <div class="drift-stat"><div class="value">60</div><div class="label">prédictions de production</div></div>
+      <div class="drift-stat"><div class="value">PSI &gt; 0,2</div><div class="label">seuil d'alerte</div></div>
+    </div>
+    <span class="drift-verdict detected">⚠ Dérive détectée sur ce lot</span>
+    <p class="hint">
+      Attendu ici : l'échantillon de production n'est qu'un lot de test ponctuel (60 images),
+      pas un vrai flux continu — non représentatif statistiquement. En conditions réelles,
+      cette même mécanique tournerait en continu sur le trafic /predict, avec une alerte
+      pertinente si la dérive persiste dans la durée.
+    </p>
+    <p class="hint">
+      Généré via <code>trainer/scripts/drift_report.py</code>, à partir des vraies prédictions
+      loguées par log-service (<code>/v1/logs</code>) — pas de données simulées.
+    </p>
+  </div>
+
+  <div class="drift-embed">
+    <iframe src="/monitoring/drift-report" title="Rapport Evidently — dérive des scores de confiance" loading="lazy"></iframe>
+  </div>
+
+   <!-- AJOUT : schéma explicatif — comment Prometheus/Grafana et Evidently
        récupèrent réellement leurs données, pour la présentation à l'oral -->
   <h2>D'où viennent ces métriques ?</h2>
   <p style="color:#8b949e">
@@ -202,35 +232,6 @@
           plus bas en <code>&lt;iframe&gt;</code>.</p>
       </div>
     </div>
-  </div>
-
-  <h2>Détection de dérive — Evidently</h2>
-  <p style="color:#8b949e">
-    Compare la distribution des scores de confiance en production à celle de référence
-    (entraînement), classe par classe, via l'indice PSI (Population Stability Index — seuil
-    d'alerte : 0,2).
-  </p>
-  <div class="drift-card">
-    <div class="drift-stats">
-      <div class="drift-stat"><div class="value">500</div><div class="label">images de référence (train)</div></div>
-      <div class="drift-stat"><div class="value">60</div><div class="label">prédictions de production</div></div>
-      <div class="drift-stat"><div class="value">PSI &gt; 0,2</div><div class="label">seuil d'alerte</div></div>
-    </div>
-    <span class="drift-verdict detected">⚠ Dérive détectée sur ce lot</span>
-    <p class="hint">
-      Attendu ici : l'échantillon de production n'est qu'un lot de test ponctuel (60 images),
-      pas un vrai flux continu — non représentatif statistiquement. En conditions réelles,
-      cette même mécanique tournerait en continu sur le trafic /predict, avec une alerte
-      pertinente si la dérive persiste dans la durée.
-    </p>
-    <p class="hint">
-      Généré via <code>trainer/scripts/drift_report.py</code>, à partir des vraies prédictions
-      loguées par log-service (<code>/v1/logs</code>) — pas de données simulées.
-    </p>
-  </div>
-
-  <div class="drift-embed">
-    <iframe src="/monitoring/drift-report" title="Rapport Evidently — dérive des scores de confiance" loading="lazy"></iframe>
   </div>
 
   {% set nav_position = 'bottom' %}
