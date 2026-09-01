@@ -32,7 +32,7 @@ outs:
 
 Git ne voit que ce pointeur (un hash + des métadonnées) — jamais les 807 Mo réels. `data/raw/` lui-même est dans `.gitignore`. Quand quelqu'un clone le repo, il récupère ce pointeur instantanément, puis doit faire `dvc pull` pour rapatrier les vrais fichiers depuis le remote, en résolvant le hash.
 
-Le seul fichier `.dvc` tracké dans ce repo est `data/raw.dvc`. Le rapport de dérive Evidently est un artefact local généré avec `python trainer/scripts/drift_report.py` dans `outputs/drift/report.html`; il n'est pas synchronisé par DVC.
+Seuls deux `.dvc` sont trackés dans ce repo : `data/raw.dvc` et `outputs/drift/report.html.dvc` (le rapport de dérive Evidently — cas particulier : `/outputs/*` est ignoré globalement, sauf `!/outputs/drift/` ré-inclus explicitement dans `.gitignore` pour permettre au pointeur `.dvc` d'être trackable ; le vrai `report.html`, lui, reste ignoré via un `.gitignore` que DVC génère automatiquement dans `outputs/drift/`).
 
 ### `dvc.yaml` / `dvc.lock` — le pipeline versionné par Git
 
