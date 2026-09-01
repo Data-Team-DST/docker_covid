@@ -31,7 +31,7 @@ NC     := \033[0m
 # ── Variables ─────────────────────────────────────────────────────────────────
 BACKEND_URL  := http://localhost:8000
 FRONTEND_URL := http://localhost:8501
-PYTHON       := python3
+PYTHON       := python3.11
 SCRIPTS      := ops
 COMPOSE      := docker compose -f infrastructure/docker-compose.yml --project-directory .
 

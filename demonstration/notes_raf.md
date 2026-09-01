@@ -114,6 +114,19 @@ U-Net en 2 phases (freeze puis fine-tune).
 
 → `outputs/segmentation_evaluation_report.json` — mesure la qualité **après** nettoyage du mask (voir ci-dessous), pas sur la sortie brute du U-Net.
 
+### Dice et IoU — les deux métriques de qualité du mask
+
+Les deux comparent le mask prédit (binaire, 0/1 par pixel) au mask vérité terrain, pixel par pixel. Notations : `∩` = intersection (pixels à 1 dans les deux masks), `∪` = union (pixels à 1 dans au moins un des deux).
+
+- **IoU** (*Intersection over Union*, aussi appelé indice de Jaccard) : `IoU = ∩ / ∪`. Le plus intuitif — proportion de la zone combinée des deux masks qui est effectivement partagée.
+- **Dice** (coefficient de Sørensen-Dice) : `Dice = 2·∩ / (|mask_pred| + |mask_vérité|)`. Même idée, mais compte l'intersection deux fois au numérateur plutôt que d'utiliser l'union — ça pénalise moins durement les petits désaccords de contour que l'IoU. C'est la métrique choisie ici comme critère d'arrêt (`params.yaml § min_val_dice: 0.5`, `evaluate.py`) et comme loss d'entraînement (`dice_loss = 1 - dice_coef`, combinée à la BCE — voir plus bas).
+
+Les deux valent 1.0 pour un mask parfait, 0.0 si aucun pixel ne se recouvre. Dice ≥ IoU toujours (relation mathématique directe entre les deux formules) — ne pas comparer un score Dice à un seuil pensé pour l'IoU ou l'inverse.
+
+Implémentation réelle (`ds_covid/segmentation.py::dice_coef` / `iou_metric`) : un `smooth = 1.0` est ajouté au numérateur et au dénominateur des deux formules — évite une division par zéro si vérité terrain ET prédiction sont entièrement vides (aucun pixel poumon), et lisse légèrement le score sur les petits masks.
+
+`evaluate_segmentation.py` calcule ces deux métriques deux fois : une fois sur le mask brut (sortie sigmoïde du U-Net directement seuillée à 0.5), une fois sur le mask nettoyé (`clean_mask()`, voir juste en dessous) — pour objectiver le gain apporté par le nettoyage.
+
 ## Nettoyage du mask prédit (`clean_mask()`)
 
 Le U-Net brut produit un mask bruité : des îlots de pixels isolés hors des poumons (faux positifs ponctuels) et/ou des petits trous à l'intérieur de la silhouette pulmonaire. Sans nettoyage, ces défauts se propagent au recadrage backend (`squared_crop_to_lungs()`, qui borne sur *tout pixel non nul* du mask) — un îlot parasite loin des poumons élargirait artificiellement la bounding box du crop.

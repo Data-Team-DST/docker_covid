@@ -21,6 +21,32 @@
       background: #2d2410; border: 1px solid #9e6a03; border-radius: 6px;
       padding: .8rem 1rem; color: #d29922; margin: 1rem 0;
     }
+    .badge-row { display: flex; flex-wrap: wrap; gap: .6rem; margin: .9rem 0 .3rem; }
+    .badge {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 20px;
+      padding: .4rem 1rem; font-size: .85rem; color: #c9d1d9;
+    }
+    .mismatch-flow {
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+      gap: .8rem; margin: 1.1rem 0;
+    }
+    .mismatch-flow .m-node {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: .9rem 1rem;
+    }
+    .mismatch-flow .m-node.bad { border-color: #f85149; }
+    .mismatch-flow .m-node.good { border-color: #3fb950; }
+    .mismatch-flow .m-node h3 { margin: 0 0 .4rem; font-size: .82rem; }
+    .mismatch-flow .m-node p { margin: 0; color: #8b949e; font-size: .78rem; line-height: 1.4; }
+    .mismatch-arrow { font-size: 1.5rem; text-align: center; color: #d29922; }
+    .result-strip {
+      display: flex; align-items: center; justify-content: center; gap: 1rem;
+      margin: 1.1rem 0 .4rem; padding: 1rem; background: #0d1117; border-radius: 8px;
+    }
+    .result-num { font-size: 2.1rem; font-weight: bold; }
+    .result-num.bad { color: #f85149; }
+    .result-num.good { color: #3fb950; }
+    .result-arrow { color: #8b949e; font-size: 1.4rem; }
+    .result-label { color: #8b949e; font-size: .82rem; max-width: 240px; }
   </style>
 
   <div class="page-content">
@@ -38,33 +64,52 @@
   <div class="card">
     <p style="color:#8b949e">
       Un notebook de recherche ne suffit pas à mettre un modèle entre les mains d'un
-      utilisateur réel. Il a fallu le découper en <a href="/architecture">microservices</a>
-      qui communiquent par HTTP plutôt que par imports Python, versionner les données et les
-      modèles au lieu de les balader en pièce jointe, sécuriser l'API (clé, rate limiting,
-      validation stricte des uploads), automatiser le lint/tests/build via CI/CD jusqu'au
-      déploiement, et enfin instrumenter le tout pour savoir s'il tient la route une fois en
-      prod — <a href="/monitoring">latence, taux d'erreurs, dérive des prédictions</a>.
-      C'est ce système-là, pas seulement le modèle, qu'on présente aujourd'hui.
+      utilisateur réel — il a fallu construire tout un système autour.
     </p>
+    <div class="badge-row">
+      <span class="badge">🧩 <a href="/architecture">Microservices HTTP</a></span>
+      <span class="badge">🗃 Données &amp; modèles versionnés (DVC/MLflow)</span>
+      <span class="badge">🔒 API sécurisée (clé, rate limiting)</span>
+      <span class="badge">⚙️ CI/CD lint → tests → build → déploiement</span>
+      <span class="badge">📈 <a href="/monitoring">Monitoring en prod</a></span>
+    </div>
   </div>
 
   <h2>Ce qu'on a appris en le construisant</h2>
   <div class="card">
     <p>
-      Le moment le plus révélateur : un test en lot sur des radios réelles a montré que le
-      backend confondait systématiquement trois classes sur quatre — l'ordre des classes
-      codé en dur ne correspondait plus à celui figé par le pipeline d'entraînement. Invisible
-      sur un exemple isolé, flagrant sur une matrice de confusion. Correction en une ligne,
-      mais le vrai enseignement est méthodologique : <b>un modèle qui répond n'est pas un
-      modèle qui répond juste</b> — sans test de bout en bout sur des données réelles, ce bug
-      serait passé inaperçu jusqu'à la démo.
+      Un test en lot sur des radios réelles a montré que le backend confondait
+      systématiquement trois classes sur quatre :
     </p>
+    <div class="mismatch-flow" aria-label="Décalage entre l'ordre codé en dur et l'ordre réel du pipeline">
+      <div class="m-node bad">
+        <h3>backend/config.py <span style="color:#f85149">(avant fix)</span></h3>
+        <p><code>COVID → Lung_Opacity → Normal → Viral_Pneumonia</code><br>ordre alphabétique</p>
+      </div>
+      <div class="mismatch-arrow" aria-hidden="true">⚠️≠</div>
+      <div class="m-node good">
+        <h3>params.yaml / dvc.lock <span style="color:#3fb950">(réel)</span></h3>
+        <p><code>COVID → Normal → Viral_Pneumonia → Lung_Opacity</code><br>ordre figé à l'entraînement</p>
+      </div>
+    </div>
+    <div class="result-strip">
+      <div class="result-num bad">35%</div>
+      <div class="result-arrow">→</div>
+      <div class="result-num good">78%</div>
+      <div class="result-label">accuracy sur le même lot de 60 radios réelles, après correction d'une ligne</div>
+    </div>
     <p style="color:#8b949e; font-size:.9rem">
-      D'autres frictions, plus ordinaires, ont jalonné le projet : une fuite mémoire du
-      service de segmentation sous charge (contournée, cause racine encore ouverte), un test
-      de déploiement automatisé intermittent (root-causé et corrigé), un pipeline de données
-      localement désynchronisé de son propre historique figé. Rien de dramatique — le genre
-      de choses qu'on ne voit qu'en poussant le système au-delà du cas nominal.
+      Invisible sur un exemple isolé, flagrant sur une matrice de confusion. Le vrai
+      enseignement est méthodologique : <b>un modèle qui répond n'est pas un modèle qui
+      répond juste</b> — sans test de bout en bout sur des données réelles, ce bug serait
+      passé inaperçu jusqu'à la démo.
+    </p>
+    <p style="color:#8b949e; font-size:.85rem">
+      D'autres frictions, plus ordinaires, ont jalonné le projet : un test de déploiement CI
+      intermittent (root-causé et corrigé), une image Docker périmée révélée seulement sous
+      Kubernetes, un service MLflow qui dépasse sa limite mémoire selon le nombre de cœurs
+      CPU (cause identifiée, correctif pas encore appliqué). Le genre de choses qu'on ne voit
+      qu'en poussant le système au-delà du cas nominal.
     </p>
   </div>
 
