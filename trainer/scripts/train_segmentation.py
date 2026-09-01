@@ -1,3 +1,10 @@
+from ds_covid.mlflow_utils import (  # noqa: E402
+    DualMlflowRun,
+    MlflowEpochLogger,
+    build_final_metrics,
+    collect_run_tags,
+    flatten_params,
+)
 """Stage DVC — Entraînement du U-Net de segmentation pulmonaire + tracking MLflow.
 
 Lit  : data/processed/segmentation/{X,M}_train.npy (re-split en train/val en interne)
@@ -28,7 +35,11 @@ sys.path.insert(0, str(TRAINER_ROOT / "src"))
 load_dotenv(REPO_ROOT / ".env")
 
 from ds_covid.data import MemmapSequence  # noqa: E402
-from ds_covid.mlflow_utils import DualMlflowRun, MlflowEpochLogger  # noqa: E402
+from ds_covid.mlflow_utils import (  # noqa: E402
+    DualMlflowRun,
+    MlflowEpochLogger,
+    collect_run_tags,
+)
 from ds_covid.segmentation import (  # noqa: E402
     build_unet,
     combined_loss,
@@ -77,16 +88,11 @@ def main() -> None:
     model_path = MODELS_DIR / "segmentation.keras"
 
     with DualMlflowRun(mlp["segmentation_experiment_name"]) as tracking:
-        tracking.log_params({
-            "freeze_epochs":       sp["freeze_epochs"],
-            "freeze_lr":           sp["freeze_lr"],
-            "fine_tune_epochs":    sp["fine_tune_epochs"],
-            "fine_tune_lr":        sp["fine_tune_lr"],
-            "batch_size":          sp["batch_size"],
-            "fine_tune_batch_size": sp["fine_tune_batch_size"],
-            "val_split":           sp["val_split"],
-            "img_size":            prep["img_size"],
-        })
+        tracking.log_params(flatten_params(p))
+        tracking.log_tags(
+            collect_run_tags(PARAMS_FILE, p, mlp["segmentation_model_name"])
+        )
+        tracking.log_config_artifact(PARAMS_FILE)
 
         model, encoder = build_unet(input_shape=(img_h, img_w, 1))
 
@@ -192,6 +198,8 @@ def main() -> None:
                 flush=True,
             )
         tracking.log_model(model, "model")
+        if promoted:
+            tracking.register_model(mlp["segmentation_model_name"])
         mlflow.log_metric("registered", int(promoted))
 
         metrics = {
@@ -202,6 +210,7 @@ def main() -> None:
             "freeze_epochs_run":    len(history_freeze.epoch),
             "fine_tune_epochs_run": len(history_finetune.epoch),
         }
+        tracking.log_metrics(build_final_metrics(metrics))
         METRICS_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(METRICS_FILE, "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2)

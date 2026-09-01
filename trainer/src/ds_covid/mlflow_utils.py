@@ -11,12 +11,21 @@ sur une timeline continue.
 """
 
 import os
+import platform
 import tempfile
+import time
+from contextlib import contextmanager
+from hashlib import sha256
 from pathlib import Path
+from typing import Iterator
 
 import mlflow
 from mlflow.tracking import MlflowClient
 import tensorflow as tf
+
+
+_REMOTE_RUN_CREATION_ATTEMPTS = 3
+_REMOTE_RUN_CREATION_RETRY_DELAY_SECONDS = 1
 
 
 class DualMlflowRun:
@@ -27,6 +36,7 @@ class DualMlflowRun:
         self.run_name = run_name
         self.remote_client = None
         self.remote_run_id = None
+        self._remote_environment: dict[str, str] = {}
 
     def __enter__(self):
         self.local_run = mlflow.start_run(run_name=self.run_name)
@@ -42,6 +52,22 @@ class DualMlflowRun:
         mlflow.end_run(status="FAILED" if exc_type else "FINISHED")
         return False
 
+    @contextmanager
+    def _remote_credentials(self) -> Iterator[None]:
+        """Expose temporairement les credentials requis par le client DagsHub."""
+        previous_environment = {
+            key: os.environ.get(key) for key in self._remote_environment
+        }
+        try:
+            os.environ.update(self._remote_environment)
+            yield
+        finally:
+            for key, value in previous_environment.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
     def _configure_remote(self):
         tracking_uri = os.getenv("DAGSHUB_MLFLOW_TRACKING_URI")
         username = os.getenv("DAGSHUB_USERNAME")
@@ -51,28 +77,58 @@ class DualMlflowRun:
         if not all((tracking_uri, username, token)):
             return
 
+        self._remote_environment = {
+            "MLFLOW_TRACKING_URI": tracking_uri,
+            "MLFLOW_REGISTRY_URI": tracking_uri,
+            "MLFLOW_TRACKING_USERNAME": username,
+            "MLFLOW_TRACKING_PASSWORD": token,
+        }
+        operation = "initialisation du client"
         try:
-            os.environ["MLFLOW_TRACKING_URI"] = tracking_uri
-            os.environ["MLFLOW_REGISTRY_URI"] = tracking_uri
-            os.environ["MLFLOW_TRACKING_USERNAME"] = username
-            os.environ["MLFLOW_TRACKING_PASSWORD"] = token
-            self.remote_client = MlflowClient(
-                tracking_uri=tracking_uri,
-                registry_uri=tracking_uri,
-            )
-            experiment = self.remote_client.get_experiment_by_name(self.experiment_name)
-            if experiment is None:
-                experiment_id = self.remote_client.create_experiment(self.experiment_name)
-            else:
-                experiment_id = experiment.experiment_id
-            self.remote_run_id = self.remote_client.create_run(
-                experiment_id=experiment_id,
-                tags={"mlflow.runName": self.run_name} if self.run_name else None,
-            ).info.run_id
+            with self._remote_credentials():
+                self.remote_client = MlflowClient(
+                    tracking_uri=tracking_uri,
+                    registry_uri=tracking_uri,
+                )
+                operation = "lecture de l'expérience"
+                experiment = self.remote_client.get_experiment_by_name(
+                    self.experiment_name
+                )
+                operation = "création de l'expérience"
+                experiment_id = (
+                    self.remote_client.create_experiment(self.experiment_name)
+                    if experiment is None
+                    else experiment.experiment_id
+                )
+                operation = "création du run"
+                self.remote_run_id = self._create_remote_run(experiment_id)
         except Exception as error:  # Remote tracking must not stop local training.
-            print(f"[WARN] DagsHub MLflow indisponible : {error}", flush=True)
+            print(
+                f"[WARN] DagsHub MLflow indisponible pendant {operation} "
+                f"({type(error).__name__}: {getattr(error, 'error_code', 'unknown')})",
+                flush=True,
+            )
             self.remote_client = None
             self.remote_run_id = None
+
+    def _create_remote_run(self, experiment_id: str) -> str:
+        """Crée le run DagsHub en tolérant sa cohérence éventuelle après création d'expérience."""
+        tags = {"mlflow.runName": self.run_name} if self.run_name else {}
+        for attempt in range(_REMOTE_RUN_CREATION_ATTEMPTS):
+            try:
+                return self.remote_client.create_run(
+                    experiment_id=experiment_id,
+                    tags=tags,
+                ).info.run_id
+            except Exception as error:  # noqa: BLE001 - le miroir distant est optionnel
+                if attempt == _REMOTE_RUN_CREATION_ATTEMPTS - 1:
+                    raise
+                print(
+                    "[WARN] Création du run DagsHub différée "
+                    f"({type(error).__name__}), nouvel essai...",
+                    flush=True,
+                )
+                time.sleep(_REMOTE_RUN_CREATION_RETRY_DELAY_SECONDS)
 
     def log_params(self, params: dict):
         mlflow.log_params(params)
@@ -81,6 +137,31 @@ class DualMlflowRun:
                 self._remote_call(
                     self.remote_client.log_param, self.remote_run_id, key, str(value)
                 )
+
+    def log_tags(self, tags: dict):
+        """Enregistre les tags de reproductibilité dans les deux trackers."""
+        normalized_tags = {key: str(value) for key, value in tags.items()}
+        mlflow.set_tags(normalized_tags)
+        if not self.remote_client or not self.remote_run_id:
+            return
+        for key, value in normalized_tags.items():
+            self._remote_call(
+                self.remote_client.set_tag, self.remote_run_id, key, value
+            )
+
+    def log_config_artifact(self, config_path: Path):
+        """Enregistre le fichier de configuration dans les deux trackers."""
+        if not config_path.is_file():
+            return
+        mlflow.log_artifact(str(config_path), artifact_path="config")
+        if not self.remote_client or not self.remote_run_id:
+            return
+        self._remote_call(
+            self.remote_client.log_artifact,
+            self.remote_run_id,
+            str(config_path),
+            "config",
+        )
 
     def log_metrics(self, metrics: dict, step: int = 0):
         mlflow.log_metrics(metrics, step=step)
@@ -110,14 +191,71 @@ class DualMlflowRun:
                     artifact_path,
                 )
 
-    def _remote_call(self, operation, *args, **kwargs):
+    def register_model(self, model_name: str, artifact_path: str = "model"):
+        """Crée une version DagsHub du modèle miroir lorsqu'il est disponible."""
+        if not self.remote_client or not self.remote_run_id:
+            return None
         try:
-            return operation(*args, **kwargs)
-        except Exception as error:
+            with self._remote_credentials():
+                try:
+                    self.remote_client.get_registered_model(model_name)
+                except Exception:  # noqa: BLE001
+                    self.remote_client.create_registered_model(model_name)
+                return self.remote_client.create_model_version(
+                    name=model_name,
+                    source=f"runs:/{self.remote_run_id}/{artifact_path}",
+                    run_id=self.remote_run_id,
+                )
+        except Exception as error:  # noqa: BLE001
+            print(f"[WARN] Enregistrement du modèle DagsHub ignoré : {error}", flush=True)
+            return None
+
+    def _remote_call(self, operation, *args, **kwargs):
+        if not self.remote_client or not self.remote_run_id:
+            return None
+        try:
+            with self._remote_credentials():
+                return operation(*args, **kwargs)
+        except Exception as error:  # noqa: BLE001
             print(f"[WARN] Écriture DagsHub MLflow ignorée : {error}", flush=True)
             self.remote_client = None
             self.remote_run_id = None
             return None
+
+
+def flatten_params(params: dict, parent_key: str = "") -> dict:
+    """Aplatit les paramètres YAML pour leur stockage dans MLflow."""
+    flattened = {}
+    for key, value in params.items():
+        parameter_name = f"{parent_key}.{key}" if parent_key else key
+        if isinstance(value, dict):
+            flattened.update(flatten_params(value, parameter_name))
+        else:
+            flattened[parameter_name] = value
+    return flattened
+
+
+def build_final_metrics(metrics: dict) -> dict:
+    """Préfixe les métriques finales pour préserver les courbes par epoch."""
+    return {
+        f"final_{key}": int(value) if isinstance(value, bool) else value
+        for key, value in metrics.items()
+        if isinstance(value, (bool, int, float))
+    }
+
+
+def collect_run_tags(config_path: Path, params: dict, model_name: str) -> dict:
+    """Construit les tags de reproductibilité communs aux entraînements."""
+    return {
+        "config.file": config_path.name,
+        "config.sha256": sha256(config_path.read_bytes()).hexdigest(),
+        "config.img_size": params["preprocess"]["img_size"],
+        "config.random_seed": params["preprocess"]["random_seed"],
+        "mlflow.model_name": model_name,
+        "runtime.python_version": platform.python_version(),
+        "runtime.tensorflow_version": tf.__version__,
+        "runtime.gpu_count": len(tf.config.list_physical_devices("GPU")),
+    }
 
 
 class MlflowEpochLogger(tf.keras.callbacks.Callback):
