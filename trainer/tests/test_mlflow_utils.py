@@ -65,3 +65,30 @@ def test_log_remote_metrics_uses_dagshub_credentials_only_during_call(monkeypatc
     ]
     assert "MLFLOW_TRACKING_USERNAME" not in os.environ
     assert "MLFLOW_TRACKING_PASSWORD" not in os.environ
+
+
+def test_configure_remote_retries_run_creation_after_new_experiment(monkeypatch):
+    """DagsHub peut exiger un court délai avant le premier run d'une expérience."""
+    monkeypatch.setenv("DAGSHUB_MLFLOW_TRACKING_URI", "https://dagshub.example/mlflow")
+    monkeypatch.setenv("DAGSHUB_USERNAME", "dagshub-user")
+    monkeypatch.setenv("DAGSHUB_TOKEN", "dagshub-token")
+    monkeypatch.setattr("ds_covid.mlflow_utils.time.sleep", lambda _: None)
+
+    remote_client = Mock()
+    remote_client.get_experiment_by_name.return_value = None
+    remote_client.create_experiment.return_value = "42"
+    remote_client.create_run.side_effect = [
+        RuntimeError("experiment not ready"),
+        Mock(info=Mock(run_id="remote-run")),
+    ]
+    monkeypatch.setattr("ds_covid.mlflow_utils.MlflowClient", lambda **_: remote_client)
+
+    mirror = DualMlflowRun("classification")
+    mirror._configure_remote()
+
+    assert mirror.remote_run_id == "remote-run"
+    assert remote_client.create_run.call_count == 2
+    assert remote_client.create_run.call_args.kwargs == {
+        "experiment_id": "42",
+        "tags": {},
+    }
